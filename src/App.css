@@ -1,0 +1,79 @@
+/* #root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+} */
+
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400; /* Default regular weight */
+  font-style: normal;
+  /* width: 1280px; */
+}
+
+
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400; /* Regular weight */
+  src: url('./assets/fonts/Montserrat/static/Montserrat-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600; /* SemiBold weight */
+  src: url('./assets/fonts/Montserrat/static/Montserrat-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700; /* Bold weight */
+  src: url('./assets/fonts/Montserrat/static/Montserrat-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 400; /* Regular italic */
+  src: url('./assets/fonts/Montserrat/static/Montserrat-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 600; /* SemiBold italic */
+  src: url('./assets/fonts/Montserrat/static/Montserrat-SemiBoldItalic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 700; /* Bold italic */
+  src: url('./assets/fonts/Montserrat/static/Montserrat-BoldItalic.ttf') format('truetype');
+}
+
+
+
+
+.dashed-border .highcharts-plot-border {
+  stroke-dasharray: 5, 5; /* Create a dashed effect */
+  stroke: #DFDFDF; 
+  stroke-width: 2; 
+}
+
+.hide-ticks .highcharts-tick {
+  stroke-width: 0;
+}
+
+.hide-scrollbar .highcharts-scrollbar {
+  opacity: 0;
+}
+
+.hide-stroke .highcharts-axis-line{
+  stroke-width: 0;
+}

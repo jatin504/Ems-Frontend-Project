@@ -1,0 +1,113 @@
+{
+    "id": "plantview-dashboard",
+    "title": "Plant View Dashboard",
+    "configuration": {
+        "widgets" : {
+            "BatterySoCCircularProgressBar" : {
+                "id" : "BatterySoCCircularProgressBar",
+                "title": "Battery State of Charge",
+                "type" : "standard",
+                "standard" : {
+                    "componentName" : "CircularProgressWidget",
+                    "componentProps" : {
+                        "containerProps" : {
+                            "padding" : 4,
+                            "width" : "380px",
+                            "height" : "250px",
+                            "borderRadius" : "xl",
+                            "shadow" : "md",
+                            "textAlign" : "center",
+                            "color" : "white"
+                        },
+                        "circularProgress": {
+                            "maxValue" : 100,
+                            "size":  "180px",
+                            "color" : "green.400", 
+                            "trackColor": "gray.600",
+                            "thickness" : "12px"
+                        },
+                        "circularProgressLabel" : {
+                            "fontSize" :"2xl",
+                            "color": "white.300",
+                            "unit" : "%"
+                        }
+                    }
+                },
+                "dataSource" : {
+                    "devices" : {
+                        "patterns" : [
+                            "_plant_device"
+                        ],
+                        "ids" : [
+                            
+                        ],
+                        "keys" : [
+                            {
+                                "key" : "Total_Avg_SoC",
+                                "alias" : "SoC (%)"
+                            }
+                        ],
+                        "isRealTime": true,
+                        "pollInterval": 10000,
+                        "executorType": "sql_function",
+                        "execute" : "fn_get_latest_timeseries_data",
+                        "returnDataName": "totalSoCPowerData"
+                    }
+                },
+                "layout": {
+                    "i": "battery-latest-soc-power",
+                    "x": 0,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2
+                }
+            },
+            "PowerFlowSolarBatteryGrid" : {
+                "id" : "PowerFlowSolarBatteryGrid",
+                "title" : "Power Flow",
+                "type" : "standard",
+                "standard" : {
+                    "componentName" : "EnergyFlowCardSVG"
+                },
+                "dataSource" : {
+                    "pattern" : [
+
+                    ],
+                    "ids" : [
+
+                    ],
+                    "keys" : [
+
+                    ],
+                    "isRealTime": true,
+                    "pollInterval": 10000,
+                    "executorType": "sql_function",
+                    "execute" : "fn_get_latest_timeseries_data",
+                    "returnDataName": "powerFlowData"
+                },
+                "layout": {
+                    "i": "battery-power-flow",
+                    "x": 3,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2
+                }
+            },
+            "MeterLatestCard" : {
+                "id" : "MeterLatestCard",
+                "title" : "Meter",
+                "type" : "standard",
+                "standard" : {
+                    "componentName" : "MeterCard"
+                },
+                "layout": {
+                    "i": "meter-latest-card",
+                    "x": 6,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2
+                }
+            }
+        }
+    }
+}

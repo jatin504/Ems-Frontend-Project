@@ -1,0 +1,192 @@
+{
+    "id": "customize-dashboard",
+    "title": "Customize",
+    "configuration": {
+        "widgets": {
+            "inv-ess": {
+                "id": "inv-ess",
+                "title": "INV-ESS",
+                "type": "graph",
+                "graph" : {
+                    "type" : "combination"
+                },
+                "dataSource": {
+                    "devices": {
+                        "patterns": [
+                            "_ess_ess_",
+                            "_inverter_inverter_1"
+                        ],
+                        "ids": [
+                            "plant_1_pcs_1_ess_ess_1",
+                            "plant_1_pcs_1_ess_ess_2",
+                            "plant_1_block_1_inverter_inverter_1"
+                        ]
+                    },
+                    "keys": [
+                        {
+                            "key": "voltage",
+                            "alias": " ESS(V)",
+                            "keyType": "common",
+                            "chartType": "spline",
+                            "yAxis": 0,
+                            "color": "#2E93fA"
+                        },
+                        {
+                            "key": "volt",
+                            "alias": "INV(V)-01",
+                            "keyType": "individual",
+                            "chartType": "column",
+                            "yAxis": 1,
+                            "color": "#66DA26"
+                        }
+                    ],
+                    "aggregation": {
+                        "func": "avg",
+                        "interval": 5,
+                        "intervalType": "minutes"
+                    },
+                    "timeRange": {
+                        "type": "last",
+                        "interval": 24,
+                        "intervalType": "hour"
+                    },
+                    "orderBy" : "ASC",
+                    "isRealTime": true,
+                    "pollInterval": 10000,
+                    "executorType": "sql_function",
+                    "execute" : "fn_get_timeseries_data",
+                    "returnDataName": "essPowerData"
+                },
+                "layout": {
+                    "i": "ess-power-voltage",
+                    "x": 0,
+                    "y": 0,
+                    "w": 6,
+                    "h": 4
+                },
+                "props": {
+                    "chartProps": {
+                        "chart": {
+                            "zoomType": "x",
+                            "style": {
+                                "fontFamily": "Montserrat, sans-serif"
+                            }
+                        },
+                        "title": {
+                            "text": ""
+                        },
+                        "xAxis": {
+                            "type": "datetime",
+                            "labels": {
+                                "enabled": true
+                            }
+                        },
+                        "yAxis": [
+                            {
+                                "id": 0,
+                                "title": {
+                                    "text": ""
+                                },
+                                "opposite": false
+                            },
+                            {
+                                "id": 1,
+                                "title": {
+                                    "text": ""
+                                },
+                                "opposite": true
+                            }
+                        ],
+                        "tooltip": {
+                            "shared": true
+                        },
+                        "legend": {
+                            "enabled": true
+                        }
+                    },
+                    "widgetProps": {}
+                },
+                "exportEnabled": true
+            },
+            "inverter-power": {
+                "id": "inverter-power",
+                "title": "Inverter Output",
+                "type": "graph",
+                "graph" : {
+                    "type" : "combination"
+                },
+                "dataSource": {
+                    "devices": {
+                        "patterns": [
+                            "_inverter_inverter"
+                        ],
+                        "ids": [
+                            "plant_1_block_1_inverter_inverter_1",
+                            "plant_1_block_1_inverter_inverter_2"
+                        ]
+                    },
+                    "keys": [
+                        {
+                            "key": "active_power_kw",
+                            "alias": "INV(kW)",
+                            "keyType": "common",
+                            "chartType": "spline",
+                            "yAxis": 0
+                        },
+                        {
+                            "key": "reactive_power_kvar",
+                            "alias": "INV(kVAR)",
+                            "keyType": "common",
+                            "chartType": "spline",
+                            "yAxis": 1
+                        }
+                    ],
+                    "aggregation": {
+                        "func": "avg",
+                        "interval": 1,
+                        "intervalType" : "hours"
+                    },
+                    "timeRange": {
+                        "type": "absolute",
+                        "startTs": 1753228800000,
+                        "endTs": 1753833600000
+                    },
+                    "orderBy" : "DESC",
+                    "isRealTime": false,
+                    "executorType": "sql_function",
+                    "execute" : "fn_get_timeseries_data",
+                    "returnDataName": "invPowerData"
+                },
+                "layout": {
+                    "i": "inverter-status",
+                    "x": 6,
+                    "y": 0,
+                    "w": 6,
+                    "h": 4
+                },
+                "props": {
+                    "chartProps": {
+                        "yAxis": [
+                            {
+                                "id": 0,
+                                "title": {
+                                    "text": ""
+                                },
+                                "opposite": false
+                            },
+                            {
+                                "id": 1,
+                                "title": {
+                                    "text": ""
+                                },
+                                "opposite": true
+                            }
+                        ]
+                    },
+                    "widgetProps": {}
+                },
+                "exportEnabled": true
+            }
+        }
+    }
+}

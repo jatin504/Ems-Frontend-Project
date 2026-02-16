@@ -1,0 +1,332 @@
+// src/components/UsersPage.tsx
+import { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Heading,
+  useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  Input,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  HStack,
+  Text,
+  useColorModeValue,
+} from "@chakra-ui/react";
+import { ChevronDownIcon, CheckIcon } from "@chakra-ui/icons";
+import { useLocation } from "react-router-dom";
+import UserList from "./UserList";
+import UserForm from "./UserForm";
+import type { User } from "./User";
+
+/* --------------------- Inline dark RoleSelect (no separate file) --------------------- */
+const ROLE_OPTIONS = ["admin", "operator", "engineer", "supervisor", "viewer"] as const;
+const pretty = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+function RoleSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  return (
+    <Menu matchWidth>
+      <MenuButton
+        as={Button}
+        w="100%"
+        justifyContent="space-between"
+        rightIcon={<ChevronDownIcon />}
+        bg="gray.700"
+        color="white"
+        border="1px solid"
+        borderColor="gray.600"
+        _hover={{ bg: "gray.600" }}
+        _active={{ bg: "gray.600" }}
+      >
+        {pretty(value || "viewer")}
+      </MenuButton>
+      <MenuList bg="gray.800" borderColor="gray.700" color="white" p={0}>
+        {ROLE_OPTIONS.map((r) => (
+          <MenuItem
+            key={r}
+            bg="gray.800"
+            _hover={{ bg: "gray.700" }}
+            onClick={() => onChange(r)}
+          >
+            <HStack w="100%" justify="space-between">
+              <Text>{pretty(r)}</Text>
+              {value === r ? <CheckIcon boxSize="0.8em" /> : <span style={{ width: "0.8em" }} />}
+            </HStack>
+          </MenuItem>
+        ))}
+      </MenuList>
+    </Menu>
+  );
+}
+/* ------------------------------------------------------------------------------------ */
+
+const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : "");
+const splitFirstLast = (raw: string | undefined) => {
+  const base = (raw ?? "").trim().replace(/[_\.\-]+/g, " ");
+  const parts = base.split(/\s+/).filter(Boolean);
+  const first = parts[0] ?? "";
+  const last = parts.slice(1).join(" ");
+  return { first: cap(first), last: cap(last) };
+};
+
+export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [showForm, setShowForm] = useState(false);
+
+  // edit state
+  const [editing, setEditing] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",              // added phone in edit form state
+    role: "viewer",
+  });
+
+  const location = useLocation();
+  const toast = useToast();
+
+  useEffect(() => {
+    if (location.search.includes("create=true")) setShowForm(true);
+  }, [location.search]);
+
+  const fetchUsers = () => {
+    fetch("http://75.119.146.115:5179/api/users")
+      .then((res) => res.json())
+      .then((data) => {
+        const normalized: User[] = (data || []).map((u: any) => {
+          const hasProperNames =
+            u.first_name && typeof u.last_name === "string" && u.last_name.length > 0;
+          const { first, last } = splitFirstLast(u.first_name);
+          return {
+            id: u.id,
+            firstName: hasProperNames ? u.first_name : first,
+            lastName: hasProperNames ? u.last_name : last,
+            email: u.email,
+            phone: u.phone ?? "",                 // will now be present from backend
+            role: (u.role ?? "viewer").toLowerCase(),
+            is_blocked: u.is_blocked ?? false,
+          };
+        });
+        setUsers(normalized);
+      })
+      .catch((err) => console.error("Error fetching users:", err));
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleFormSubmit = (newUser: User) => {
+    setUsers((prev) => [...prev, newUser]);
+    setShowForm(false);
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`http://75.119.146.115:5179/api/users/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        toast({ title: "User deleted", status: "success", duration: 3000, isClosable: true });
+      } else {
+        const data = await res.json();
+        toast({
+          title: "Delete failed",
+          description: data.message,
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch {
+      toast({ title: "Error deleting user", status: "error", duration: 3000, isClosable: true });
+    }
+  };
+
+  const handleBlock = async (id: number, is_blocked: boolean) => {
+    try {
+      const res = await fetch(`http://75.119.146.115:5179/api/users/${id}/block`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_blocked: !is_blocked }),
+      });
+      if (res.ok) {
+        fetchUsers();
+        toast({
+          title: `User ${is_blocked ? "unblocked" : "blocked"}`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({
+          title: "Failed to update block",
+          description: data?.message || "Unknown error",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch {
+      toast({
+        title: "Error updating block status",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const startEdit = (u: User) => {
+    setEditing(u);
+    setEditForm({
+      firstName: u.firstName || "",
+      lastName: u.lastName || "",
+      email: u.email || "",
+      phone: u.phone || "",            // prefill phone
+      role: (u.role || "viewer").toLowerCase(),
+    });
+  };
+
+  const submitEdit = async () => {
+    if (!editing) return;
+    const { firstName, lastName, email, phone, role } = editForm;
+
+    // backend expects: username, email, role, phone
+    const body = {
+      username: `${(firstName || "").toLowerCase()}_${(lastName || "").toLowerCase()}`,
+      email,
+      role,
+      phone,                           // include phone in PUT
+    };
+
+    try {
+      const res = await fetch(`http://75.119.146.115:5179/api/users/${editing.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        toast({ title: "User updated", status: "success", duration: 3000, isClosable: true });
+        setEditing(null);
+        fetchUsers();
+      } else {
+        toast({
+          title: "Update failed",
+          description: data?.message || "Invalid data",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch {
+      toast({ title: "Error updating user", status: "error", duration: 3000, isClosable: true });
+    }
+  };
+
+  const bgOuter = useColorModeValue("gray.100", "gray.900");
+  const textClr = useColorModeValue("gray.900", "white");
+  const modalBg = useColorModeValue("white", "gray.800");
+  const inputBg = useColorModeValue("gray.200", "gray.700");
+  const inputBorder = useColorModeValue("gray.300", "gray.600");
+  return (
+    <Box bg={bgOuter} color={textClr} minH="100vh" p={6}>
+      <Heading mb={4}>Users Management</Heading>
+
+      {!showForm && (
+        <Button
+          leftIcon={<span style={{ fontSize: "1.2em" }}>+</span>}
+          colorScheme="blue"
+          mb={4}
+          onClick={() => setShowForm(true)}
+        >
+          Create User
+        </Button>
+      )}
+
+      {showForm ? (
+        <UserForm onSubmit={handleFormSubmit} onCancel={() => setShowForm(false)} />
+      ) : (
+        <UserList users={users} onStartEdit={startEdit} onBlock={handleBlock} onDelete={handleDelete} />
+      )}
+
+      {/* Edit Modal */}
+      <Modal isOpen={!!editing} onClose={() => setEditing(null)}>
+        <ModalOverlay />
+        <ModalContent bg={modalBg} color={textClr}>
+          <ModalHeader>Edit User</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Input
+              placeholder="First name"
+              value={editForm.firstName}
+              onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))}
+              mb={3}
+              bg={inputBg}
+              borderColor={inputBorder}
+              color={textClr}
+            />
+            <Input
+              placeholder="Last name"
+              value={editForm.lastName}
+              onChange={(e) => setEditForm((p) => ({ ...p, lastName: e.target.value }))}
+              mb={3}
+              bg={inputBg}
+              borderColor={inputBorder}
+              color={textClr}
+            />
+            <Input
+              type="email"
+              placeholder="Email"
+              value={editForm.email}
+              onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))}
+              mb={3}
+              bg={inputBg}
+              borderColor={inputBorder}
+              color={textClr}
+            />
+            <Input
+              placeholder="Phone (10 digits)"
+              value={editForm.phone}
+              onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
+              mb={3}
+              bg={inputBg}
+              borderColor={inputBorder}
+              color={textClr}
+            />
+
+            <RoleSelect
+              value={editForm.role}
+              onChange={(val) => setEditForm((p) => ({ ...p, role: val }))}
+            />
+          </ModalBody>
+          <ModalFooter>
+            <Button mr={3} onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+            <Button colorScheme="teal" onClick={submitEdit}>
+              Save
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Box>
+  );
+}
