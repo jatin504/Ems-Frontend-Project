@@ -10,12 +10,14 @@ import {
 } from "@chakra-ui/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDevices } from "../hooks/useDevices";
+import usePermissions from "../hooks/usePermissions";
+import ConfirmPasswordModal from "../components/Common/ConfirmPasswordModal";
+
 import DeviceConfigFullScreenForm, {
   type DeviceConfig,
 } from "../components/DeviceConfig/DeviceConfigFullScreenForm";
-import PlantConfigFullScreenForm, {
-  type PlantConfig,
-} from "../components/DeviceConfig/PlantConfigFullScreenForm";
+
+import PlantConfigFullScreenForm from "../components/DeviceConfig/PlantConfigFullScreenForm";
 
 export default function ConfigDashboard() {
   const toast = useToast();
@@ -28,6 +30,21 @@ export default function ConfigDashboard() {
 
   const { devices, addDevice } = useDevices();
 
+  // ---------------- PERMISSIONS ----------------
+  const { permissions } = usePermissions();
+  const role = (sessionStorage.getItem("role") || "").toLowerCase();
+
+  const myPermission = (permissions || []).find(
+    (p: any) => (p.role_name || "").toLowerCase() === role
+  );
+
+  const canPlantConfig =
+    myPermission?.can_control_plant_config === true;
+
+  const [isPasswordOpen, setIsPasswordOpen] =
+    React.useState(false);
+
+  // ---------------- UI ----------------
   return (
     <Box
       bg={useColorModeValue("#F4F6F6", "#0E1111")}
@@ -50,7 +67,11 @@ export default function ConfigDashboard() {
             size="sm"
             colorScheme="teal"
             variant={isPlantRoute ? "solid" : "outline"}
-            onClick={() => navigate("/config/plant")}
+            isDisabled={!canPlantConfig}
+            onClick={() => {
+              if (!canPlantConfig) return;
+              setIsPasswordOpen(true);
+            }}
           >
             Plant Config
           </Button>
@@ -84,7 +105,7 @@ export default function ConfigDashboard() {
       {isPlantRoute && (
         <PlantConfigFullScreenForm
           mode="inline"
-          onSubmit={(plant) => {
+          onSubmit={() => {
             toast({
               title: "Saved plant config",
               status: "success",
@@ -93,6 +114,16 @@ export default function ConfigDashboard() {
           }}
         />
       )}
+
+      {/* PASSWORD MODAL */}
+      <ConfirmPasswordModal
+        isOpen={isPasswordOpen}
+        onClose={() => setIsPasswordOpen(false)}
+        onConfirm={() => {
+          setIsPasswordOpen(false);
+          navigate("/config/plant");
+        }}
+      />
     </Box>
   );
 }

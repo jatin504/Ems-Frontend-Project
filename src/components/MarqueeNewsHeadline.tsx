@@ -58,8 +58,17 @@ const MarqueeNewsHeadline: React.FC = () => {
           }
           const dev = j.data?.[m.deviceId];
           const raw = dev?.[m.key];
-          const v = raw?.value ?? raw?.v ?? raw ?? "--";
-          newVals[m.label] = v;
+
+let v = "--";
+
+if (raw && typeof raw === "object") {
+  v = raw.value ?? raw.v ?? "--";   
+} else if (raw !== undefined && raw !== null) {
+  v = raw;
+}
+
+newVals[m.label] = v;
+
         });
 
         setValues(newVals);

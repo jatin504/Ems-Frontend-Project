@@ -19,10 +19,13 @@ import {
   Badge,
   Text,
   HStack,
+  VStack,
   Tooltip,
   useColorModeValue,
+  Select,
 } from "@chakra-ui/react";
-import { SearchIcon, RepeatIcon, CalendarIcon, CloseIcon } from "@chakra-ui/icons";
+import { SearchIcon, RepeatIcon, CalendarIcon, CloseIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
+import { authFetch } from "../hooks/UseAuth";
 
 type AuditLog = {
   id: string;
@@ -32,9 +35,6 @@ type AuditLog = {
   rights?: string;
   ip?: string;
 };
-
-const API_BASE =
-  (import.meta as any).env?.VITE_API_URL ?? "http://75.119.146.115:5179/api";
 
 // dd-mm-yyyy, h:mm:ss am/pm (Asia/Calcutta)
 function formatIST(iso: string) {
@@ -53,7 +53,7 @@ function formatIST(iso: string) {
       second: "2-digit",
       hour12: true,
     }).format(dt); // h:mm:ss am/pm
-    return `${date.replaceAll("/", "-")}, ${time}`;
+    return `${date.replace(/\//g, "-")}, ${time}`;
   } catch {
     return iso;
   }
@@ -65,6 +65,10 @@ export default function UserLogDashboard() {
   const [q, setQ] = useState("");
   const [from, setFrom] = useState(""); // yyyy-mm-dd
   const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const bgCard = useColorModeValue("white", "gray.800");
   const bgTable = useColorModeValue("gray.50", "#0f141a");
@@ -75,20 +79,22 @@ export default function UserLogDashboard() {
   async function load() {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("token");
       const params = new URLSearchParams();
       if (q) params.set("q", q);
-      if (from) params.set("from", new Date(from).toISOString());
-      if (to) params.set("to", new Date(to).toISOString());
+      if (from) params.set("from", from);
+if (to) params.set("to", to);
+      params.set("page", String(page));
+      params.set("limit", String(limit));
 
-      const res = await fetch(`${API_BASE}/audit/logs?${params.toString()}`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const res = await authFetch(`/audit/logs?${params.toString()}`);
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
-      setLogs(
-        Array.isArray(data?.logs) ? data.logs : Array.isArray(data) ? data : []
-      );
+      
+      setLogs(Array.isArray(data?.logs) ? data.logs : []);
+      if (data?.pagination) {
+        setTotal(data.pagination.total || 0);
+        setTotalPages(data.pagination.total_pages || 0);
+      }
     } catch {
       // Demo rows so UI dekhe turant
       setLogs([
@@ -125,23 +131,26 @@ export default function UserLogDashboard() {
           ip: "-",
         },
       ]);
+      setTotal(4);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
-  }, []);
+  load();
+}, [page, limit, from, to]);
 
   function clearFilters() {
     setQ("");
     setFrom("");
     setTo("");
+    setPage(1);
   }
 
   return (
-    <Box px={{ base: 3, md: 6 }} py={4} minH={"85vh"} maxW="container.xl" mx="auto">
+    <Box px={{ base: 3, md: 6 }} py={4} minH={"85vh"} w="100%">
       <Heading size="md" mb={4}>
         User Log
       </Heading>
@@ -231,7 +240,6 @@ export default function UserLogDashboard() {
       >
         <Box
           overflowX="auto"
-          maxH={{ base: "unset", md: "60vh" }}
           sx={{
             "tbody tr:hover td": {
               bg: useColorModeValue("gray.100", "whiteAlpha.100"),
@@ -257,8 +265,10 @@ export default function UserLogDashboard() {
             </Thead>
             <Tbody>
               {logs.map((row) => {
-                const isOff = /logoff/i.test(row.message);
-                const isOn = /logon|login/i.test(row.message);
+                const msgUpper = String(row.message).toUpperCase();
+                const isOff = msgUpper === "LOGOFF";
+                const isOn = msgUpper === "LOGON";
+                const isFailed = msgUpper.includes("FAILED");
                 return (
                   <Tr key={row.id} borderColor={borderCol}>
                     <Td fontFamily="mono" color={textCol}>{formatIST(row.ts)}</Td>
@@ -270,6 +280,10 @@ export default function UserLogDashboard() {
                       ) : isOn ? (
                         <Badge colorScheme={useColorModeValue("green", "green")} variant="solid">
                           LOGON
+                        </Badge>
+                      ) : isFailed ? (
+                        <Badge colorScheme={useColorModeValue("orange", "orange")} variant="solid">
+                          {row.message}
                         </Badge>
                       ) : (
                         <Text color={textCol}>{row.message}</Text>
@@ -293,6 +307,58 @@ export default function UserLogDashboard() {
             </Tbody>
           </Table>
         </Box>
+      </Box>
+
+      {/* Pagination Controls */}
+      <Box mt={4}>
+        <HStack spacing={4} justify="space-between" align="center">
+          <HStack spacing={2}>
+            <Text fontSize="sm" color={textCol}>
+              Rows per page:
+            </Text>
+            <Select
+              w="100px"
+              size="sm"
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              bg={bgCard}
+              borderColor={borderCol}
+              color={textCol}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </Select>
+          </HStack>
+
+          <HStack spacing={2}>
+            <Text fontSize="sm" color={textCol}>
+              Page {page} of {totalPages || 1} ({total} total)
+            </Text>
+            <Tooltip label="Previous page">
+              <IconButton
+                aria-label="Previous"
+                icon={<ChevronLeftIcon />}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                isDisabled={page === 1 || loading}
+                size="sm"
+              />
+            </Tooltip>
+            <Tooltip label="Next page">
+              <IconButton
+                aria-label="Next"
+                icon={<ChevronRightIcon />}
+                onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+                isDisabled={page >= totalPages || loading}
+                size="sm"
+              />
+            </Tooltip>
+          </HStack>
+        </HStack>
       </Box>
     </Box>
   );

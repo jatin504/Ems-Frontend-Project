@@ -171,10 +171,46 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
 
             {/* Users */}
-            <Route path="/users" element={<UsersPage />} />
+            <Route
+              path="/users"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Users" },
+                  ]}
+                >
+                  <UsersPage />
+                </DashboardLayout>
+              }
+            />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/userlog" element={<UserLogDashboard />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route
+              path="/userlog"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "User Logs" },
+                  ]}
+                >
+                  <UserLogDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Settings" },
+                  ]}
+                >
+                  <SettingsPage />
+                </DashboardLayout>
+              }
+            />
 
             {/* Custom Dashboard */}
             <Route path="/custom/dashboard/:id" element={<CustomDashboardView />} />

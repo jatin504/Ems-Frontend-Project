@@ -5,7 +5,7 @@ import {
   Stack, Text, useToast, Spinner
 } from "@chakra-ui/react";
 
-type Role = "admin" | "operator" | "engineer" | "supervisor";
+type Role = "admin" | "manager" | "supervisor" | "engineer" | "operator" | "guest";
 type Policy = {
   role_name: Role;
   min_length: number;
@@ -67,9 +67,11 @@ export default function PolicyPanel() {
   const toast = useToast();
   const roles = useMemo(() => [
     { value: "admin" as Role, label: "Admin" },
-    { value: "operator" as Role, label: "Operator" },
-    { value: "engineer" as Role, label: "Engineer" },
+    { value: "manager" as Role, label: "Manager" },
     { value: "supervisor" as Role, label: "Supervisor" },
+    { value: "engineer" as Role, label: "Engineer" },
+    { value: "operator" as Role, label: "Operator" },
+    { value: "guest" as Role, label: "Guest" },
   ], []);
   const [role, setRole] = useState<Role>("admin");
 
@@ -111,11 +113,12 @@ export default function PolicyPanel() {
       toast({ title: "Nothing to save", description: "No policy loaded.", status: "warning" });
       return;
     }
-    // validate numbers present
+
     const req: (keyof Policy)[] = [
       "min_length","min_numeric","min_alpha","min_special",
       "expiry_days","auto_logoff_minutes","lock_after_attempts"
     ];
+
     for (const k of req) {
       const v = policy[k] as unknown as number;
       if (typeof v !== "number" || Number.isNaN(v)) {
@@ -136,15 +139,35 @@ export default function PolicyPanel() {
         auto_logoff_minutes: policy.auto_logoff_minutes,
         lock_after_attempts: policy.lock_after_attempts,
       };
-      const res = await authFetch(`/policy`, { method: "PUT", body: JSON.stringify(body) });
+
+      const res = await authFetch(`/policy`, {
+        method: "PUT",
+        body: JSON.stringify(body)
+      });
+
+      // ✅ UX: Show specific toast for forbidden
+      if (res.status === 403) {
+        await loadPolicy(role);
+        toast({
+          title: "Forbidden",
+          description: "Only admin can modify policy",
+          status: "warning"
+        });
+        return;
+      }
+      // ✅ IMPORTANT FIX — if forbidden or any fail → reload DB value immediately
       if (!res.ok) {
+        await loadPolicy(role);   // 👈 yahi main fix hai
         const e = await res.json().catch(() => ({}));
         throw new Error(e?.error || `${res.status}`);
       }
+
       const data = await res.json() as Policy;
       setPolicy(data);
+
       toast({ title: "Policy saved", status: "success" });
       _scheduleAutoLogoutFromStoredToken();
+
     } catch (e: any) {
       toast({ title: "Save failed", description: e?.message, status: "error" });
     } finally {

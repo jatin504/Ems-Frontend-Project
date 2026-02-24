@@ -10,6 +10,8 @@ import {
 } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { useBessControlModes } from "../../../../hooks/useBessControlModes";
+import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
+import usePermissions from "../../../../hooks/usePermissions";
 
 type Dot = "green" | "red";
 
@@ -198,6 +200,25 @@ export default function ControlServices() {
   const [qValue, setQValue] = useState("");
   const [modes, setModes] = useState<any>({});
 
+  // PERMISSION CHECK
+  const { permissions } = usePermissions();
+
+  const role = (sessionStorage.getItem("role") || "").toLowerCase();
+
+  const isPermissionLoaded = permissions && permissions.length > 0;
+
+  const myPermission = permissions.find(
+    (p: any) => (p.role_name || "").toLowerCase() === role
+  );
+
+  const canControlService = isPermissionLoaded
+    ? myPermission?.can_control_service === true
+    : true;
+
+  // PASSWORD FLOW STATE
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<any>(null);
+
   const {
     setBessControlSetpoints,
     getBessControlSetpoints,
@@ -221,29 +242,49 @@ export default function ControlServices() {
 
     fetchModes(); // first load
 
-    const interval = setInterval(fetchModes, 3000); // 🔥 auto update
+    const interval = setInterval(fetchModes, 3000); 
 
     return () => clearInterval(interval);
   }, []);
 
   /* ===== APPLY ===== */
   const handleApply = async () => {
-    await setBessControlSetpoints({
+    if (!canControlService) {
+      console.warn("User has no service control permission");
+      return;
+    }
+
+    const payload = {
       p: { setpoint_value: Number(pValue), setpoint_unit: "kW" },
       q: { setpoint_value: Number(qValue), setpoint_unit: "kVAr" },
-    });
+    };
+
+    setPendingPayload(payload);
+    setIsPasswordOpen(true);
+  };
+
+  // 🔥 PASSWORD CONFIRM HANDLER
+  const handlePasswordConfirm = async () => {
+    if (!pendingPayload) return;
+
+    await setBessControlSetpoints(pendingPayload);
+
+    setPendingPayload(null);
+    setIsPasswordOpen(false);
   };
 
   return (
     <Box
-      bg={cardBg}
-      border="1px solid"
-      borderColor={cardBorder}
-      borderRadius="12px"
-      w={`${WRAP_W}px`}
-      h={`${WRAP_H}px`}
-      overflow="hidden"
-    >
+  bg={cardBg}
+  border="1px solid"
+  borderColor={cardBorder}
+  borderRadius="12px"
+  w={`${WRAP_W}px`}
+  h={`${WRAP_H}px`}
+  overflow="hidden"
+  pointerEvents={!canControlService ? "none" : "auto"}
+  opacity={!canControlService ? 0.6 : 1}
+>
       <VStack align="stretch" spacing={0}>
         <HStack justify="space-between" px="16px" py="12px">
           <Text fontWeight={700}>Control Services</Text>
@@ -251,7 +292,13 @@ export default function ControlServices() {
             <Button size="xs" variant="outline">
               Clear
             </Button>
-            <Button size="xs" bg="#33D2D2" color="white" onClick={handleApply}>
+            <Button
+              size="xs"
+              bg="#33D2D2"
+              color="white"
+              onClick={handleApply}
+              isDisabled={!canControlService}
+            >
               Apply
             </Button>
           </HStack>
@@ -324,6 +371,13 @@ export default function ControlServices() {
             modeSymbol={modes?.frt?.control_state === "local" ? "L" : "R"}
           />
         </VStack>
+
+        {/* Password Confirmation Modal */}
+        <ConfirmPasswordModal
+          isOpen={isPasswordOpen}
+          onClose={() => setIsPasswordOpen(false)}
+          onConfirm={handlePasswordConfirm}
+        />
       </VStack>
     </Box>
   );

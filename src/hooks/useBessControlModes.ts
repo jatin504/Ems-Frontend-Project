@@ -18,18 +18,25 @@ export interface BessSetpointPayload {
 
 const BESS_BASE_URL = "http://75.119.146.115:5179";
 
+
+function getToken(): string {
+  return sessionStorage.getItem("token") || "";
+}
+
 export function useBessControlModes() {
   // ===============================
   // SET BESS CONTROL MODES
   // ===============================
   const setBessControlModes = async (payload: BessModePayload) => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
 
     const res = await axios.post(
       `${BESS_BASE_URL}/api/bess_control/set_bess_control_modes`,
       payload,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
     );
 
@@ -42,13 +49,15 @@ export function useBessControlModes() {
   const setBessControlSetpoints = async (
     payload: BessSetpointPayload
   ) => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
 
     const res = await axios.post(
       `${BESS_BASE_URL}/api/bess_control/set_bess_control_setpoints`,
       payload,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
     );
 
@@ -59,12 +68,14 @@ export function useBessControlModes() {
   // GET BESS CONTROL SETPOINTS
   // ===============================
   const getBessControlSetpoints = async () => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
 
     const res = await axios.get(
       `${BESS_BASE_URL}/api/bess_control/get_bess_control_setpoints`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
     );
 
@@ -75,24 +86,24 @@ export function useBessControlModes() {
   // GET BESS CONTROL MODES
   // ===============================
   const getBessControlModes = async () => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
 
     const res = await axios.get(
       `${BESS_BASE_URL}/api/bess_control/get_bess_control_modes`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
     );
 
     return res.data;
   };
 
-  // ===============================
-  // 🔥 AUTO REFRESH (NO PAGE RELOAD)
-  // ===============================
+
   const startBessModeAutoRefresh = (
     onUpdate: (data: any) => void,
-    intervalMs = 3000 // ⏱ 3 sec
+    intervalMs = 3000
   ) => {
     // first load
     getBessControlModes().then(onUpdate);
@@ -102,7 +113,7 @@ export function useBessControlModes() {
       onUpdate(data);
     }, intervalMs);
 
-    return () => clearInterval(interval); // cleanup
+    return () => clearInterval(interval);
   };
 
   return {
@@ -110,6 +121,6 @@ export function useBessControlModes() {
     setBessControlSetpoints,
     getBessControlSetpoints,
     getBessControlModes,
-    startBessModeAutoRefresh, // ✅ NEW
+    startBessModeAutoRefresh,
   };
 }

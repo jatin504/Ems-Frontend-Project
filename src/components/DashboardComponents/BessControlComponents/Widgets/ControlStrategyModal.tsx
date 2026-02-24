@@ -28,6 +28,9 @@ import { AddIcon, DeleteIcon, EditIcon, ViewIcon } from "@chakra-ui/icons";
 
 import MaxCyclesPerDayModal from "./MaxCyclesPerDayModal";
 import RTMAdjustmentDashboard from "../../../../Dashboard/RTMAdjustmentDashboard";
+import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
+import usePermissions from "../../../../hooks/usePermissions";
+
 
 import {
   fetchStrategyConfiguration,
@@ -226,6 +229,25 @@ export default function TariffConfigurationModal({
   >("maxrev");
 
   const [saving, setSaving] = React.useState(false);
+  // 🔥 PERMISSION CHECK (FINAL FIX)
+const { permissions } = usePermissions();
+
+const role = (sessionStorage.getItem("role") || "").toLowerCase();
+
+const isPermissionLoaded = permissions && permissions.length > 0;
+
+const myPermission = permissions.find(
+  (p) => (p.role_name || "").toLowerCase() === role
+);
+
+const canControl = isPermissionLoaded
+  ? myPermission?.can_control_bess === true
+  : true; // jab tak load nahi hua tab disable mat karo
+
+
+  // 🔥 PASSWORD CONFIRMATION FLOW
+  const [isPasswordOpen, setIsPasswordOpen] = React.useState(false);
+  const [pendingPayload, setPendingPayload] = React.useState<any>(null);
 
   //  Modal open hone par GET /strategy/configuration se values load karo
   React.useEffect(() => {
@@ -472,11 +494,11 @@ export default function TariffConfigurationModal({
     const peakShavingPayload =
       tariffMode === "peak" && enablePeakShaving
         ? {
-            mode: peakMode, // soft / hard / predictive
+            mode: peakMode,
             threshold: peakThreshold,
             minSOC: psMinSOC,
             maxDischarge: psMaxDischarge,
-            forecastSource: psForecastSource, // "none" | "ai" | "manual" | "external"
+            forecastSource: psForecastSource,
             softLimit,
             hardLimit,
             maintainSoft: psMaintainSoft,
@@ -487,13 +509,12 @@ export default function TariffConfigurationModal({
     const cappedPayload =
       tariffMode === "capped"
         ? {
-            priceSource: cappedPriceSource, // "dayahead" | "real" | "custom" | "xls"
+            priceSource: cappedPriceSource,
             apiUrl: cappedApiUrl,
             refreshMin: cappedRefreshMin,
             priceCap,
             priceFloor,
             arbThreshold,
-            // ⚠️ Max cycles / day removed from capped dynamic (global BESS cycles used)
             rules: {
               cappedAggressivelyCharge,
               cappedPreventImport,
@@ -505,17 +526,16 @@ export default function TariffConfigurationModal({
     const virtualPayload =
       tariffMode === "virtual"
         ? {
-            customerTariffType, // "0" | "1" (FlatTou / SmartTou -> VirtualTariff.json tou_type)
+            customerTariffType,
             flatPrice,
             aggregatorShare,
             guaranteedSavings,
-            settlementMethod, // "0" | "1" | "2" (VirtualTariff.json settlement_method)
+            settlementMethod,
             billingOutputs,
-            virtualStrategy, // "maxrev" | "balanced" | "solar"
+            virtualStrategy,
           }
         : null;
 
-    // Include new BESS values in bess object
     const payload = {
       tariffMode,
       bess: {
@@ -539,16 +559,28 @@ export default function TariffConfigurationModal({
       virtual: virtualPayload,
     };
 
-    console.log("Saving tariff config (frontend payload):", payload);
+    // 🔥 Open password modal instead of saving directly
+    if (!canControl) {
+  console.warn("User has no BESS control permission");
+  return;
+}
 
+setPendingPayload(payload);
+setIsPasswordOpen(true);
+
+  };
+
+  // 🔥 Password confirm handler
+  const handlePasswordConfirm = async (password: string) => {
     try {
       setSaving(true);
-      const data = await saveStrategyConfiguration(payload);
+      const data = await saveStrategyConfiguration(pendingPayload, password);
       console.log("Tariff config saved OK:", data);
     } catch (err) {
-      console.error("Error calling /strategy/configuration:", err);
+      console.error("Save error:", err);
     } finally {
       setSaving(false);
+      setIsPasswordOpen(false);
       onClose();
     }
   };
@@ -741,14 +773,19 @@ export default function TariffConfigurationModal({
                 {/* Top action buttons */}
                 <HStack justify="flex-end" spacing={2}>
                   <Button
-                    size="xs"
-                    colorScheme="purple"
-                    onClick={handleSave}
-                    isLoading={saving}
-                    loadingText="Saving..."
-                  >
-                    Save
-                  </Button>
+  size="xs"
+  colorScheme="purple"
+  onClick={() => {
+    if (!canControl) return;   // 🔥 permission check
+    handleSave();
+  }}
+  isDisabled={!canControl}
+  isLoading={saving}
+  loadingText="Saving..."
+>
+  Save
+</Button>
+
                   <Button
                     size="xs"
                     variant="outline"
@@ -1640,6 +1677,13 @@ export default function TariffConfigurationModal({
             </ModalBody>
           </ModalContent>
         </Modal>
+
+        {/* Password Confirmation Modal */}
+        <ConfirmPasswordModal
+          isOpen={isPasswordOpen}
+          onClose={() => setIsPasswordOpen(false)}
+          onConfirm={handlePasswordConfirm}
+        />
       </ModalContent>
     </Modal>
   );

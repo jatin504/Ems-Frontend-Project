@@ -1,7 +1,7 @@
 import { useToast } from "@chakra-ui/react";
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5179";
+const BASE_URL = "http://75.119.146.115:5179";
 
 export function useDeleteSchedule() {
   const toast = useToast();

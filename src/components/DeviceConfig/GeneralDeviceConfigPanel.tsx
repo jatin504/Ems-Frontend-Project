@@ -480,11 +480,11 @@ export default function GeneralDeviceConfigPanel({
         <FormControl gridColumn={{ base: "span 12", md: "span 2" }}>
           <FormLabel>Protocol Type</FormLabel>
           <Select>
-            <option key={"88689"} value={"modbus"} defaultChecked style={{ background: "#000", color: "#fff" }}>{"Modbus TCP/IP"}</option>
-            <option key={"88689"} value={"61850"} style={{ background: "#000", color: "#fff" }}>{"61850"}</option>
-            <option key={"88689"} value={"OPC UA"} style={{ background: "#000", color: "#fff" }}>{"OPC UA"}</option>
-            <option key={"88689"} value={"mqtt"} style={{ background: "#000", color: "#fff" }}>{"MQTT"}</option>
-            <option key={"88689"} value={"ftp"} style={{ background: "#000", color: "#fff" }}>{"FTP"}</option>
+            <option key="modbus" value="modbus">Modbus TCP/IP</option>
+<option key="61850" value="61850">61850</option>
+<option key="opcua" value="OPC UA">OPC UA</option>
+<option key="mqtt" value="mqtt">MQTT</option>
+<option key="ftp" value="ftp">FTP</option>
           </Select>
         </FormControl>
 

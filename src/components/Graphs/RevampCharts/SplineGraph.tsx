@@ -40,7 +40,8 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
     ref
   ) => {
     // store actual Highcharts.Chart instance
-    const chartRef = useRef<Highcharts.Chart | null>(null);
+    const chartRef = useRef<any>(null); // <--- any type
+
     const [isDark, setIsDark] = useState(false);
     const [areAllHidden, setAreAllHidden] = useState(false);
 
@@ -90,6 +91,11 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
         spacingTop: 8,
         spacingRight: 12,
         className: 'rounded-lg',
+        events: {
+          mouseOut: () => {
+            setSelectedSeries(null); // ⭐ highlight reset
+          }
+        }
       } as any,
       title: { text: '' },
       credits: { enabled: false },
@@ -121,8 +127,10 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
         maxHeight: legendHeight,
         useHTML: true,
         itemStyle: { color: legendColor, fontSize: '12px' },
-        symbolHeight: 0,
-        symbolWidth: 0,
+        // Show color symbol
+        symbolHeight: 12,
+        symbolWidth: 24,
+        symbolRadius: 0,
         navigation: { enabled: true },
       },
 
@@ -134,17 +142,18 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
         style: { color: tooltipTextColor, fontSize: '12px' },
         valueDecimals: 2,
         formatter: function () {
+          const xValue = typeof this.x === 'number' ? this.x : 0;
           let s = `<b>${Highcharts.dateFormat(
             '%A, %b %e, %Y %H:%M',
-            this.x
+            xValue
           )}</b><br/>`;
 
           if (this.points) {
             this.points.forEach((point) => {
               s += `<span style="color:${point.color}">●</span> ${point.series.name}: <b>${point.y.toFixed(2)}</b>`;
 
-              // ✅ Highcharts internal hover state
-              if (point.series.state === 'hover') {
+              // Optionally highlight selected series (if needed)
+              if (selectedSeries !== null && point.series.index === selectedSeries) {
                 s +=
                   ' <span style="color:#38a169;font-weight:600">(Selected)</span>';
               }
@@ -262,24 +271,26 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
 
     // 🔹 Show / Hide handlers
     const handleHideAll = () => {
-      if (!chartRef.current) return;
+      const chart = chartRef.current && chartRef.current.chart;
+      if (!chart) return;
 
-      chartRef.current.series.forEach((s) => {
+      chart.series.forEach((s: any) => {
         if (s.visible) s.setVisible(false, false);
       });
 
-      chartRef.current.redraw();
+      chart.redraw();
       setAreAllHidden(true);
     };
 
     const handleShowAll = () => {
-      if (!chartRef.current) return;
+      const chart = chartRef.current && chartRef.current.chart;
+      if (!chart) return;
 
-      chartRef.current.series.forEach((s) => {
+      chart.series.forEach((s: any) => {
         if (!s.visible) s.setVisible(true, false);
       });
 
-      chartRef.current.redraw();
+      chart.redraw();
       setAreAllHidden(false);
     };
 
@@ -287,14 +298,14 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
     const buttonOffset = 40;
 
     return (
-      <Box position="relative">
+      <Box position="relative" zIndex={1}>
         <Button
           size="xs"
           variant="ghost"
           position="absolute"
           left={`${legendOffset}px`}
           bottom={`-${buttonOffset}px`}
-          zIndex={0}
+          zIndex={10}
           onClick={handleShowAll}
           style={{ marginBottom: `${legendHeight || 45}px` }}
           disabled={!areAllHidden}
@@ -308,7 +319,7 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
           position="absolute"
           right={`${legendOffset}px`}
           bottom={`-${buttonOffset}px`}
-          zIndex={0}
+          zIndex={10}
           onClick={handleHideAll}
           style={{ marginBottom: `${legendHeight || 45}px` }}
           disabled={areAllHidden}
@@ -319,16 +330,24 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
         <HighchartsReact
           highcharts={Highcharts}
           options={chartOptions}
-          ref={ref}
-          callback={(chart) => {
+          ref={chartRef} // <-- yahi sahi hai
+          callback={(chart: Highcharts.Chart) => {
             chartRef.current = chart;
+
+            // ⭐ cursor chart se bahar gaya to highlight reset
+            chart.container.addEventListener('mouseleave', () => {
+              setSelectedSeries(null);
+            });
 
             onExportReady?.({
               exportPNG: () =>
-                chart.exportChart({
-                  type: 'image/png',
-                  filename: 'chart',
-                }),
+                chart.exportChart(
+                  {
+                    type: 'image/png',
+                    filename: 'chart',
+                  },
+                  {}
+                ),
               exportCSV: () => chart.downloadCSV(),
             });
           }}

@@ -121,6 +121,7 @@ export const TimeWindow: React.FC<TimeWindowProps> = ({
     // Relative options
     const relativeOptions = [
         { label: "Today So Far", value: "currentDaySoFar" },
+        { label: "Yesterday", value: "yesterday" },
         { label: "This Week So Far", value: "currentWeekSoFar" },
         { label: "This Month So Far", value: "currentMonthSoFar" },
         { label: "This Quater So Far", value: "currentQuarterSoFar" },

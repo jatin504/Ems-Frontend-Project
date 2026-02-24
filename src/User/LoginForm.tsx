@@ -1,4 +1,3 @@
-// src/User/LoginForm.tsx
 import {
   Box,
   Button,
@@ -13,29 +12,40 @@ import {
   HStack,
   Checkbox,
   Text,
-  Link as ChakraLink,
   Heading,
   Divider,
   useColorModeValue,
 } from "@chakra-ui/react";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginForm() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const toast = useToast();
   const navigate = useNavigate();
 
-  // Light/Dark adaptive styles
-  const cardBg = useColorModeValue("rgba(255,255,255,0.7)", "rgba(18,24,20,0.6)");
-  const cardBorder = useColorModeValue("blackAlpha.200", "whiteAlpha.200");
+  const cardBg = useColorModeValue(
+    "rgba(255,255,255,0.7)",
+    "rgba(18,24,20,0.6)"
+  );
+  const cardBorder = useColorModeValue(
+    "blackAlpha.200",
+    "whiteAlpha.200"
+  );
   const inputBg = useColorModeValue("white", "whiteAlpha.100");
-  const placeholderColor = useColorModeValue("blackAlpha.500", "whiteAlpha.700");
-  const textColor = useColorModeValue("gray.800", "whiteAlpha.900");
+  const placeholderColor = useColorModeValue(
+    "blackAlpha.500",
+    "whiteAlpha.700"
+  );
+  const textColor = useColorModeValue(
+    "gray.800",
+    "whiteAlpha.900"
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -45,18 +55,19 @@ export default function LoginForm() {
     return () => window.removeEventListener("keydown", onKey);
   }, [identifier, password]);
 
+  // MAIN LOGIN
   const handleLogin = async () => {
     if (!identifier || !password) {
       toast({
         title: "Please fill all fields",
         status: "warning",
         duration: 2500,
-        isClosable: true,
       });
       return;
     }
 
     setLoading(true);
+
     try {
       const res = await fetch("http://75.119.146.115:5179/api/login", {
         method: "POST",
@@ -67,16 +78,35 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (res.ok) {
+        // TOKEN SAVE
         sessionStorage.setItem("token", data.access_token);
 
+        // NAME SAVE
         const displayName =
           data?.user?.fullName ||
-          [data?.user?.firstName, data?.user?.lastName].filter(Boolean).join(" ") ||
-          data?.name ||
-          data?.fullName ||
+          [data?.user?.firstName, data?.user?.lastName]
+            .filter(Boolean)
+            .join(" ") ||
           identifier;
 
         sessionStorage.setItem("userName", displayName);
+
+        // ROLE FIX — JWT SE ROLE NIKALO (OLD FLOW SAME RAHEGA)
+        let role = "";
+        try {
+          const payload = JSON.parse(
+            atob(data.access_token.split(".")[1])
+          );
+          role = String(payload?.role || "").toLowerCase();
+        } catch (e) {
+          role = "";
+        }
+
+        sessionStorage.setItem("role", role);
+
+        console.log("LOGIN ROLE SAVED =", role);
+        console.log("FULL LOGIN RESPONSE =", data);
+
         window.dispatchEvent(new Event("storage"));
 
         toast({
@@ -84,7 +114,6 @@ export default function LoginForm() {
           description: `Logged in as ${displayName}`,
           status: "success",
           duration: 3000,
-          isClosable: true,
         });
 
         navigate("/plantview");
@@ -94,7 +123,6 @@ export default function LoginForm() {
           description: data.message || "Invalid credentials",
           status: "error",
           duration: 3000,
-          isClosable: true,
         });
       }
     } catch (err) {
@@ -104,7 +132,6 @@ export default function LoginForm() {
         description: "Unable to connect to backend",
         status: "error",
         duration: 3000,
-        isClosable: true,
       });
     } finally {
       setLoading(false);
@@ -121,14 +148,10 @@ export default function LoginForm() {
       bg={cardBg}
       border="1px solid"
       borderColor={cardBorder}
-      boxShadow={useColorModeValue(
-        "0 8px 30px rgba(0,0,0,0.15)",
-        "0 8px 30px rgba(0,0,0,0.35)"
-      )}
       color={textColor}
     >
       <VStack spacing={5} align="stretch">
-        <Heading size="lg" lineHeight={1.1}>
+        <Heading size="lg">
           Sign in to{" "}
           <Text
             as="span"
@@ -147,7 +170,6 @@ export default function LoginForm() {
           <Input
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="you@cogneta.green"
             bg={inputBg}
             _placeholder={{ color: placeholderColor }}
           />
@@ -160,13 +182,12 @@ export default function LoginForm() {
               type={showPwd ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your secure password"
               bg={inputBg}
               _placeholder={{ color: placeholderColor }}
             />
             <InputRightElement>
               <IconButton
-                aria-label={showPwd ? "Hide password" : "Show password"}
+                aria-label="toggle"
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowPwd((s) => !s)}
@@ -176,9 +197,10 @@ export default function LoginForm() {
           </InputGroup>
         </FormControl>
 
-        {/* Bottom row: only Remember me (Forgot password removed) */}
-        <HStack justify="flex-start">
-          <Checkbox defaultChecked colorScheme="green">Remember me</Checkbox>
+        <HStack>
+          <Checkbox defaultChecked colorScheme="green">
+            Remember me
+          </Checkbox>
         </HStack>
 
         <Button
@@ -186,17 +208,12 @@ export default function LoginForm() {
           size="lg"
           onClick={handleLogin}
           isLoading={loading}
-          loadingText="Signing in"
           isDisabled={!identifier || !password}
-          _hover={{ transform: "translateY(-1px)" }}
-          transition="all 0.15s ease"
         >
           Sign in
         </Button>
 
-        <Divider borderColor={useColorModeValue("blackAlpha.300", "whiteAlpha.300")} />
-
-        
+        <Divider />
       </VStack>
     </Box>
   );

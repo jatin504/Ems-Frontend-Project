@@ -25,6 +25,7 @@ import { ChevronDownIcon, CheckIcon } from "@chakra-ui/icons";
 import { useLocation } from "react-router-dom";
 import UserList from "./UserList";
 import UserForm from "./UserForm";
+import useUsers from "../hooks/useUsers";
 import type { User } from "./User";
 
 /* --------------------- Inline dark RoleSelect (no separate file) --------------------- */
@@ -84,7 +85,7 @@ const splitFirstLast = (raw: string | undefined) => {
 };
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const { users, fetchUsers, createUser, deleteUser, blockUser, updateUser } = useUsers();
   const [showForm, setShowForm] = useState(false);
 
   // edit state
@@ -104,91 +105,40 @@ export default function UsersPage() {
     if (location.search.includes("create=true")) setShowForm(true);
   }, [location.search]);
 
-  const fetchUsers = () => {
-    fetch("http://75.119.146.115:5179/api/users")
-      .then((res) => res.json())
-      .then((data) => {
-        const normalized: User[] = (data || []).map((u: any) => {
-          const hasProperNames =
-            u.first_name && typeof u.last_name === "string" && u.last_name.length > 0;
-          const { first, last } = splitFirstLast(u.first_name);
-          return {
-            id: u.id,
-            firstName: hasProperNames ? u.first_name : first,
-            lastName: hasProperNames ? u.last_name : last,
-            email: u.email,
-            phone: u.phone ?? "",                 // will now be present from backend
-            role: (u.role ?? "viewer").toLowerCase(),
-            is_blocked: u.is_blocked ?? false,
-          };
-        });
-        setUsers(normalized);
-      })
-      .catch((err) => console.error("Error fetching users:", err));
-  };
-
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  const handleFormSubmit = (newUser: User) => {
-    setUsers((prev) => [...prev, newUser]);
-    setShowForm(false);
+  const handleFormSubmit = async (newUser: User) => {
+    try {
+      const payload = {
+        username: `${(newUser.firstName || "").toLowerCase()}_${(newUser.lastName || "").toLowerCase()}`.replace(/\s+/g, "_"),
+        email: newUser.email,
+        role: newUser.role,
+        phone: newUser.phone,
+      };
+      await createUser(payload);
+      setShowForm(false);
+    } catch (err: any) {
+      console.error("Create user failed", err);
+    }
   };
 
   const handleDelete = async (id: number) => {
     try {
-      const res = await fetch(`http://75.119.146.115:5179/api/users/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.id !== id));
-        toast({ title: "User deleted", status: "success", duration: 3000, isClosable: true });
-      } else {
-        const data = await res.json();
-        toast({
-          title: "Delete failed",
-          description: data.message,
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch {
-      toast({ title: "Error deleting user", status: "error", duration: 3000, isClosable: true });
+      await deleteUser(id);
+      toast({ title: "User deleted", status: "success", duration: 3000, isClosable: true });
+    } catch (err: any) {
+      toast({ title: "Delete failed", description: err?.message || "Error", status: "error", duration: 3000, isClosable: true });
     }
   };
 
   const handleBlock = async (id: number, is_blocked: boolean) => {
     try {
-      const res = await fetch(`http://75.119.146.115:5179/api/users/${id}/block`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_blocked: !is_blocked }),
-      });
-      if (res.ok) {
-        fetchUsers();
-        toast({
-          title: `User ${is_blocked ? "unblocked" : "blocked"}`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      } else {
-        const data = await res.json().catch(() => ({}));
-        toast({
-          title: "Failed to update block",
-          description: data?.message || "Unknown error",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch {
-      toast({
-        title: "Error updating block status",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      await blockUser(id, is_blocked);
+      toast({ title: `User ${is_blocked ? "unblocked" : "blocked"}`, status: "success", duration: 3000, isClosable: true });
+    } catch (err: any) {
+      toast({ title: "Failed to update block", description: err?.message || "Unknown error", status: "error", duration: 3000, isClosable: true });
     }
   };
 
@@ -216,28 +166,11 @@ export default function UsersPage() {
     };
 
     try {
-      const res = await fetch(`http://75.119.146.115:5179/api/users/${editing.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok) {
-        toast({ title: "User updated", status: "success", duration: 3000, isClosable: true });
-        setEditing(null);
-        fetchUsers();
-      } else {
-        toast({
-          title: "Update failed",
-          description: data?.message || "Invalid data",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch {
-      toast({ title: "Error updating user", status: "error", duration: 3000, isClosable: true });
+      await updateUser(editing.id as number, body);
+      toast({ title: "User updated", status: "success", duration: 3000, isClosable: true });
+      setEditing(null);
+    } catch (err: any) {
+      toast({ title: "Update failed", description: err?.message || "Invalid data", status: "error", duration: 3000, isClosable: true });
     }
   };
 

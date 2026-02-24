@@ -12,6 +12,7 @@ import {
 import ReactSelect, { components as reactSelectComponents } from "react-select";
 import useReports from "../hooks/useReports";
 import useReportTemplate from "../hooks/useReportTemplate";
+import useReportsApi from "../hooks/useReportsApi";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronRightIcon } from "@chakra-ui/icons";
 
@@ -30,6 +31,7 @@ export default function ReportDashboard() {
   const location = useLocation();
   const editTemplate = (location.state as any)?.editTemplate;
   const { updateTemplate } = useReportTemplate();
+  const { saveOrSchedule } = useReportsApi();
   // helper to format ms -> datetime-local string
   const formatMsToLocalInput = (ms?: number | string | null) => {
     if (ms === undefined || ms === null) return "";
@@ -62,6 +64,11 @@ export default function ReportDashboard() {
   const [email, setEmail] = React.useState(editTemplate?.email ?? "");
   const [scheduleTime, setScheduleTime] = React.useState(editTemplate?.scheduleTime ?? "");
   const [scheduleLive, setScheduleLive] = React.useState(editTemplate?.scheduleLive ?? "");
+  // ⭐ NEW (5 minute scheduler support)
+  const [scheduleMinute, setScheduleMinute] = React.useState(
+    editTemplate?.scheduleMinute ?? "0"
+  );
+
 
   React.useEffect(() => {
     if (!editTemplate?.configuration) return;
@@ -140,11 +147,11 @@ export default function ReportDashboard() {
       return;
     }
     if (selectedDateType === "history") {
-      if (!historyStartTs || !historyEndTs) {
+      if (!startTs || !endTs) {
         toast({ title: "Start and End timestamps are required for History.", status: "warning", duration: 3000, isClosable: true });
         return;
       }
-      if (new Date(historyStartTs) > new Date(historyEndTs)) {
+      if (new Date(startTs) > new Date(endTs)) {
         toast({ title: "StartTs must be before EndTs.", status: "warning", duration: 3000, isClosable: true });
         return;
       }
@@ -161,11 +168,15 @@ export default function ReportDashboard() {
 
     const payload = {
       reportName, schedule, email: schedule === "email" ? email : null,
-      scheduleTime, scheduleLive,
+      scheduleTime,
+      scheduleMinute,
+      scheduleLive,
+
+
       selectedDeviceTypes, selectedDeviceIds, selectedParams,
       selectedDateType, selectedFrequency, selectedInterval,
       previewData: reportData || [],
-      ...(selectedDateType === "history" ? { historyStartTs, historyEndTs } : {}),
+      ...(selectedDateType === "history" ? { startTs, endTs } : {}),
       ...(schedule === "self" && userIdFromToken ? { userId: userIdFromToken } : {}),
     };
 
@@ -177,49 +188,25 @@ export default function ReportDashboard() {
         navigate("/report/template");
         return;
       }
-
-      const BASE_URL =
-        (import.meta as any).env?.VITE_API_BASE ||
-        "http://75.119.146.115:5179";
-
-      // 🔥 Decide endpoint based on schedule type
-      const endpoint =
-        schedule === "email"
-          ? `${BASE_URL}/api/reports/schedule`
-          : `${BASE_URL}/api/reports/templates`;
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-
-      let data: any = {};
-      try {
-        data = await res.json();
-      } catch { /* ignore parse errors */ }
-
-      if (res.ok && data?.ok) {
-        toast({
-          title: "Template saved!",
-          description: `Report "${reportName}" saved for ${schedule}${schedule === "email" ? ` (${email})` : ""}.`,
-          status: "success", duration: 3000, isClosable: true,
-        });
         try {
-          navigate("/report/template");
-        } catch (e) {
-          // ignore navigation errors in non-router environments
+          await saveOrSchedule(payload, schedule as any);
+          toast({
+            title: "Template saved!",
+            description: `Report "${reportName}" saved for ${schedule}${schedule === "email" ? ` (${email})` : ""}.`,
+            status: "success", duration: 3000, isClosable: true,
+          });
+          try {
+            navigate("/report/template");
+          } catch (e) {
+            // ignore navigation errors in non-router environments
+          }
+        } catch (err: any) {
+          toast({
+            title: "Error saving template",
+            description: err?.message || "Unknown error",
+            status: "error", duration: 3000, isClosable: true,
+          });
         }
-      } else {
-        toast({
-          title: "Error saving template",
-          description: data?.error || `Status ${res.status}` || "Unknown error",
-          status: "error", duration: 3000, isClosable: true,
-        });
-      }
     } catch (err: any) {
       toast({
         title: "Network error",
@@ -368,11 +355,22 @@ export default function ReportDashboard() {
                   hideSelectedOptions={false}
                   placeholder={selectedDeviceTypes.length === 0 ? "Select type first" : "Select device IDs"}
                   isDisabled={selectedDeviceTypes.length === 0}
-                  value={allDeviceIds
-                    .filter((id) => selectedDeviceIds.includes(id))
-                    .map((id) => ({ label: id, value: id }))}
-                  onChange={(selected) => setSelectedDeviceIds(selected ? selected.map((s) => s.value) : [])}
-                  options={allDeviceIds.map((id) => ({ label: id, value: id }))}
+                  value={
+                    selectedDeviceIds.length === allDeviceIds.length && allDeviceIds.length > 0
+                      ? [{ label: "All", value: "__ALL__" }]
+                      : allDeviceIds
+                        .filter((id) => selectedDeviceIds.includes(id))
+                        .map((id) => ({ label: id, value: id }))
+                  }
+                  onChange={(selected) => {
+                    const sel = selected || [];
+                    if (sel.some((s: any) => s.value === "__ALL__")) {
+                      setSelectedDeviceIds(allDeviceIds);
+                    } else {
+                      setSelectedDeviceIds(sel ? sel.map((s: any) => s.value) : []);
+                    }
+                  }}
+                  options={[{ label: "All", value: "__ALL__" }, ...allDeviceIds.map((id) => ({ label: id, value: id }))]}
                   blurInputOnSelect={false}
                   openMenuOnFocus
                   filterOption={(option, rawInput) =>
@@ -424,11 +422,22 @@ export default function ReportDashboard() {
                   closeMenuOnSelect={false}
                   hideSelectedOptions={false}
                   placeholder="Select parameters"
-                  value={allDeviceColumns
-                    .filter((p) => selectedParams.includes(p))
-                    .map((p) => ({ label: p, value: p }))}
-                  onChange={(selected) => setSelectedParams(selected ? selected.map((s) => s.value) : [])}
-                  options={allDeviceColumns.map((p) => ({ label: p, value: p }))}
+                  value={
+                    selectedParams.length === allDeviceColumns.length && allDeviceColumns.length > 0
+                      ? [{ label: "All", value: "__ALL_PARAMS__" }]
+                      : allDeviceColumns
+                        .filter((p) => selectedParams.includes(p))
+                        .map((p) => ({ label: p, value: p }))
+                  }
+                  onChange={(selected) => {
+                    const sel = selected || [];
+                    if (sel.some((s: any) => s.value === "__ALL_PARAMS__")) {
+                      setSelectedParams(allDeviceColumns);
+                    } else {
+                      setSelectedParams(sel ? sel.map((s: any) => s.value) : []);
+                    }
+                  }}
+                  options={[{ label: "All", value: "__ALL_PARAMS__" }, ...allDeviceColumns.map((p) => ({ label: p, value: p }))]}
                   blurInputOnSelect={false}
                   openMenuOnFocus
                   filterOption={(option, rawInput) =>
@@ -494,12 +503,24 @@ export default function ReportDashboard() {
             </VStack>
 
             <VStack align="start" minW="200px" flex="1">
-              <Text fontWeight="semibold">Schedule Time (Hour)</Text>
-              <Select placeholder="Pick hour" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} color={fg} bg={inputBg} borderColor={borderClr}>
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i} style={{ color: "black" }}>{i}:00</option>
-                ))}
-              </Select>
+              <Text fontWeight="semibold">Schedule Time</Text>
+              <Input
+                type="time"
+                value={
+                  scheduleTime !== "" || scheduleMinute !== ""
+                    ? `${String(scheduleTime).padStart(2, "0")}:${String(scheduleMinute ?? "0").padStart(2, "0")}`
+                    : ""
+                }
+                onChange={(e: any) => {
+                  const val = e.target.value || ""; // format HH:MM
+                  const [hh = "", mm = ""] = val.split(":");
+                  setScheduleTime(hh !== "" ? String(Number(hh)) : "");
+                  setScheduleMinute(mm !== "" ? String(Number(mm)) : "0");
+                }}
+                bg={inputBg}
+                color={fg}
+                borderColor={borderClr}
+              />
             </VStack>
 
             <VStack align="start" minW="200px" flex="1">

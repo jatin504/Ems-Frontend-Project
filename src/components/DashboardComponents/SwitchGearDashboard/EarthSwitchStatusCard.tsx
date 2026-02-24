@@ -1,3 +1,6 @@
+import React, { useState } from "react";
+import usePermissions from "../../../hooks/usePermissions";
+import ConfirmPasswordModal from "../../Common/ConfirmPasswordModal";
 import {
   Box,
   Flex,
@@ -19,11 +22,14 @@ interface EarthSwitchData {
   positionFeedback: string;
 }
 
-export default function EarthSwitchStatusCard({
-  data,
-}: {
-  data: EarthSwitchData;
-}) {
+export default function EarthSwitchStatusCard({ data }: { data: EarthSwitchData }) {
+  // Permission logic
+  const { permissions } = usePermissions();
+  const role = (sessionStorage.getItem("role") || "").toLowerCase();
+  const myPermission = (permissions || []).find((p) => (p.role_name || "").toLowerCase() === role);
+  const canSwitchGear = myPermission?.can_control_switchgear === true;
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+
   const bg = useColorModeValue("#FFFFFF", "#2B2F36");
   const color = useColorModeValue("#1A202C", "white");
   const headerBg = useColorModeValue("#EDF2F7", "#1F2328");
@@ -76,10 +82,24 @@ export default function EarthSwitchStatusCard({
             px="8px"
             fontSize="10px"
             fontWeight={600}
+            isDisabled={!canSwitchGear}
+            onClick={() => {
+              if (!canSwitchGear) return;
+              setIsPasswordOpen(true);
+            }}
           >
             OPEN
           </Button>
         </HStack>
+        {/* Password Modal for Switch Gear */}
+        <ConfirmPasswordModal
+          isOpen={isPasswordOpen}
+          onClose={() => setIsPasswordOpen(false)}
+          onConfirm={() => {
+            setIsPasswordOpen(false);
+            // TODO: Add actual open logic here after password confirmation
+          }}
+        />
       </Flex>
 
       <Divider borderColor={borderColor} />

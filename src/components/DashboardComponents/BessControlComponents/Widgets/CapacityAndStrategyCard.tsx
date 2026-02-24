@@ -14,6 +14,8 @@ import {
 } from "@chakra-ui/react";
 import { EditIcon } from "@chakra-ui/icons";
 import ReactSelect, { components } from "react-select";
+import usePermissions from "../../../../hooks/usePermissions";
+import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
 
 import { useCurrentStrategy } from "../../../../hooks/current_strategy/useCurrentStrategy";
 import { useDevices } from "../../../../hooks/useDevices";
@@ -126,7 +128,17 @@ const CheckboxOptionPCS = (props: any) => {
 
 /* ================= MAIN ================= */
 
-export default function CapacityAndStrategyCard() {
+const CapacityAndStrategyCard: React.FC = () => {
+  // 🔥 Permission logic
+  const { permissions } = usePermissions();
+  const role = (sessionStorage.getItem("role") || "").toLowerCase();
+  const myPermission = permissions.find(
+    (p: any) => (p.role_name || "").toLowerCase() === role
+  );
+  const canControl =
+    permissions?.length > 0
+      ? myPermission?.can_control_bess === true
+      : true;
   const cardBg = useColorModeValue("#ffffff", "#161B1B");
   const cardBorder = useColorModeValue("#e5e7eb", "#202525");
   const softBg = useColorModeValue("#f3f4f6", "#1C2121");
@@ -135,19 +147,16 @@ export default function CapacityAndStrategyCard() {
   const { devices } = useDevices();
   const { setBessControlModes, getBessControlModes } = useBessControlModes();
 
-  const [injectionMode, setInjectionMode] =
-    useState<"single" | "multi" | "vvp">("multi");
-
+  const [injectionMode, setInjectionMode] = useState<"single" | "multi" | "vvp">("multi");
   const [selectedModes, setSelectedModes] = useState<any[]>([]);
   const [pcsByMode, setPcsByMode] = useState<Record<string, any[]>>({});
   const [activePCSMode, setActivePCSMode] = useState<string | null>(null);
-  const [localRemoteMode, setLocalRemoteMode] =
-    useState<"Local" | "Remote">("Local");
-
+  const [localRemoteMode, setLocalRemoteMode] = useState<"Local" | "Remote">("Local");
   const [backendModes, setBackendModes] = useState<any>({}); // ✅ NEW
-
   const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  // Password modal state for Apply
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 
   /* ========= PCS OPTIONS ========= */
 
@@ -206,30 +215,31 @@ export default function CapacityAndStrategyCard() {
   /* ================= APPLY ================= */
 
   const handleApply = async () => {
-  const selectedKeys = selectedModes.map(
-    (m) => MODE_KEY_MAP[m.value]
-  );
+    setIsPasswordOpen(true);
+  };
 
-  const payload: any = {};
+  // Actual apply logic after password confirmation
+  const handlePasswordConfirm = async () => {
+    setIsPasswordOpen(false);
+    const selectedKeys = selectedModes.map(
+      (m) => MODE_KEY_MAP[m.value]
+    );
 
-  Object.entries(MODE_KEY_MAP).forEach(([label, key]) => {
-    payload[key] = {
-      name: key,
-      active: selectedKeys.includes(key),
+    const payload: any = {};
 
-      // ✅ FINAL LOGIC
-      // Active → dropdown se
-      // Inactive → backend ka jo hai wahi
-      control_state: selectedKeys.includes(key)
-        ? localRemoteMode.toLowerCase()
-        : backendModes?.[key]?.control_state,
+    Object.entries(MODE_KEY_MAP).forEach(([label, key]) => {
+      payload[key] = {
+        name: key,
+        active: selectedKeys.includes(key),
+        control_state: selectedKeys.includes(key)
+          ? localRemoteMode.toLowerCase()
+          : backendModes?.[key]?.control_state,
+        pcs_device_id: (pcsByMode[label] || []).map((p) => p.value),
+      };
+    });
 
-      pcs_device_id: (pcsByMode[label] || []).map((p) => p.value),
-    };
-  });
-
-  await setBessControlModes(payload);
-};
+    await setBessControlModes(payload);
+  };
 
   const selectStyles = {
     control: (base: any) => ({
@@ -251,6 +261,9 @@ export default function CapacityAndStrategyCard() {
       minH="210px"
       p="16px"
       position="relative"
+      // 🔥 FULL UI LOCK
+      pointerEvents={!canControl ? "none" : "auto"}
+      opacity={!canControl ? 0.6 : 1}
     >
       <VStack spacing="16px" align="stretch">
         <Text fontWeight={600} fontSize="16px">
@@ -292,9 +305,14 @@ export default function CapacityAndStrategyCard() {
             />
           </Box>
 
-          <Button colorScheme="teal" onClick={handleApply}>
+          <Button colorScheme="teal" onClick={handleApply} isDisabled={!canControl}>
             Apply
           </Button>
+          <ConfirmPasswordModal
+            isOpen={isPasswordOpen}
+            onClose={() => setIsPasswordOpen(false)}
+            onConfirm={handlePasswordConfirm}
+          />
         </HStack>
 
         {activePCSMode && (
@@ -359,7 +377,13 @@ export default function CapacityAndStrategyCard() {
               aria-label="edit"
               icon={<EditIcon />}
               size="sm"
-              onClick={() => setIsOpen(true)}
+              isDisabled={!canControl}
+              opacity={!canControl ? 0.5 : 1}
+              cursor={!canControl ? "not-allowed" : "pointer"}
+              onClick={() => {
+                if (!canControl) return;
+                setIsOpen(true);
+              }}
             />
           </HStack>
         </HStack>
@@ -387,4 +411,6 @@ export default function CapacityAndStrategyCard() {
       />
     </Box>
   );
-}
+};
+
+export default CapacityAndStrategyCard;

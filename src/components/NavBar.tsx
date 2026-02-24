@@ -1,3 +1,4 @@
+import ConfirmPasswordModal from "./Common/ConfirmPasswordModal";
 import {
   Box, Flex, HStack, IconButton, Button, useDisclosure,
   Stack, Text, VStack, Image as ChakraImage,   
@@ -163,6 +164,8 @@ const Navbar = () => {
   const [id, setId] = useState("");
   const { createDashboard, getDashboard, dashboards } = useDashboard();
   useEffect(() => { getDashboard(); }, []);
+
+
 
   const handleCreate = () => {
     if (!title.trim() || !id.trim()) return;
@@ -426,7 +429,13 @@ const Navbar = () => {
                   <MenuItem onClick={() => goDevice("bess")} py={1} fontSize="sm">BESS</MenuItem>
                   <MenuItem onClick={() => goDevice("transformer")} py={1} fontSize="sm">Transformer</MenuItem>
                   <MenuItem onClick={() => goDevice("dc-zone")} py={1} fontSize="sm">DC Zone</MenuItem>
-                  <MenuItem onClick={() => goDevice("switch-gear")} py={1} fontSize="sm">Switch Gear</MenuItem>
+                  <MenuItem
+                    py={1}
+                    fontSize="sm"
+                    onClick={() => navigate("/devices/switch-gear")}
+                  >
+                    Switch Gear
+                  </MenuItem>
                   <MenuItem onClick={() => navigate("/devices/protection-relay")} py={1} fontSize="sm">Protection Relay</MenuItem>
                 </MenuList>
               </Portal>
@@ -666,6 +675,7 @@ const Navbar = () => {
           </Stack>
         </Box>
       )}
+
     </Box>
   );
 };

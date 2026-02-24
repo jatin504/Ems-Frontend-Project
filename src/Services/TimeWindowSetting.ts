@@ -49,15 +49,16 @@ const resolveTimeRangeToTimestamps = (
                         endTs: now,
                     };
                     
-                case "currentMonthSoFar":
+                case "currentMonthSoFar": {
                     const cmsf = new Date(now);
                     const startOfMonth = new Date(cmsf.getFullYear(), cmsf.getMonth(), 1);
                     return {
                         startTs: startOfMonth.getTime(),
                         endTs: now,
                     };
+                }
 
-                case "currentWeekSoFar":
+                case "currentWeekSoFar": {
                     const currentWeekStart = new Date(now);
                     const dayOfWeek = currentWeekStart.getDay(); // 0 = Sunday
                     currentWeekStart.setDate(currentWeekStart.getDate() - dayOfWeek);
@@ -66,8 +67,9 @@ const resolveTimeRangeToTimestamps = (
                         startTs: currentWeekStart.getTime(),
                         endTs: now,
                     };
+                }
 
-                case "currentQuarterSoFar":
+                case "currentQuarterSoFar": {
                     const cqsf = new Date(now);
                     const currentMonth = cqsf.getMonth();
                     const quarterStartMonth = Math.floor(currentMonth / 3) * 3; // 0,3,6,9
@@ -76,16 +78,19 @@ const resolveTimeRangeToTimestamps = (
                         startTs: startOfQuarter.getTime(),
                         endTs: now,
                     };
-                // case "yesterday":
-                //     const yesterdayStart = new Date(now);
-                //     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-                //     yesterdayStart.setHours(0, 0, 0, 0);
-                //     const yesterdayEnd = new Date(yesterdayStart);
-                //     yesterdayEnd.setDate(yesterdayEnd.getDate() + 1);
-                //     return {
-                //         startTs: yesterdayStart.getTime(),
-                //         endTs: yesterdayEnd.getTime(),
-                //     };
+                }
+
+                case "yesterday": {
+                    const yesterdayStart = new Date(now);
+                    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+                    yesterdayStart.setHours(0, 0, 0, 0);
+                    const yesterdayEnd = new Date(yesterdayStart);
+                    yesterdayEnd.setDate(yesterdayEnd.getDate() + 1);
+                    return {
+                        startTs: yesterdayStart.getTime(),
+                        endTs: yesterdayEnd.getTime(),
+                    };
+                }
                 // case "last7Days":
                 //     return {
                 //         startTs: now - 7 * day,

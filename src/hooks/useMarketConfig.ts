@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://75.119.146.115:5179";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5179";
 
 /* ================= TYPES ================= */
 
@@ -28,6 +28,11 @@ export function useMarketConfig() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 🔥 GLOBAL TOKEN HELPER (EMS STANDARD)
+  function getToken(): string {
+    return sessionStorage.getItem("token") || "";
+  }
+
   /* ================= DAM ================= */
 
   const getDAMConfig = async (): Promise<DamConfig | null> => {
@@ -37,7 +42,10 @@ export function useMarketConfig() {
 
       const res = await fetch(`${API_BASE_URL}/api/market/dam-timing`, {
         method: "GET",
-        cache: "no-store", 
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
       });
 
       if (!res.ok) {
@@ -55,16 +63,26 @@ export function useMarketConfig() {
     }
   };
 
-  const saveDAMConfig = async (payload: DamConfig): Promise<void> => {
+  const saveDAMConfig = async (
+    payload: DamConfig,
+    password?: string
+  ): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      };
+
+      if (password) {
+        headers["X-Confirm-Password"] = password;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/market/dam-timing`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -89,7 +107,10 @@ export function useMarketConfig() {
 
       const res = await fetch(`${API_BASE_URL}/api/market/rtm-timing`, {
         method: "GET",
-        cache: "no-store", 
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
       });
 
       if (!res.ok) {
@@ -107,16 +128,26 @@ export function useMarketConfig() {
     }
   };
 
-  const saveRTMConfig = async (payload: RtmConfig): Promise<void> => {
+  const saveRTMConfig = async (
+    payload: RtmConfig,
+    password?: string
+  ): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      };
+
+      if (password) {
+        headers["X-Confirm-Password"] = password;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/market/rtm-timing`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(payload),
       });
 

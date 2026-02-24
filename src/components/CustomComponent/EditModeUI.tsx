@@ -574,6 +574,7 @@ export default function EditModeUI(props: EditModeUIProps) {
             onChange={(e) => onPresetRangeChange?.(e.target.value)}
           >
             <option value ="currentDaySoFar">Today So Far</option>
+            <option value ="yesterday">Yesterday</option>
             <option value ="currentWeekSoFar">This Week So Far</option>
             <option value ="currentMonthSoFar">This Month So Far</option>
             <option value ="currentQuarterSoFar">This Quarter So Far</option>

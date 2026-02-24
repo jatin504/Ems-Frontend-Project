@@ -5,6 +5,10 @@ export const API_BASE =
     (import.meta as any).env.VITE_EMS_API_URL) ||
   "http://75.119.146.115:5179";
 
+function getToken(): string {
+  return sessionStorage.getItem("token") || "";
+}
+
 // ---- Mapping helpers 
 export const mapForecastCodeToUi = (
   code?: string
@@ -44,12 +48,10 @@ export const mapSettlementCodeToUi = (
 ): "wholesale" | "fixed" => {
   switch (code) {
     case "1":
-      // baseline_load_method -> treat as fixed settlement
       return "fixed";
     case "0":
     case "2":
     default:
-      // wholesale_arbitrage_calculation / export_settlement_method
       return "wholesale";
   }
 };
@@ -68,9 +70,13 @@ export const mapArbitrageCodeToUi = (
   }
 };
 
-// ---- GET API: /strategy/configuration ----
+// ---- GET API ----
 export async function fetchStrategyConfiguration() {
-  const resp = await fetch(`${API_BASE}/strategy/configuration`);
+  const resp = await fetch(`${API_BASE}/strategy/configuration`, {
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
 
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
@@ -82,22 +88,33 @@ export async function fetchStrategyConfiguration() {
   return resp.json();
 }
 
-// ---- POST API: /strategy/configuration ----
-export async function saveStrategyConfiguration(payload: any) {
+
+// password REQUIRED now
+export async function saveStrategyConfiguration(
+  payload: any,
+  password: string
+) {
+  if (!password) {
+    throw new Error("Password missing");
+  }
+
   const resp = await fetch(`${API_BASE}/strategy/configuration`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+      "X-Confirm-Password": password,
     },
     body: JSON.stringify(payload),
   });
 
+  const text = await resp.text().catch(() => "");
+
   if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
     throw new Error(
       `Tariff config save failed: ${resp.status} ${text || ""}`.trim()
     );
   }
 
-  return resp.json();
+  return text ? JSON.parse(text) : {};
 }

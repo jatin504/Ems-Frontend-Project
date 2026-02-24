@@ -101,8 +101,8 @@ const PlantCard = () => {
       setLoading(true);
 
       const payload = {
-        table: "plant_1_pcs_2_bank_bank_18",
-        today_table: "plant_1_pcs_2_bank_bank_19",
+        table: "plant_1_pcs_2_bank_bank_12",
+        today_table: "plant_1_pcs_2_bank_bank_13",
         resolution: resolutionMap[currentResolution],
         info: statusInfoMap[currentStatus],
       };

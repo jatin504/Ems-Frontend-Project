@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import usePermissions from "../../../hooks/usePermissions";
+import ConfirmPasswordModal from "../../Common/ConfirmPasswordModal";
 import {
   Box,
   Flex,
@@ -41,6 +43,15 @@ const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
 );
 
 export default function VCBStatusCard({ data }: VCBStatusCardProps) {
+  // Permission logic (must be inside component)
+  const { permissions } = usePermissions();
+  const role = (sessionStorage.getItem("role") || "").toLowerCase();
+  const myPermission = (permissions || []).find((p) => (p.role_name || "").toLowerCase() === role);
+  const canSwitchGear = myPermission?.can_control_switchgear === true;
+
+  // Password modal state
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+
   const bg = useColorModeValue("white", "#1A202C");
   const color = useColorModeValue("#1A202C", "white");
   const headerBg = useColorModeValue("#EDF2F7", "#2D3748");
@@ -94,10 +105,24 @@ export default function VCBStatusCard({ data }: VCBStatusCardProps) {
             px="8px"
             fontSize="10px"
             fontWeight={600}
+            isDisabled={!canSwitchGear}
+            onClick={() => {
+              if (!canSwitchGear) return;
+              setIsPasswordOpen(true);
+            }}
           >
             OPEN
           </Button>
         </HStack>
+            {/* Password Modal for Switch Gear */}
+            <ConfirmPasswordModal
+              isOpen={isPasswordOpen}
+              onClose={() => setIsPasswordOpen(false)}
+              onConfirm={() => {
+                setIsPasswordOpen(false);
+                // TODO: Add actual open logic here after password confirmation
+              }}
+            />
       </Flex>
 
       <Divider borderColor={borderColor} />
