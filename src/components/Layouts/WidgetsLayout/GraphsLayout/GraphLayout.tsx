@@ -69,6 +69,7 @@ interface GraphLayoutProps {
   inProgress?: boolean;
   preDefineTimeInvterval?: boolean;
   setCurrentWidgetInterval?: (interval: "daily" | "month" | "year") => void;
+  forcePortalToBody?: boolean;
 }
 
 const GraphLayout: React.FC<GraphLayoutProps> = ({
@@ -93,7 +94,8 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
   downloadOption = true,
   inProgress = false,
   preDefineTimeInvterval = false,
-  setCurrentWidgetInterval
+  setCurrentWidgetInterval,
+  forcePortalToBody = false,
 }) => {
   const iconColor = useColorModeValue('#004F86', 'white');
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -199,7 +201,7 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
               onClose={onClose}
               onReset={onReset || (() => { })}
               onSave={onTimeWindowChange || (() => { })}
-              containerRef={GraphLayoutRef}
+              containerRef={undefined}
             >
               <GoClock color={currentColor} cursor={"pointer"} size={20} />
             </TimeWindow>

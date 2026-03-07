@@ -81,7 +81,7 @@ export const useDashboardData = () => {
         // Here we attempt to call it with a second options param; if your wrapper ignores it, consider
         // updating the wrapper to accept signal or replace this call with fetch/axios directly.
         // Example: GetDashboardDataAPI(payload, { signal: controller.signal })
-        const res = await GetDashboardDataAPI(payload, { signal: controller.signal });
+        const res = await GetDashboardDataAPI(payload);
 
         const mapped = transformResponseToMap(res);
         setData((prev) => ({ ...(prev ?? {}), ...mapped }));
@@ -120,15 +120,11 @@ export const useDashboardData = () => {
 
       try {
         const minimalPayload = {
-          widgets: [
-            {
-              id: widget.id,
-              dataSource: widget.dataSource ?? {},
-            },
-          ],
+          id: widget.id,
+          widget: widget,
         };
 
-        const res = await GetDashboardDataAPI(minimalPayload, { signal: controller.signal });
+        const res = await GetDashboardDataAPI(minimalPayload);
         const mapped = transformResponseToMap(res);
         setData((prev) => ({ ...(prev ?? {}), ...mapped }));
         setLoading(false);

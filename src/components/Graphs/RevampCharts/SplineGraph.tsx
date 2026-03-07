@@ -4,6 +4,7 @@ import HighchartsReact from 'highcharts-react-official';
 import { EnlargeHeight } from '../../../Services/EnlargeWidget';
 import exporting from 'highcharts/modules/exporting';
 import exportData from 'highcharts/modules/export-data';
+import Boost from 'highcharts/modules/boost';
 import HighchartsFullScreen from 'highcharts/modules/full-screen';
 import type { ExportFunctions } from '../../../types/graphExport/export';
 import { Box, Button } from '@chakra-ui/react';
@@ -11,6 +12,7 @@ import { Box, Button } from '@chakra-ui/react';
 HighchartsFullScreen(Highcharts);
 exporting(Highcharts);
 exportData(Highcharts);
+Boost(Highcharts);
 
 interface SplineGraphProps {
   apiData?: Object[];
@@ -90,6 +92,7 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
         style: { fontFamily: 'Inter, Montserrat, sans-serif' },
         spacingTop: 8,
         spacingRight: 12,
+        boostThreshold: 1000,
         className: 'rounded-lg',
         events: {
           mouseOut: () => {
@@ -164,7 +167,9 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
           return s;
         },
       },
-
+      boost: {
+        useGPUTranslations: true,
+      },
       plotOptions: {
         series: {
           cursor: 'pointer',

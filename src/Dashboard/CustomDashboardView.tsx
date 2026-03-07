@@ -70,7 +70,7 @@ const CustomDashboardView = () => {
 
     w.dataSource = w.dataSource || {};
     w.dataSource.returnDataName =
-      w.dataSource.returnDataName || `ds_${w.id}`;
+      w.dataSource.returnDataName ? w.dataSource.returnDataName.includes(w.id) ? w.dataSource.returnDataName : w.dataSource.returnDataName + "_" + w.id : `ds_${w.id}`;
     w.dataSource.keys = Array.isArray(w.dataSource.keys)
       ? w.dataSource.keys
       : w.dataSource.keys
@@ -123,7 +123,9 @@ const CustomDashboardView = () => {
     console.log("[DASHBOARD_LOAD] normalized dashboard:", normalized);
     setDashboardConfig(normalized);
 
-    void loadDashboardData({...normalized});
+      Object.values(normalized.config.widgets).forEach((widget: any) => {
+        fetchForWidget(widget);
+      });
   }, [id, loadDashboardData]);
 
   const addWidgetFromTemplate = async (template: WidgetTemplate) => {
@@ -169,14 +171,14 @@ const CustomDashboardView = () => {
         newId
       );
 
-      console.log(
-        "[ADD_WIDGET] fetching data for new widget before mounting:",
-        widget.id
-      );
+      // console.log(
+      //   "[ADD_WIDGET] fetching data for new widget before mounting:",
+      //   widget.id
+      // );
 
-      const fetchResult = await fetchForWidget(widget);
+      // const fetchResult = await fetchForWidget(widget);
 
-      console.log("[ADD_WIDGET] fetchForWidget result:", fetchResult);
+      // console.log("[ADD_WIDGET] fetchForWidget result:", fetchResult);
 
       const updatedWidgets = {
         ...dashboardConfig.config.widgets,
@@ -235,7 +237,7 @@ const CustomDashboardView = () => {
         console.log("[DASHBOARD_LOAD] normalized dashboard:", normalized);
         setDashboardConfig(normalized);
 
-        void loadDashboardData({...normalized});
+        // void loadDashboardData({...normalized});
 
       } catch (err) {
         // ignore
@@ -253,6 +255,7 @@ const CustomDashboardView = () => {
 
   const updateWidget = async (updatedWidget: any) => {
     if (!dashboardConfig) return;
+
     const currentWidget = dashboardConfig.config.widgets[updatedWidget.id];
     if (!currentWidget) return;
 
@@ -271,61 +274,24 @@ const CustomDashboardView = () => {
         ...currentWidget.props,
         ...(updatedWidget.props || {}),
       },
-      layout:
-        currentWidget.layout ||
-        updatedWidget.layout || { ...currentWidget.layout },
-    };
-
-    const newWidgets = {
-      ...dashboardConfig.config.widgets,
-      [merged.id]: normalizeWidget(merged, merged.id),
     };
 
     const updatedDashboard = {
       ...dashboardConfig,
       config: {
         ...dashboardConfig.config,
-        widgets: newWidgets,
+        widgets: {
+          ...dashboardConfig.config.widgets,
+          [merged.id]: merged,
+        },
       },
     };
 
-    // Update local state immediately
+    // ✅ Only update state
     setDashboardConfig(updatedDashboard);
-    void loadDashboardData(updatedDashboard);
 
-    // Save to localStorage immediately
-    try {
-      const stored = localStorage.getItem("dashboards");
-      const parsed = stored ? JSON.parse(stored) : [];
-      let updatedList: any[] = [];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        let replaced = false;
-        updatedList = parsed.map((d: any) => {
-          if (d.id === updatedDashboard.id) {
-            replaced = true;
-            return updatedDashboard;
-          }
-          return d;
-        });
-        if (!replaced) updatedList.push(updatedDashboard);
-      } else {
-        updatedList = [updatedDashboard];
-      }
-      localStorage.setItem("dashboards", JSON.stringify(updatedList));
-      console.log("[UPDATE_WIDGET] Widget changes saved to localStorage immediately");
-    } catch (err) {
-      console.warn("Failed to persist widget changes to localStorage:", err);
-    }
-
-    // Save to database asynchronously
-    try {
-      await saveDashboard(updatedDashboard);
-      console.log("[UPDATE_WIDGET] Widget changes saved to database successfully");
-    } catch (err) {
-      console.warn("Failed to save widget changes to database:", err);
-      // Even if database save fails, localStorage is already updated
-      // so changes will persist on refresh
-    }
+    // ✅ Only refetch this widget
+    await fetchForWidget(merged);
 
     setEditingWidget(null);
   };
@@ -346,7 +312,7 @@ const CustomDashboardView = () => {
 
     // Update local state immediately
     setDashboardConfig(updatedDashboard);
-    void loadDashboardData(updatedDashboard);
+    // void loadDashboardData(updatedDashboard);
 
     // Save to localStorage immediately
     try {
@@ -490,24 +456,17 @@ const CustomDashboardView = () => {
     void saveDashboard(toSave);
   };
 
-  if (loading && !isAddingWidget)
+  if (!dashboardConfig)
     return (
-      <Flex justify="center" align="center" bg={bg} minH="100vh">
-        <Spinner size="xl" color={spinnerColor} />
-      </Flex>
+      <Box bg={bg} color={textColor} p={4}>
+        Dashboard not found.
+      </Box>
     );
 
   if (error)
     return (
       <Box color="red.500" p={4}>
         Error: {error}
-      </Box>
-    );
-
-  if (!dashboardConfig)
-    return (
-      <Box bg={bg} color={textColor} p={4}>
-        Dashboard not found.
       </Box>
     );
 
@@ -597,7 +556,7 @@ const CustomDashboardView = () => {
                     right={1}
                     zIndex={10}
                     bg={overlayBg}
-                    pointerEvents="auto"
+                    pointerEvents="none" // overlay disables pointer events
                     borderRadius="md"
                     px={1}
                   >
@@ -607,6 +566,7 @@ const CustomDashboardView = () => {
                       icon={<EditIcon />}
                       size="xs"
                       colorScheme="yellow"
+                      style={{ pointerEvents: 'auto' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEdit(widget);
@@ -618,6 +578,7 @@ const CustomDashboardView = () => {
                       icon={<DeleteIcon />}
                       size="xs"
                       colorScheme="red"
+                      style={{ pointerEvents: 'auto' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeletingWidgetId(widget.id);
@@ -628,12 +589,16 @@ const CustomDashboardView = () => {
 
                 <ChakraBox flex="1" overflow="hidden" p={2}>
                   {widget.type === "graph" ? (
-                    <GraphWidgetRenderer
-                      config={widget}
-                      data={
-                        data?.[widget.dataSource?.returnDataName] || {}
-                      }
-                    />
+                    <div style={{ pointerEvents: 'auto', height: '100%' }}>
+                      <GraphWidgetRenderer
+                        key={widget.id}
+                        config={widget}
+                        data={
+                          data?.[widget.dataSource?.returnDataName] || {}
+                        }
+                        loading={loading}
+                      />
+                    </div>
                   // ) : widget.type === "latest_card" ? (
                   //   <LatestCardWidgetRenderer
                   //     config={widget}
@@ -647,6 +612,7 @@ const CustomDashboardView = () => {
                       data={
                         data?.[widget.dataSource?.returnDataName] || {}
                       }
+                      loading={loading}
                     />
                   ) : widget.type === "table" ? (
                     <TableWidgetRenderer
@@ -654,6 +620,7 @@ const CustomDashboardView = () => {
                       data={
                         data?.[widget.dataSource?.returnDataName] || []
                       }
+                      loading={loading}
                     />
                   ) : widget.type === "advance_table" ? (
                     <AdvanceTableWidgetRenderer
@@ -661,6 +628,7 @@ const CustomDashboardView = () => {
                       data={
                         data?.[widget.dataSource?.returnDataName] || []
                       }
+                      loading={loading}
                     />
                   ) : null}
                 </ChakraBox>

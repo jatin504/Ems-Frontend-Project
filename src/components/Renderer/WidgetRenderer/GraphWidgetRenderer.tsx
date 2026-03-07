@@ -3,7 +3,7 @@ import { useState } from "react";
 import LineGraph from "../../Graphs/LineGraph";
 import ColumnGraph from "../../Graphs/ColumnGraph";
 import AreasplineGraph from "../../Graphs/RevampCharts/AreasplineGraph";
-import { Box, useColorModeValue, Text } from "@chakra-ui/react";
+import { Box, useColorModeValue, Text, Spinner } from "@chakra-ui/react";
 import { transformToHighchartsTimeSeries } from "../../../Services/APIDataFormatter/TimeseriesGraphs";
 
 const CHART_COMPONENTS = {
@@ -16,8 +16,13 @@ const CHART_COMPONENTS = {
     // Add more: PieGraph, Gauge, etc.
 } as any;
 
-const GraphWidgetRenderer: React.FC<{ config: any; data: any }> = ({ config, data = [] }) => {
+import useDashboardData from '../../../hooks/dashboard/useDashboardData';
+const GraphWidgetRenderer: React.FC<{ config: any; data: any; loading?: boolean }> = ({ config, data = [], loading }) => {
+        if (loading) {
+            return <Spinner size="md" />;
+        }
     const [exportFunctions, setExportFunctions] = useState<any | null>(null);
+    const { fetchForWidget } = useDashboardData();
 
     const graphType = config?.graph?.type || "spline";
     const GraphComponent = CHART_COMPONENTS[graphType];
@@ -103,22 +108,40 @@ const GraphWidgetRenderer: React.FC<{ config: any; data: any }> = ({ config, dat
             boxShadow="md"
             display="flex"
             flexDirection="column"
+            position="relative"
         >
-            <GraphLayout
-                title={config?.title}
-                titleLengthSVG={config?.titleLengthSVG || 1000}
-                width={["100%"]}
-                height="100%"
-                fullScreen={true}
-                onExport={exportFunctions}
-            >
-                <GraphComponent
-                    height={config?.props?.height}
-                    props={mergedChartProps}
-                    apiData={apiDataWithChartTypes}
-                    onExportReady={setExportFunctions}
-                />
-            </GraphLayout>
+            {/* Portal for TimeWindow/modal overlay */}
+            <Box as="div" position="relative" zIndex={1} pointerEvents="auto">
+                <GraphLayout
+                    title={config?.title}
+                    titleLengthSVG={config?.titleLengthSVG || 1000}
+                    width={["100%"]}
+                    height="100%"
+                    fullScreen={true}
+                    onExport={exportFunctions}
+                    timeWindow={true} // 🔥 Enable TimeWindow control
+                    onTimeWindowChange={(twConfig) => {
+                        // Merge new time window config into widget config and fetch
+                        const updatedWidget = {
+                            ...config,
+                            dataSource: {
+                                ...config.dataSource,
+                                aggregation: twConfig.aggregation,
+                                timeRange: twConfig.timeRange,
+                                orderBy: twConfig.orderBy,
+                            },
+                        };
+                        fetchForWidget(updatedWidget);
+                    }}
+                >
+                    <GraphComponent
+                        height={config?.props?.height}
+                        props={mergedChartProps}
+                        apiData={apiDataWithChartTypes}
+                        onExportReady={setExportFunctions}
+                    />
+                </GraphLayout>
+            </Box>
         </Box>
     );
 };

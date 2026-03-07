@@ -1,3 +1,6 @@
+import type { TimelineItem } from "./PeakShavingTable";
+import CappedDynamicTable from "./CappedDynamicTable";
+import TouSimulationTable from "./TouSimulationTable";
 import React from "react";
 import {
   Modal,
@@ -22,14 +25,23 @@ import {
   GridItem,
   Select,
   useColorModeValue,
-  IconButton, 
+  IconButton,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from "@chakra-ui/react";
-import { AddIcon, DeleteIcon, EditIcon, ViewIcon } from "@chakra-ui/icons"; 
+import { AddIcon, DeleteIcon, EditIcon, ViewIcon } from "@chakra-ui/icons";
+import SimulateBessOptimizeAPI from "../../../../api/BessControlAPI";
+
 
 import MaxCyclesPerDayModal from "./MaxCyclesPerDayModal";
 import RTMAdjustmentDashboard from "../../../../Dashboard/RTMAdjustmentDashboard";
 import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
 import usePermissions from "../../../../hooks/usePermissions";
+import PeakShavingGraph from "./PeakShavingGraph";
+import PeakShavingTable from "./PeakShavingTable";
 
 
 import {
@@ -38,7 +50,7 @@ import {
   mapForecastCodeToUi,
   mapPriceSourceCodeToUi,
   mapArbitrageCodeToUi,
-} from "../../../../hooks/strategyConfigurationAPI"; 
+} from "../../../../hooks/strategyConfigurationAPI";
 
 type ToUWindow = {
   id: string;
@@ -92,7 +104,7 @@ export default function TariffConfigurationModal({
 
       case "0": // Basic
       default:
-        
+
         break;
     }
   }, [isOpen, strategy]);
@@ -107,22 +119,142 @@ export default function TariffConfigurationModal({
   const [bessMaxCyclesPerDay, setBessMaxCyclesPerDay] = React.useState("4");
   const [backupSOC, setBackupSOC] = React.useState("5"); // %
 
+
   // Max Cycles per day edit modal state
-  const [isMaxCyclesModalOpen, setIsMaxCyclesModalOpen] =
-    React.useState(false);
+  const [isMaxCyclesModalOpen, setIsMaxCyclesModalOpen] = React.useState(false);
   const [isRTMModalOpen, setIsRTMModalOpen] = React.useState(false);
   const [isTradingModalOpen, setIsTradingModalOpen] = React.useState(false);
+
+  // NOTE: PeakShavingMeterModal removed; selectedMeter unused
+  // STEP 1: Add timelineData and simulationLoading state
+  const [timelineData, setTimelineData] = React.useState<TimelineItem[]>([]);
+  const [simulationLoading, setSimulationLoading] = React.useState(false);
+  // STEP 2: Trigger table refresh
+  const runSimulation = async () => {
+    try {
+      setSimulationLoading(true);
+
+      let strategy = "peak_shaving";
+
+      if (tariffMode === "tou") {
+        strategy = "tou_tariff";
+      }
+
+      if (tariffMode === "capped") {
+        strategy = "cap_dynamic";
+      }
+
+      if (tariffMode === "peak") {
+        strategy = "peak_shaving";
+      }
+
+      console.log("SIMULATION STRATEGY:", strategy);
+
+      const response = await SimulateBessOptimizeAPI(strategy);
+
+      console.log("SIMULATION RESPONSE:", response);
+
+      const timeline =
+        response?.result?.timeline ??
+        response?.timeline ??
+        [];
+
+      // normalize timeline for table UI
+      if (tariffMode === "peak") {
+        const normalizedTimeline = timeline.map((item: any) => ({
+          action: item.action ?? "idle",
+          start: item.start ?? item.start_time ?? "-",
+          end: item.end ?? item.end_time ?? "-",
+          window_state: item.window_state ?? item.window ?? "-",
+          load: item.load ?? item.price ?? 0,
+          duration_hours: item.duration_hours ?? item.duration ?? 0,
+          p_max_kw: item.p_max_kw ?? 0,
+          energy_charged_kwh: item.energy_charged_kwh ?? 0,
+          energy_used_kwh:
+            item.energy_used_kwh ?? item.energy_discharged_kwh ?? 0,
+          dynamic_threshold_kw: item.dynamic_threshold_kw ?? null,
+          soc_before_percent: item.soc_before_percent ?? item.soc_before ?? 0,
+          soc_after_percent: item.soc_after_percent ?? item.soc_after ?? 0,
+          shortfall_kwh: item.shortfall_kwh ?? 0,
+          soft_limit_kw: item.soft_limit_kw ?? null,
+        }));
+
+        setTimelineData(normalizedTimeline);
+      } else {
+        // capped dynamic -> raw API data
+        setTimelineData(timeline);
+      }
+
+    } catch (error) {
+      console.error("Simulation API failed:", error);
+      setTimelineData([]);
+    } finally {
+      setSimulationLoading(false);
+    }
+  };
 
   const handleMaxCyclesSave = (val: string) => {
     setBessMaxCyclesPerDay(val);
     setIsMaxCyclesModalOpen(false);
   };
 
-  // TOU windows
-  const [windows, setWindows] = React.useState<ToUWindow[]>([
+
+  // TOU and Peak windows (split state)
+  const [touWindows, setTouWindows] = React.useState<ToUWindow[]>([
     { id: "w1", name: "Peak", start: "17:00", end: "21:00", price: "12" },
     { id: "w2", name: "Off-peak", start: "00:00", end: "07:00", price: "4" },
   ]);
+  const [peakWindows, setPeakWindows] = React.useState<ToUWindow[]>([]);
+
+  // TOU window functions
+  const addTouWindow = () => {
+    const newId = `w${Date.now()}`;
+    setTouWindows((s) => [
+      ...s,
+      {
+        id: newId,
+        name: newWindowType,
+        start: "00:00",
+        end: "01:00",
+        price: "0",
+      },
+    ]);
+  };
+
+  const removeTouWindow = (id: string) => {
+    setTouWindows((s) => s.filter((w) => w.id !== id));
+  };
+
+  const updateTouWindow = (id: string, patch: Partial<ToUWindow>) => {
+    setTouWindows((s) =>
+      s.map((w) => (w.id === id ? { ...w, ...patch } : w))
+    );
+  };
+
+  // Peak window functions
+  const addPeakWindow = () => {
+    const newId = `pw${Date.now()}`;
+    setPeakWindows((s) => [
+      ...s,
+      {
+        id: newId,
+        name: newWindowType,
+        start: "00:00",
+        end: "01:00",
+        price: "0",
+      },
+    ]);
+  };
+
+  const removePeakWindow = (id: string) => {
+    setPeakWindows((s) => s.filter((w) => w.id !== id));
+  };
+
+  const updatePeakWindow = (id: string, patch: Partial<ToUWindow>) => {
+    setPeakWindows((s) =>
+      s.map((w) => (w.id === id ? { ...w, ...patch } : w))
+    );
+  };
 
   const [newWindowType, setNewWindowType] = React.useState<
     "Off-peak" | "Mid-peak" | "Peak"
@@ -230,19 +362,19 @@ export default function TariffConfigurationModal({
 
   const [saving, setSaving] = React.useState(false);
   // 🔥 PERMISSION CHECK (FINAL FIX)
-const { permissions } = usePermissions();
+  const { permissions } = usePermissions();
 
-const role = (sessionStorage.getItem("role") || "").toLowerCase();
+  const role = (sessionStorage.getItem("role") || "").toLowerCase();
 
-const isPermissionLoaded = permissions && permissions.length > 0;
+  const isPermissionLoaded = permissions && permissions.length > 0;
 
-const myPermission = permissions.find(
-  (p) => (p.role_name || "").toLowerCase() === role
-);
+  const myPermission = permissions.find(
+    (p) => (p.role_name || "").toLowerCase() === role
+  );
 
-const canControl = isPermissionLoaded
-  ? myPermission?.can_control_bess === true
-  : true; // jab tak load nahi hua tab disable mat karo
+  const canControl = isPermissionLoaded
+    ? myPermission?.can_control_bess === true
+    : true; // jab tak load nahi hua tab disable mat karo
 
 
   // 🔥 PASSWORD CONFIRMATION FLOW
@@ -309,7 +441,7 @@ const canControl = isPermissionLoaded
         pushArray(setting.peak || [], "Peak");
 
         if (newWindows.length > 0) {
-          setWindows(newWindows);
+          setTouWindows(newWindows);
         }
 
         const opt = flat.optimization_rule || {};
@@ -330,7 +462,32 @@ const canControl = isPermissionLoaded
         const peak = data?.peak_shaving || {};
 
         if (Object.keys(peak).length > 0) {
-          setEnablePeakShaving(true);
+          // ---- LOAD PEAK SHAVING WINDOWS ----
+          // ---- LOAD PEAK SHAVING WINDOWS ----
+          const psWindows: ToUWindow[] = [];
+          let pIdx = 1;
+
+          const pushPSArray = (arr: any[], name: string) => {
+            (arr || []).forEach((slot) => {
+              psWindows.push({
+                id: `pw${pIdx++}`,
+                name,
+                start: slot?.start_time ?? "00:00",
+                end: slot?.end_time ?? "00:00",
+                price: String(slot?.load ?? "0"),
+              });
+            });
+          };
+
+          const windows = peak.windows || {};
+
+          pushPSArray(windows["off_peak"] || windows["off-peak"] || [], "Off-peak");
+          pushPSArray(windows["mid_peak"] || windows["mid-peak"] || [], "Mid-peak");
+          pushPSArray(windows["peak"] || [], "Peak");
+
+          if (psWindows.length > 0) {
+            setPeakWindows(psWindows);
+          }
 
           // mode mapping from backend code to UI value
           if (peak.peak_shaving_mode != null) {
@@ -494,46 +651,46 @@ const canControl = isPermissionLoaded
     const peakShavingPayload =
       tariffMode === "peak" && enablePeakShaving
         ? {
-            mode: peakMode,
-            threshold: peakThreshold,
-            minSOC: psMinSOC,
-            maxDischarge: psMaxDischarge,
-            forecastSource: psForecastSource,
-            softLimit,
-            hardLimit,
-            maintainSoft: psMaintainSoft,
-            forceHard: psForceHard,
-          }
+          mode: peakMode,
+          threshold: peakThreshold,
+          minSOC: psMinSOC,
+          maxDischarge: psMaxDischarge,
+          forecastSource: psForecastSource,
+          softLimit,
+          hardLimit,
+          maintainSoft: psMaintainSoft,
+          forceHard: psForceHard,
+        }
         : null;
 
     const cappedPayload =
       tariffMode === "capped"
         ? {
-            priceSource: cappedPriceSource,
-            apiUrl: cappedApiUrl,
-            refreshMin: cappedRefreshMin,
-            priceCap,
-            priceFloor,
-            arbThreshold,
-            rules: {
-              cappedAggressivelyCharge,
-              cappedPreventImport,
-              cappedAllowExport,
-            },
-          }
+          priceSource: cappedPriceSource,
+          apiUrl: cappedApiUrl,
+          refreshMin: cappedRefreshMin,
+          priceCap,
+          priceFloor,
+          arbThreshold,
+          rules: {
+            cappedAggressivelyCharge,
+            cappedPreventImport,
+            cappedAllowExport,
+          },
+        }
         : null;
 
     const virtualPayload =
       tariffMode === "virtual"
         ? {
-            customerTariffType,
-            flatPrice,
-            aggregatorShare,
-            guaranteedSavings,
-            settlementMethod,
-            billingOutputs,
-            virtualStrategy,
-          }
+          customerTariffType,
+          flatPrice,
+          aggregatorShare,
+          guaranteedSavings,
+          settlementMethod,
+          billingOutputs,
+          virtualStrategy,
+        }
         : null;
 
     const payload = {
@@ -547,7 +704,7 @@ const canControl = isPermissionLoaded
         backupSOC: backupSOC,
       },
 
-      windows,
+      windows: tariffMode === "peak" ? peakWindows : touWindows,
       rules: {
         allowOffPeakCharge,
         dischargeOnlyPeak,
@@ -561,12 +718,12 @@ const canControl = isPermissionLoaded
 
     // 🔥 Open password modal instead of saving directly
     if (!canControl) {
-  console.warn("User has no BESS control permission");
-  return;
-}
+      console.warn("User has no BESS control permission");
+      return;
+    }
 
-setPendingPayload(payload);
-setIsPasswordOpen(true);
+    setPendingPayload(payload);
+    setIsPasswordOpen(true);
 
   };
 
@@ -603,12 +760,20 @@ setIsPasswordOpen(true);
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="4xl">
       <ModalOverlay />
-      <ModalContent fontSize="xs">
+      <ModalContent
+        fontSize="xs"
+        maxH="90vh"
+        display="flex"
+      >
         <ModalHeader fontSize="sm" py={1.5}>
           EMS Tariff Configuration
         </ModalHeader>
         <ModalCloseButton top="8px" />
-        <ModalBody py={2} px={3}>
+        <ModalBody
+          py={2}
+          px={3}
+          overflowY="auto"
+        >
           <Grid templateColumns="240px 1fr" gap={3}>
             {/* LEFT COLUMN: Tariff mode + BESS params */}
             <GridItem>
@@ -773,18 +938,18 @@ setIsPasswordOpen(true);
                 {/* Top action buttons */}
                 <HStack justify="flex-end" spacing={2}>
                   <Button
-  size="xs"
-  colorScheme="purple"
-  onClick={() => {
-    if (!canControl) return;   // 🔥 permission check
-    handleSave();
-  }}
-  isDisabled={!canControl}
-  isLoading={saving}
-  loadingText="Saving..."
->
-  Save
-</Button>
+                    size="xs"
+                    colorScheme="purple"
+                    onClick={() => {
+                      if (!canControl) return;   // 🔥 permission check
+                      handleSave();
+                    }}
+                    isDisabled={!canControl}
+                    isLoading={saving}
+                    loadingText="Saving..."
+                  >
+                    Save
+                  </Button>
 
                   <Button
                     size="xs"
@@ -794,7 +959,16 @@ setIsPasswordOpen(true);
                   >
                     Reset
                   </Button>
-                  <Button size="xs" colorScheme="green" isDisabled={saving}>
+                  <Button
+                    size="xs"
+                    colorScheme="green"
+                    isDisabled={saving}
+                    isLoading={simulationLoading}
+                    loadingText="Simulating..."
+                    onClick={async () => {
+                      await runSimulation();
+                    }}
+                  >
                     Test Optimization
                   </Button>
                 </HStack>
@@ -823,10 +997,10 @@ setIsPasswordOpen(true);
                           onChange={(e) =>
                             setCappedPriceSource(
                               e.target.value as
-                                | "dayahead"
-                                | "real"
-                                | "custom"
-                                | "xls"
+                              | "dayahead"
+                              | "real"
+                              | "custom"
+                              | "xls"
                             )
                           }
                         >
@@ -967,9 +1141,60 @@ setIsPasswordOpen(true);
                       borderRadius="8px"
                       textAlign="center"
                     >
-                      <Text color={muted} fontSize="2xs">
-                        24-hour Price Preview
+                      <Text fontWeight={700} mb={1} fontSize="2xs">
+                        Simulation Preview
                       </Text>
+
+                      <Box
+                        h="320px"
+                        borderRadius="6px"
+                        bg={useColorModeValue("#f3f4f6", "#071019")}
+                      >
+                        <Tabs variant="soft-rounded" colorScheme="blue" w="100%" h="100%">
+                          <TabList
+                            mb={2}
+                            bg={useColorModeValue("#f1f5f9", "#0f172a")}
+                            p="4px"
+                            borderRadius="8px"
+                            w="fit-content"
+                          >
+                            <Tab
+                              fontSize="xs"
+                              px={4}
+                              _selected={{
+                                bg: "blue.500",
+                                color: "white",
+                              }}
+                            >
+                              📊 Chart
+                            </Tab>
+
+                            <Tab
+                              fontSize="xs"
+                              px={4}
+                              _selected={{
+                                bg: "blue.500",
+                                color: "white",
+                              }}
+                            >
+                              📋 Table
+                            </Tab>
+                          </TabList>
+
+                          <TabPanels h="calc(100% - 30px)">
+                            <TabPanel p={0} h="100%">
+                              <PeakShavingGraph
+                                threshold={priceCap}
+                                data={timelineData}
+                              />
+                            </TabPanel>
+
+                            <TabPanel p={0} h="100%">
+                              <CappedDynamicTable timelineData={timelineData || []} />
+                            </TabPanel>
+                          </TabPanels>
+                        </Tabs>
+                      </Box>
                       <Box
                         h="80px"
                         mt={2}
@@ -1188,6 +1413,184 @@ setIsPasswordOpen(true);
                         borderRadius="8px"
                         border={`1px solid ${cardBorder}`}
                       >
+                        {/* TOU window editor UI (copied from TOU mode) */}
+                        <Box
+                          borderRadius="8px"
+                          p={2}
+                          bg={softBg}
+                          border={`1px solid ${cardBorder}`}
+                          mb={2}
+                        >
+                          <Text fontWeight={700} mb={2} fontSize="xs">
+                            Time-of-Use (TOU) Settings
+                          </Text>
+                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                            {peakWindows.map((w) => (
+                              <Box
+                                key={w.id}
+                                borderRadius="8px"
+                                p={2}
+                                border={`1px solid ${cardBorder}`}
+                              >
+                                <HStack justify="space-between" mb={1}>
+                                  <Text fontWeight={600} fontSize="xs">
+                                    {w.name}
+                                  </Text>
+                                  <Button
+                                    variant="ghost"
+                                    size="2xs"
+                                    onClick={() => removePeakWindow(w.id)}
+                                    leftIcon={<DeleteIcon />}
+                                  >
+                                    Remove
+                                  </Button>
+                                </HStack>
+                                <VStack align="stretch" spacing={1} fontSize="2xs">
+                                  <HStack>
+                                    <Text w="60px">Start</Text>
+                                    <Input
+                                      size="xs"
+                                      type="time"
+                                      value={w.start}
+                                      onChange={(e) =>
+                                        updatePeakWindow(w.id, {
+                                          start: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </HStack>
+                                  <HStack>
+                                    <Text w="60px">End</Text>
+                                    <Input
+                                      size="xs"
+                                      type="time"
+                                      value={w.end}
+                                      onChange={(e) =>
+                                        updatePeakWindow(w.id, { end: e.target.value })
+                                      }
+                                    />
+                                  </HStack>
+                                  <HStack>
+                                    <Text w="60px">Load</Text>
+                                    <Input
+                                      size="xs"
+                                      value={w.price}
+                                      onChange={(e) =>
+                                        updatePeakWindow(w.id, {
+                                          price: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </HStack>
+                                </VStack>
+                              </Box>
+                            ))}
+                          </SimpleGrid>
+                          <Box
+                            mt={2}
+                            p={2}
+                            borderWidth={1}
+                            borderStyle="dashed"
+                            borderColor={cardBorder}
+                            borderRadius="8px"
+                          >
+                            <HStack
+                              justify="space-between"
+                              align="center"
+                              flexWrap="wrap"
+                              rowGap={1}
+                            >
+                              {/* Window type selector */}
+                              <HStack>
+                                <Text fontSize="2xs" mr={1}>
+                                  New window type:
+                                </Text>
+                                <Select
+                                  size="xs"
+                                  w="130px"
+                                  value={newWindowType}
+                                  onChange={(e) =>
+                                    setNewWindowType(
+                                      e.target.value as
+                                      | "Off-peak"
+                                      | "Mid-peak"
+                                      | "Peak"
+                                    )
+                                  }
+                                >
+                                  <option value="Off-peak">Off-peak</option>
+                                  <option value="Mid-peak">Mid-peak</option>
+                                  <option value="Peak">Peak</option>
+                                </Select>
+                              </HStack>
+                              {/* Add button */}
+                              <Button
+                                size="2xs"
+                                variant="ghost"
+                                leftIcon={<AddIcon />}
+                                onClick={addPeakWindow}
+                              >
+                                Add Window
+                              </Button>
+                            </HStack>
+                          </Box>
+                          <Box
+                            mt={2}
+                            borderRadius="8px"
+                            p={2}
+                            bg={softBg}
+                            border={`1px solid ${cardBorder}`}
+                          >
+                            <Text fontWeight={700} mb={1} fontSize="xs">
+                              Optimization Rules
+                            </Text>
+                            <SimpleGrid
+                              columns={2}
+                              spacing={2}
+                              alignItems="center"
+                              fontSize="2xs"
+                            >
+                              <Checkbox
+                                size="xs"
+                                isChecked={allowOffPeakCharge}
+                                onChange={(e) =>
+                                  setAllowOffPeakCharge(e.target.checked)
+                                }
+                              >
+                                Allow charging during off-peak
+                              </Checkbox>
+                              <HStack>
+                                <Checkbox
+                                  size="xs"
+                                  isChecked={allowChargeOnlySolar}
+                                  onChange={(e) =>
+                                    setAllowChargeOnlySolar(e.target.checked)
+                                  }
+                                >
+                                  Allow charging only from solar
+                                </Checkbox>
+                              </HStack>
+                              <Checkbox
+                                size="xs"
+                                isChecked={dischargeOnlyPeak}
+                                onChange={(e) =>
+                                  setDischargeOnlyPeak(e.target.checked)
+                                }
+                              >
+                                Discharge only during peak
+                              </Checkbox>
+                              <HStack>
+                                <Text>Reserve SOC:</Text>
+                                <Input
+                                  size="xs"
+                                  w="60px"
+                                  value={reserveSOC}
+                                  onChange={(e) => setReserveSOC(e.target.value)}
+                                />
+                              </HStack>
+                            </SimpleGrid>
+                          </Box>
+                        </Box>
                         <Text fontWeight={600} mb={1} fontSize="2xs">
                           Peak Shaving Mode
                         </Text>
@@ -1228,88 +1631,66 @@ setIsPasswordOpen(true);
                         </RadioGroup>
                       </Box>
 
-                      <Box
-                        p={2}
-                        borderRadius="8px"
-                        border={`1px solid ${cardBorder}`}
-                      >
-                        <Text fontWeight={600} mb={1} fontSize="2xs">
-                          General Settings
-                        </Text>
-
-                        <Grid
-                          templateColumns={{ base: "1fr", md: "1fr 1fr" }}
-                          gap={2}
-                        >
-                          <Box>
-                            <Text fontSize="2xs" mb={1}>
-                              Peak Shaving Threshold (kW)
-                            </Text>
-                            <Input
-                              size="xs"
-                              placeholder="Enter threshold"
-                              value={peakThreshold}
-                              onChange={(e) =>
-                                setPeakThreshold(e.target.value)
-                              }
-                              isDisabled={!enablePeakShaving}
-                            />
-                          </Box>
-
-                          <Box>
-                            <Text fontSize="2xs" mb={1}>
-                              Minimum SOC (%)
-                            </Text>
-                            <Input
-                              size="xs"
-                              placeholder="e.g., 20"
-                              value={psMinSOC}
-                              onChange={(e) => setPsMinSOC(e.target.value)}
-                              isDisabled={!enablePeakShaving}
-                            />
-                          </Box>
-
-                          <Box>
-                            <Text fontSize="2xs" mb={1}>
-                              Max Discharge Power (kW)
-                            </Text>
-                            <Input
-                              size="xs"
-                              placeholder=""
-                              value={psMaxDischarge}
-                              onChange={(e) =>
-                                setPsMaxDischarge(e.target.value)
-                              }
-                              isDisabled={!enablePeakShaving}
-                            />
-                          </Box>
-
-                          <Box>
-                            <Text fontSize="2xs" mb={1}>
-                              Forecast Source
-                            </Text>
-                            <Select
-                              size="xs"
-                              value={psForecastSource}
-                              onChange={(e) =>
-                                setPsForecastSource(
-                                  e.target.value as
-                                    | "none"
-                                    | "ai"
-                                    | "manual"
-                                    | "external"
-                                )
-                              }
-                              isDisabled={!enablePeakShaving}
-                            >
-                              <option value="none">None</option>
-                              <option value="ai">AI Forecast</option>
-                              <option value="manual">Manual Input</option>
-                              <option value="external">External API</option>
-                            </Select>
-                          </Box>
-                        </Grid>
-                      </Box>
+                      {/* Threshold and other settings - 2 column layout */}
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                        <Box>
+                          <Text fontSize="2xs" mb={1}>
+                            Peak Shaving Threshold (kW)
+                          </Text>
+                          <Input
+                            size="xs"
+                            value={peakThreshold}
+                            onChange={(e) => setPeakThreshold(e.target.value)}
+                            isDisabled={!enablePeakShaving}
+                          />
+                        </Box>
+                        <Box>
+                          <Text fontSize="2xs" mb={1}>
+                            Max Discharge (kW)
+                          </Text>
+                          <Input
+                            size="xs"
+                            value={psMaxDischarge}
+                            onChange={(e) => setPsMaxDischarge(e.target.value)}
+                            isDisabled={!enablePeakShaving}
+                          />
+                        </Box>
+                        <Box>
+                          <Text fontSize="2xs" mb={1}>
+                            Min SOC (%)
+                          </Text>
+                          <Input
+                            size="xs"
+                            value={psMinSOC}
+                            onChange={(e) => setPsMinSOC(e.target.value)}
+                            isDisabled={!enablePeakShaving}
+                          />
+                        </Box>
+                        <Box>
+                          <Text fontSize="2xs" mb={1}>
+                            Forecast Source
+                          </Text>
+                          <Select
+                            size="xs"
+                            value={psForecastSource}
+                            onChange={(e) =>
+                              setPsForecastSource(
+                                e.target.value as
+                                | "none"
+                                | "ai"
+                                | "manual"
+                                | "external"
+                              )
+                            }
+                            isDisabled={!enablePeakShaving}
+                          >
+                            <option value="none">None</option>
+                            <option value="ai">AI Forecast</option>
+                            <option value="manual">Manual Input</option>
+                            <option value="external">External API</option>
+                          </Select>
+                        </Box>
+                      </SimpleGrid>
 
                       <Box
                         p={2}
@@ -1389,43 +1770,42 @@ setIsPasswordOpen(true);
                           Simulation Preview
                         </Text>
                         <Box
-                          h="150px"
+                          h="320px"
                           borderRadius="6px"
                           bg={useColorModeValue("#f3f4f6", "#071019")}
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
                         >
-                          <Text color={muted} fontSize="2xs">
-                            Load Curve + Threshold + BESS Discharge (Mock Chart)
-                          </Text>
+                          {tariffMode === "peak" ? (
+                            <Tabs variant="unstyled" w="100%" h="100%">
+                              <TabList mb={1}>
+                                <Tab>Chart</Tab>
+                                <Tab>Table</Tab>
+                              </TabList>
+                              <TabPanels h="calc(100% - 30px)">
+                                <TabPanel p={0} h="100%">
+                                  <PeakShavingGraph
+                                    threshold={peakThreshold}
+                                    data={timelineData}
+                                  />
+                                </TabPanel>
+                                <TabPanel p={0} h="100%">
+                                  <PeakShavingTable timelineData={timelineData || []} />
+                                </TabPanel>
+                              </TabPanels>
+                            </Tabs>
+                          ) : (
+                            <Text color={muted} fontSize="2xs">
+                              Load Curve + Threshold + BESS Discharge (Mock Chart)
+                            </Text>
+                          )}
                         </Box>
                       </Box>
                     </VStack>
                   </Box>
                 )}
 
-                {/* Trading Configuration box (NEW) */}
-                {tariffMode === "peak" && (
-                  <Box
-                    borderRadius="8px"
-                    p={2}
-                    bg={softBg}
-                    border={`1px solid ${cardBorder}`}
-                  >
-                    <HStack justify="space-between" align="center">
-                      <Text fontWeight={700} fontSize="xs">
-                        Trading Configuration
-                      </Text>
-                      <IconButton
-                        aria-label="View Trading Visualization"
-                        icon={<ViewIcon />}
-                        size="xs"
-                        onClick={() => setIsTradingModalOpen(true)}
-                      />
-                    </HStack>
-                  </Box>
-                )}
 
                 {/* TRADING view */}
                 {tariffMode === "trading" && (
@@ -1462,7 +1842,7 @@ setIsPasswordOpen(true);
                     </Text>
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
-                      {windows.map((w) => (
+                      {touWindows.map((w) => (
                         <Box
                           key={w.id}
                           borderRadius="8px"
@@ -1476,7 +1856,7 @@ setIsPasswordOpen(true);
                             <Button
                               variant="ghost"
                               size="2xs"
-                              onClick={() => removeWindow(w.id)}
+                              onClick={() => removeTouWindow(w.id)}
                               leftIcon={<DeleteIcon />}
                             >
                               Remove
@@ -1491,7 +1871,7 @@ setIsPasswordOpen(true);
                                 type="time"
                                 value={w.start}
                                 onChange={(e) =>
-                                  updateWindow(w.id, {
+                                  updateTouWindow(w.id, {
                                     start: e.target.value,
                                   })
                                 }
@@ -1504,7 +1884,7 @@ setIsPasswordOpen(true);
                                 type="time"
                                 value={w.end}
                                 onChange={(e) =>
-                                  updateWindow(w.id, { end: e.target.value })
+                                  updateTouWindow(w.id, { end: e.target.value })
                                 }
                               />
                             </HStack>
@@ -1514,7 +1894,7 @@ setIsPasswordOpen(true);
                                 size="xs"
                                 value={w.price}
                                 onChange={(e) =>
-                                  updateWindow(w.id, {
+                                  updateTouWindow(w.id, {
                                     price: e.target.value,
                                   })
                                 }
@@ -1522,6 +1902,7 @@ setIsPasswordOpen(true);
                             </HStack>
                           </VStack>
                         </Box>
+
                       ))}
                     </SimpleGrid>
 
@@ -1551,9 +1932,9 @@ setIsPasswordOpen(true);
                             onChange={(e) =>
                               setNewWindowType(
                                 e.target.value as
-                                  | "Off-peak"
-                                  | "Mid-peak"
-                                  | "Peak"
+                                | "Off-peak"
+                                | "Mid-peak"
+                                | "Peak"
                               )
                             }
                           >
@@ -1568,7 +1949,7 @@ setIsPasswordOpen(true);
                           size="2xs"
                           variant="ghost"
                           leftIcon={<AddIcon />}
-                          onClick={addWindow}
+                          onClick={addTouWindow}
                         >
                           Add Window
                         </Button>
@@ -1632,25 +2013,50 @@ setIsPasswordOpen(true);
                         </HStack>
                       </SimpleGrid>
                     </Box>
+
+                    {/* SIMULATION PREVIEW */}
+                    <Box
+                      mt={2}
+                      p={3}
+                      border={`1px dashed ${cardBorder}`}
+                      borderRadius="8px"
+                      textAlign="center"
+                    >
+                      <Text fontWeight={700} mb={1} fontSize="2xs">
+                        Simulation Preview
+                      </Text>
+
+                      <Box
+                        h="320px"
+                        borderRadius="6px"
+                        bg={useColorModeValue("#f3f4f6", "#071019")}
+                      >
+                        <Tabs variant="unstyled" w="100%" h="100%">
+                          <TabList mb={1}>
+                            <Tab>Chart</Tab>
+                            <Tab>Table</Tab>
+                          </TabList>
+
+                          <TabPanels h="calc(100% - 30px)">
+                            {/* CHART */}
+                            <TabPanel p={0} h="100%">
+                              <PeakShavingGraph
+                                threshold="0"
+                                data={timelineData}
+                              />
+                            </TabPanel>
+
+                            {/* TABLE */}
+                            <TabPanel p={0} h="100%">
+                              <TouSimulationTable timelineData={timelineData || []} />
+                            </TabPanel>
+                          </TabPanels>
+                        </Tabs>
+                      </Box>
+                    </Box>
+
                   </Box>
                 )}
-
-                {/* Simulation Result (fallback) */}
-                <Box
-                  borderRadius="8px"
-                  p={2}
-                  bg={softBg}
-                  border={`1px solid ${cardBorder}`}
-                >
-                  <Text fontWeight={700} mb={1} fontSize="xs">
-                    Simulation Result
-                  </Text>
-                  <Text color={muted} fontSize="2xs">
-                    No simulation run yet. Click{" "}
-                    <strong>Test Optimization</strong> to preview expected
-                    performance.
-                  </Text>
-                </Box>
               </VStack>
             </GridItem>
           </Grid>
@@ -1678,7 +2084,7 @@ setIsPasswordOpen(true);
           </ModalContent>
         </Modal>
 
-        {/* Password Confirmation Modal */}
+        {/* 🔥 Password Confirmation Modal */}
         <ConfirmPasswordModal
           isOpen={isPasswordOpen}
           onClose={() => setIsPasswordOpen(false)}

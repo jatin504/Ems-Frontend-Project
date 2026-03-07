@@ -385,12 +385,12 @@ const Navbar = () => {
               </MenuButton>
               <Portal>
                 <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
-                  <MenuItem onClick={() => { setSelectedMenu("Fleet View"); window.location.href = `http://localhost:4444`; }}>
+                  <MenuItem onClick={() => { setSelectedMenu("Fleet View"); window.location.href = `http://75.119.146.115:4444/`; }}>
                     Fleet View
                   </MenuItem>
-                  <MenuItem onClick={() => { setSelectedMenu("Fleet"); window.location.href = `http://localhost:4445${window.location.pathname}`; }}>
+                  {/* <MenuItem onClick={() => { setSelectedMenu("Fleet"); window.location.href = `http://localhost:4445${window.location.pathname}`; }}>
                     Fleet
-                  </MenuItem>
+                  </MenuItem> */}
                   <MenuItem onClick={() => { setSelectedMenu("Plant 2"); window.location.href = `http://localhost:4446${window.location.pathname}`; }}>
                     Plant 2
                   </MenuItem>
@@ -617,13 +617,13 @@ const Navbar = () => {
         <Box pb={4} display={{ md: "none" }}>
           <Stack as="nav" spacing={2}>
             <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
-              onClick={() => { setSelectedMenu("Fleet View"); window.location.href = `http://localhost:4444`; }}>
+              onClick={() => { setSelectedMenu("Fleet View"); window.location.href = `http://75.119.146.115:4444/`; }}>
               Fleet View
             </Button>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
-              onClick={() => { setSelectedMenu("Fleet"); window.location.href = `http://localhost:4445${window.location.pathname}`; }}>
+            {/* <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
+              onClick={() => { setSelectedMenu("Fleet"); window.location.href = `http://75.119.146.115:4445${window.location.pathname}`; }}>
               Fleet
-            </Button>
+            </Button> */}
             <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
               onClick={() => { setSelectedMenu("Plant 2"); window.location.href = `http://localhost:4446${window.location.pathname}`; }}>
               Plant 2

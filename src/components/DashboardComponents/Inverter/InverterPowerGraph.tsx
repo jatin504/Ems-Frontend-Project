@@ -198,7 +198,7 @@ const InverterPowerGraph: React.FC = () => {
         type: "spline",
         name: `${POWER_ALIAS}-${legendNum}`,
         data: points.map((p) => [p.ts, p.value]),
-        marker: { enabled: true },
+        marker: { enabled: false },
         color: COLORS[colorIndex],
       });
     });
@@ -296,6 +296,21 @@ const InverterPowerGraph: React.FC = () => {
             ),
             style: { color: textColor },
           },
+          plotOptions: {
+            series: {
+              boostThreshold: 500,
+              shadow: false,
+              animation: false,
+              marker: {
+                enabled: false
+              }
+            },
+            spline: {
+              marker: {
+                enabled: false,
+              }
+            }
+          }
         }}
       />
     </GraphLayout>
