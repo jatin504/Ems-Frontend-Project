@@ -1,142 +1,244 @@
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Box, Text, IconButton } from "@chakra-ui/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { MaterialReactTable, type MRT_ColumnDef } from "material-react-table";
 import { FiMaximize, FiMinimize } from "react-icons/fi";
 
 interface CappedDynamicTableProps {
-  timelineData?: any[];
+    timelineData?: any[];
+    summary?: {
+        cycles_used_today: number;
+        energy_cost: number;
+        energy_revenue: number;
+        net_profit: number;
+        initial_soc: number;
+        final_soc: number;
+        total_charge_kwh: number;
+        total_discharge_kwh: number;
+    };
 }
 
 export default function CappedDynamicTable({
-  timelineData = [],
+    timelineData = [],
+    summary,
 }: CappedDynamicTableProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
-  /* ✅ pagination state */
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 4,
-  });
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      panelRef.current?.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
-  /* fullscreen detect */
-  useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
-  /* ✅ change rows when fullscreen changes */
-  useEffect(() => {
-    setPagination({
-      pageIndex: 0,
-      pageSize: isFullscreen ? 15 : 4,
+    /* pagination state */
+    const [pagination, setPagination] = useState({
+        pageIndex: 0,
+        pageSize: 6,
     });
-  }, [isFullscreen]);
 
-  const theme = useMemo(() => createTheme({ palette: { mode: "light" } }), []);
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            panelRef.current?.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    };
 
-  /* ===== ALL COLUMNS FROM API ===== */
+    /* fullscreen detect */
+    useEffect(() => {
+        const handler = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener("fullscreenchange", handler);
+        return () => document.removeEventListener("fullscreenchange", handler);
+    }, []);
 
-  const allColumns = useMemo<MRT_ColumnDef<any>[]>(() => {
-    if (!timelineData.length) return [];
+    /*  change rows when fullscreen changes */
+    useEffect(() => {
+        setPagination({
+            pageIndex: 0,
+            pageSize: isFullscreen ? 15 : 6,
+        });
+    }, [isFullscreen]);
 
-    const keys = Object.keys(timelineData[0]);
+    const theme = useMemo(() => createTheme({ palette: { mode: "light" } }), []);
 
-    return keys.map((key) => ({
-      accessorKey: key,
-      header: key.replaceAll("_", " ").toUpperCase(),
-      Cell: ({ cell }: any) => (
-        <Text fontSize="10px" whiteSpace="nowrap">
-          {cell.getValue() ?? "-"}
-        </Text>
-      ),
-    }));
-  }, [timelineData]);
+    /* ===== ALL COLUMNS FROM API ===== */
 
-  /* ===== NORMAL VIEW → 3 COLUMNS ===== */
+    const allColumns = useMemo<MRT_ColumnDef<any>[]>(() => {
+        if (!timelineData.length) return [];
 
-  const columns = useMemo(
-    () => (isFullscreen ? allColumns : allColumns.slice(0, 3)),
-    [isFullscreen, allColumns]
-  );
+        const keys = Object.keys(timelineData[0]);
 
-  return (
-    <Box ref={panelRef} width="100%">
-      {/* FULLSCREEN BUTTON */}
-      <Box display="flex" justifyContent="flex-end" mb={2}>
-        <IconButton
-          aria-label="fullscreen"
-          size="xs"
-          icon={isFullscreen ? <FiMinimize /> : <FiMaximize />}
-          onClick={toggleFullscreen}
-        />
-      </Box>
+        return keys.map((key) => ({
+            accessorKey: key,
+            header: (() => {
+                const label = key.replace(/_/g, " ").toUpperCase();
+                return label.length > 12 ? label.slice(0, 10) + "..." : label;
+            })(),
 
-      <ThemeProvider theme={theme}>
-        <MaterialReactTable
-          columns={columns}
-          data={timelineData}
-          enablePagination
+            size: isFullscreen ? 160 : 90,
+            minSize: isFullscreen ? 120 : 70,
+            maxSize: isFullscreen ? 220 : 100,
 
-          /* ✅ controlled pagination */
-          state={{ pagination }}
-          onPaginationChange={setPagination}
+            Cell: ({ cell }: any) => (
+                <Text fontSize="10px" whiteSpace="nowrap">
+                    {cell.getValue() ?? "-"}
+                </Text>
+            ),
+        }));
+    }, [timelineData, isFullscreen]);
 
-          muiTableHeadCellProps={{
-            align: "center",
-            sx: {
-              textAlign: "center",
-              whiteSpace: "nowrap",
-              py: 1,
-              px: 1,
-              fontSize: "12px",
-              fontWeight: 600,
-            },
-          }}
+    /* ===== NORMAL VIEW → 6 COLUMNS ===== */
 
-          muiTableBodyCellProps={{
-            align: "center",
-            sx: {
-              textAlign: "center",
-              whiteSpace: "nowrap",
-              py: 0.75,
-              px: 1,
-              fontSize: "10px",
-            },
-          }}
+    const columns = useMemo(
+        () => (isFullscreen ? allColumns : allColumns.slice(0, 6)),
+        [isFullscreen, allColumns]
+    );
 
-          muiTableContainerProps={{
-            sx: {
-              height: isFullscreen ? "calc(100vh - 120px)" : 150,
-              maxHeight: isFullscreen ? "calc(100vh - 120px)" : 150,
-              overflowY: "auto",
-              overflowX: isFullscreen ? "auto" : "hidden",
-              border: "1px solid #e6e9ef",
-              borderRadius: "8px",
-            },
-          }}
+    return (
+        <Box ref={panelRef} width="100%">
+            {/* FULLSCREEN BUTTON */}
+            <Box display="flex" justifyContent="flex-end" mb={2}>
+                <IconButton
+                    aria-label="fullscreen"
+                    size="xs"
+                    icon={isFullscreen ? <FiMinimize /> : <FiMaximize />}
+                    onClick={toggleFullscreen}
+                />
+            </Box>
 
-          enableGlobalFilter={false}
-          enableColumnFilters={false}
-          enableFilters={false}
-          enableColumnActions={false}
-          enableDensityToggle={false}
-          enableHiding={false}
-          enableTopToolbar={false}
-          enableFullScreenToggle={false}
-        />
-      </ThemeProvider>
-    </Box>
-  );
+            <ThemeProvider theme={theme}>
+                <MaterialReactTable
+                    columns={columns}
+                    data={timelineData}
+                    layoutMode="grid-no-grow"
+                    enablePagination
+
+                    /* controlled pagination */
+                    state={{ pagination }}
+                    onPaginationChange={setPagination}
+
+                    muiTableHeadCellProps={{
+                        align: "center",
+                        sx: {
+                            textAlign: "center",
+                            py: 0.25,
+                            px: 0.5,
+                            fontSize: isFullscreen ? "12px" : "7px",
+
+                            "& .Mui-TableHeadCell-Content": {
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                display: "block",
+                                width: "100%",
+                            },
+
+                            "& .Mui-TableHeadCell-Content-Labels": {
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                            },
+                        },
+                    }}
+
+                    muiTableBodyCellProps={{
+                        align: "center",
+                        sx: {
+                            textAlign: "center",
+                            whiteSpace: "nowrap",
+                            py: 0.25,
+                            px: 0.5,
+                            fontSize: isFullscreen ? "13px" : "10px",
+                        },
+                    }}
+                    muiTableBodyRowProps={{
+                        sx: {
+                            height: isFullscreen ? 38 : 26,
+                        },
+                    }}
+
+                    muiTableProps={{
+                        sx: {
+                            tableLayout: "fixed",
+                        },
+                    }}
+                    muiTableContainerProps={{
+                        sx: {
+                            height: isFullscreen ? "calc(100vh - 120px)" : 200,
+                            maxHeight: isFullscreen ? "calc(100vh - 120px)" : 200,
+                            overflowY: "auto",
+                            overflowX: "hidden",
+                            border: "1px solid #e6e9ef",
+                            borderRadius: "8px",
+                        },
+                    }}
+
+                    enableGlobalFilter={false}
+                    enableColumnFilters={false}
+                    enableFilters={false}
+                    enableColumnActions={false}
+                    enableDensityToggle={false}
+                    enableHiding={false}
+                    enableTopToolbar={false}
+                    enableFullScreenToggle={false}
+                />
+            </ThemeProvider>
+
+            {summary && (
+                <Box
+                    mt="4px"
+                    height="20px"
+                    overflow="hidden"
+                    borderTop="1px solid #e6e9ef"
+                    bg="#f8fafc"
+                    position="relative"
+                >
+                    <Box
+                        position="absolute"
+                        whiteSpace="nowrap"
+                        sx={{
+                            animation: "tickerMove 20s linear infinite",
+                        }}
+                    >
+                        <Text as="span" fontSize="11px" mr={8}>
+                            Initial SOC: {summary.initial_soc}%
+                        </Text>
+
+                        <Text as="span" fontSize="11px" mr={8}>
+                            Final SOC: {summary.final_soc}%
+                        </Text>
+
+                        <Text as="span" fontSize="11px" mr={8}>
+                            Cycles Used: {summary.cycles_used_today}
+                        </Text>
+
+                        <Text as="span" fontSize="11px" mr={8}>
+                            Energy Cost: ₹{summary.energy_cost}
+                        </Text>
+
+                        <Text as="span" fontSize="11px" mr={8}>
+                            Energy Revenue: ₹{summary.energy_revenue}
+                        </Text>
+
+                        <Text as="span" fontSize="11px" mr={8}>
+                            Net Profit: ₹{summary.net_profit}
+                        </Text>
+
+                        <Text as="span" fontSize="11px" mr={8}>
+                            Total Charge: {summary.total_charge_kwh} kWh
+                        </Text>
+
+                        <Text as="span" fontSize="11px">
+                            Total Discharge: {summary.total_discharge_kwh} kWh
+                        </Text>
+                    </Box>
+
+                    <style>
+                        {`
+              @keyframes tickerMove {
+                0% { transform: translateX(100%); }
+                100% { transform: translateX(-100%); }
+              }
+            `}
+                    </style>
+                </Box>
+            )}
+        </Box>
+    );
 }

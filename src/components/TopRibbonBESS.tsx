@@ -6,7 +6,7 @@ import {
   Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, useDisclosure,
   Divider, Modal, ModalOverlay, ModalContent, ModalBody, ModalCloseButton,
   Image, Grid, GridItem, Heading, Stack, useColorMode, useColorModeValue,
-  Menu, MenuButton, MenuList, MenuItem, Button, Portal
+  Menu, MenuButton, MenuList, MenuItem, MenuGroup, Button, Portal
 } from "@chakra-ui/react";
 import {
   FiZap, FiBatteryCharging, FiTrendingUp, FiActivity, FiCpu, FiBell, FiInfo,
@@ -234,7 +234,7 @@ const RightCornerControls = ({
           <IconButton aria-label="Plant Info" icon={<FiInfo />} size="sm" variant="ghost" />
         </Tooltip>
         {isLoggedIn ? (
-          <Menu placement="bottom-end" isLazy>
+          <Menu placement="bottom-end" isLazy closeOnSelect={false}>
             <MenuButton as={Button} variant="ghost" p={0} minW={0} borderRadius="full">
               <Avatar size="sm" name={displayName || "User"} src={avatarUrl} />
             </MenuButton>
@@ -243,7 +243,9 @@ const RightCornerControls = ({
                 <MenuItem onClick={() => navigate && navigate("/users")}>Users</MenuItem>
                 {/* <MenuItem onClick={() => navigate && navigate("/profile")}>Profile</MenuItem> */}
                 <MenuItem onClick={() => navigate && navigate("/settings")}>Settings</MenuItem>
-                <MenuItem onClick={() => navigate && navigate("/userlog")}>User Log</MenuItem>
+                <MenuItem onClick={() => navigate && navigate("/userlog")}>
+                  Log
+                </MenuItem>
                 <MenuItem onClick={() => navigate && navigate("/config/device")}>Config</MenuItem>
                 <MenuItem onClick={() => handleLogout && handleLogout()}>Logout</MenuItem>
               </MenuList>

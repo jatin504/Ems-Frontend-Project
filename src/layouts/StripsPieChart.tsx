@@ -61,7 +61,7 @@ const StripsPieChart: React.FC<StripsPieChartType> = ({
     "#00f194",
   ],
 }) => {
-  // ✅ Correct ref typing
+  //  Correct ref typing
   const chartRef = useRef<HighchartsReact | null>(null);
 
   // Dark / light colors via Chakra

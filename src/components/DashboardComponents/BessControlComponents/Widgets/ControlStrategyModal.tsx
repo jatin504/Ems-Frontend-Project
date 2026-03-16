@@ -12,6 +12,11 @@ import {
   Button,
   Box,
   VStack,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
   HStack,
   Text,
   RadioGroup,
@@ -81,6 +86,16 @@ export default function TariffConfigurationModal({
   const [tariffMode, setTariffMode] =
     React.useState<"tou" | "capped" | "virtual" | "peak" | "trading">("tou");
 
+  React.useEffect(() => {
+    setTimelineData([]);
+    setSimulationSummary({
+      final_soc: 0,
+      initial_soc: 0,
+      total_energy_discharged: 0,
+      windows_simulated: 0,
+    });
+  }, [tariffMode]);
+
   // Map selected EMS strategy -> which tab opens in the modal
   React.useEffect(() => {
     if (!isOpen) return; // only when modal opens
@@ -129,6 +144,24 @@ export default function TariffConfigurationModal({
   // STEP 1: Add timelineData and simulationLoading state
   const [timelineData, setTimelineData] = React.useState<TimelineItem[]>([]);
   const [simulationLoading, setSimulationLoading] = React.useState(false);
+  const [simulationView, setSimulationView] = React.useState<"chart" | "table">("chart");
+  const [simulationSummary, setSimulationSummary] = React.useState<{
+    final_soc: number;
+    initial_soc: number;
+    total_energy_discharged?: number;
+    windows_simulated?: number;
+    cycles_used_today?: number;
+    energy_cost?: number;
+    energy_revenue?: number;
+    net_profit?: number;
+    total_charge_kwh?: number;
+    total_discharge_kwh?: number;
+  }>({
+    final_soc: 0,
+    initial_soc: 0,
+    total_energy_discharged: 0,
+    windows_simulated: 0,
+  });
   // STEP 2: Trigger table refresh
   const runSimulation = async () => {
     try {
@@ -150,14 +183,59 @@ export default function TariffConfigurationModal({
 
       console.log("SIMULATION STRATEGY:", strategy);
 
-      const response = await SimulateBessOptimizeAPI(strategy);
+      // Extend the type to include cycles_used_today for capped dynamic
+      type SimulationResult = {
+        final_soc: number;
+        initial_soc: number;
+        simulation_start: string;
+        timeline: TimelineItem[];
+        total_energy_discharged: number;
+        windows_simulated: number;
+        cycles_used_today?: number;
+        energy_cost?: number;
+        energy_revenue?: number;
+        net_profit?: number;
+        total_charge_kwh?: number;
+        total_discharge_kwh?: number;
+      };
+
+      const response: { result: SimulationResult } = await SimulateBessOptimizeAPI(strategy);
 
       console.log("SIMULATION RESPONSE:", response);
 
       const timeline =
         response?.result?.timeline ??
-        response?.timeline ??
         [];
+
+      if (tariffMode === "capped") {
+        setSimulationSummary({
+          cycles_used_today: response?.result?.cycles_used_today ?? 0,
+          energy_cost: response?.result?.energy_cost ?? 0,
+          energy_revenue: response?.result?.energy_revenue ?? 0,
+          net_profit: response?.result?.net_profit ?? 0,
+          initial_soc: response?.result?.initial_soc ?? 0,
+          final_soc: response?.result?.final_soc ?? 0,
+          total_charge_kwh: response?.result?.total_charge_kwh ?? 0,
+          total_discharge_kwh: response?.result?.total_discharge_kwh ?? 0,
+        });
+      } else if (tariffMode === "tou") {
+        setSimulationSummary({
+          energy_cost: response?.result?.energy_cost ?? 0,
+          energy_revenue: response?.result?.energy_revenue ?? 0,
+          net_profit: response?.result?.net_profit ?? 0,
+          initial_soc: response?.result?.initial_soc ?? 0,
+          final_soc: response?.result?.final_soc ?? 0,
+          total_charge_kwh: response?.result?.total_charge_kwh ?? 0,
+          total_discharge_kwh: response?.result?.total_discharge_kwh ?? 0,
+        });
+      } else {
+        setSimulationSummary({
+          final_soc: response?.result?.final_soc ?? 0,
+          initial_soc: response?.result?.initial_soc ?? 0,
+          total_energy_discharged: response?.result?.total_energy_discharged ?? 0,
+          windows_simulated: response?.result?.windows_simulated ?? 0,
+        });
+      }
 
       // normalize timeline for table UI
       if (tariffMode === "peak") {
@@ -263,7 +341,7 @@ export default function TariffConfigurationModal({
   const addWindow = () => {
     const newId = `w${Date.now()}`;
 
-    setWindows((s) => [
+    setTouWindows((s) => [
       ...s,
       {
         id: newId,
@@ -276,11 +354,11 @@ export default function TariffConfigurationModal({
   };
 
   const removeWindow = (id: string) => {
-    setWindows((s) => s.filter((w) => w.id !== id));
+    setTouWindows((s) => s.filter((w) => w.id !== id));
   };
 
   const updateWindow = (id: string, patch: Partial<ToUWindow>) => {
-    setWindows((s) => s.map((w) => (w.id === id ? { ...w, ...patch } : w)));
+    setTouWindows((s) => s.map((w) => (w.id === id ? { ...w, ...patch } : w)));
   };
 
   // Optimization rules (TOU)
@@ -361,7 +439,7 @@ export default function TariffConfigurationModal({
   >("maxrev");
 
   const [saving, setSaving] = React.useState(false);
-  // 🔥 PERMISSION CHECK (FINAL FIX)
+  // PERMISSION CHECK (FINAL FIX)
   const { permissions } = usePermissions();
 
   const role = (sessionStorage.getItem("role") || "").toLowerCase();
@@ -377,7 +455,7 @@ export default function TariffConfigurationModal({
     : true; // jab tak load nahi hua tab disable mat karo
 
 
-  // 🔥 PASSWORD CONFIRMATION FLOW
+  // PASSWORD CONFIRMATION FLOW
   const [isPasswordOpen, setIsPasswordOpen] = React.useState(false);
   const [pendingPayload, setPendingPayload] = React.useState<any>(null);
 
@@ -716,18 +794,22 @@ export default function TariffConfigurationModal({
       virtual: virtualPayload,
     };
 
-    // 🔥 Open password modal instead of saving directly
+    // Open password modal instead of saving directly
     if (!canControl) {
       console.warn("User has no BESS control permission");
       return;
     }
+
+    // SET CONTEXT FOR PASSWORD VERIFY LOG
+    ;(window as any).__CONTROL_TYPE__ = "STRATEGY";
+    ;(window as any).__CONTROL_MODULE__ = tariffMode;   // peak / capped / tou / virtual
 
     setPendingPayload(payload);
     setIsPasswordOpen(true);
 
   };
 
-  // 🔥 Password confirm handler
+  // Password confirm handler
   const handlePasswordConfirm = async (password: string) => {
     try {
       setSaving(true);
@@ -763,7 +845,9 @@ export default function TariffConfigurationModal({
       <ModalContent
         fontSize="xs"
         maxH="90vh"
+        h="90vh"
         display="flex"
+        flexDirection="column"
       >
         <ModalHeader fontSize="sm" py={1.5}>
           EMS Tariff Configuration
@@ -773,6 +857,7 @@ export default function TariffConfigurationModal({
           py={2}
           px={3}
           overflowY="auto"
+          flex="1"
         >
           <Grid templateColumns="240px 1fr" gap={3}>
             {/* LEFT COLUMN: Tariff mode + BESS params */}
@@ -941,7 +1026,7 @@ export default function TariffConfigurationModal({
                     size="xs"
                     colorScheme="purple"
                     onClick={() => {
-                      if (!canControl) return;   // 🔥 permission check
+                      if (!canControl) return;   // permission check
                       handleSave();
                     }}
                     isDisabled={!canControl}
@@ -1094,52 +1179,63 @@ export default function TariffConfigurationModal({
                       </Box>
                     </SimpleGrid>
 
-                    <Box
-                      mt={2}
-                      p={2}
-                      border={`1px solid ${cardBorder}`}
-                      borderRadius="8px"
-                    >
-                      <Text fontWeight={600} mb={1} fontSize="xs">
-                        Decision Rules
-                      </Text>
-                      <VStack align="start" spacing={1} fontSize="2xs">
-                        <Checkbox
-                          size="xs"
-                          isChecked={cappedAggressivelyCharge}
-                          onChange={(e) =>
-                            setCappedAggressivelyCharge(e.target.checked)
-                          }
-                        >
-                          Aggressively charge when price &lt; floor
-                        </Checkbox>
-                        <Checkbox
-                          size="xs"
-                          isChecked={cappedPreventImport}
-                          onChange={(e) =>
-                            setCappedPreventImport(e.target.checked)
-                          }
-                        >
-                          Prevent import when price &gt; cap
-                        </Checkbox>
-                        <Checkbox
-                          size="xs"
-                          isChecked={cappedAllowExport}
-                          onChange={(e) =>
-                            setCappedAllowExport(e.target.checked)
-                          }
-                        >
-                          Allow export when profitable
-                        </Checkbox>
-                      </VStack>
-                    </Box>
+                    <Accordion allowToggle defaultIndex={[]}>
+                      <AccordionItem border="none">
+                        <AccordionButton px={0}>
+                          <Box flex="1" textAlign="left">
+                            <Text fontWeight={600} mb={1} fontSize="xs">
+                              Decision Rules
+                            </Text>
+                          </Box>
+                          <AccordionIcon />
+                        </AccordionButton>
+                        <AccordionPanel px={0} pb={2}>
+                          <Box
+                            mt={2}
+                            p={2}
+                            border={`1px solid ${cardBorder}`}
+                            borderRadius="8px"
+                          >
+                            <VStack align="start" spacing={1} fontSize="2xs">
+                              <Checkbox
+                                size="xs"
+                                isChecked={cappedAggressivelyCharge}
+                                onChange={(e) =>
+                                  setCappedAggressivelyCharge(e.target.checked)
+                                }
+                              >
+                                Aggressively charge when price &lt; floor
+                              </Checkbox>
+                              <Checkbox
+                                size="xs"
+                                isChecked={cappedPreventImport}
+                                onChange={(e) =>
+                                  setCappedPreventImport(e.target.checked)
+                                }
+                              >
+                                Prevent import when price &gt; cap
+                              </Checkbox>
+                              <Checkbox
+                                size="xs"
+                                isChecked={cappedAllowExport}
+                                onChange={(e) =>
+                                  setCappedAllowExport(e.target.checked)
+                                }
+                              >
+                                Allow export when profitable
+                              </Checkbox>
+                            </VStack>
+                          </Box>
+                        </AccordionPanel>
+                      </AccordionItem>
+                    </Accordion>
 
                     <Box
                       mt={2}
                       p={3}
                       border={`1px dashed ${cardBorder}`}
                       borderRadius="8px"
-                      textAlign="center"
+                      textAlign="left"
                     >
                       <Text fontWeight={700} mb={1} fontSize="2xs">
                         Simulation Preview
@@ -1158,7 +1254,7 @@ export default function TariffConfigurationModal({
                             borderRadius="8px"
                             w="fit-content"
                           >
-                            <Tab
+                            {/* <Tab
                               fontSize="xs"
                               px={4}
                               _selected={{
@@ -1166,41 +1262,29 @@ export default function TariffConfigurationModal({
                                 color: "white",
                               }}
                             >
-                              📊 Chart
-                            </Tab>
-
-                            <Tab
-                              fontSize="xs"
-                              px={4}
-                              _selected={{
-                                bg: "blue.500",
-                                color: "white",
-                              }}
-                            >
-                              📋 Table
-                            </Tab>
+                              � Table
+                            </Tab> */}
                           </TabList>
 
                           <TabPanels h="calc(100% - 30px)">
                             <TabPanel p={0} h="100%">
-                              <PeakShavingGraph
-                                threshold={priceCap}
-                                data={timelineData}
+                              <CappedDynamicTable
+                                timelineData={timelineData || []}
+                                summary={{
+                                  cycles_used_today: simulationSummary.cycles_used_today ?? 0,
+                                  energy_cost: simulationSummary.energy_cost ?? 0,
+                                  energy_revenue: simulationSummary.energy_revenue ?? 0,
+                                  net_profit: simulationSummary.net_profit ?? 0,
+                                  initial_soc: simulationSummary.initial_soc ?? 0,
+                                  final_soc: simulationSummary.final_soc ?? 0,
+                                  total_charge_kwh: simulationSummary.total_charge_kwh ?? 0,
+                                  total_discharge_kwh: simulationSummary.total_discharge_kwh ?? 0,
+                                }}
                               />
-                            </TabPanel>
-
-                            <TabPanel p={0} h="100%">
-                              <CappedDynamicTable timelineData={timelineData || []} />
                             </TabPanel>
                           </TabPanels>
                         </Tabs>
                       </Box>
-                      <Box
-                        h="80px"
-                        mt={2}
-                        borderRadius="6px"
-                        bg={useColorModeValue("#fafafa", "#071019")}
-                      />
                     </Box>
                   </Box>
                 )}
@@ -1421,71 +1505,92 @@ export default function TariffConfigurationModal({
                           border={`1px solid ${cardBorder}`}
                           mb={2}
                         >
-                          <Text fontWeight={700} mb={2} fontSize="xs">
-                            Time-of-Use (TOU) Settings
-                          </Text>
-                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
-                            {peakWindows.map((w) => (
-                              <Box
-                                key={w.id}
-                                borderRadius="8px"
-                                p={2}
-                                border={`1px solid ${cardBorder}`}
-                              >
-                                <HStack justify="space-between" mb={1}>
-                                  <Text fontWeight={600} fontSize="xs">
-                                    {w.name}
+                          <Accordion allowToggle defaultIndex={[]}>
+                            <AccordionItem border="none">
+
+                              <AccordionButton px={0}>
+                                <Box flex="1" textAlign="left">
+                                  <Text fontWeight={700} fontSize="xs">
+                                    Peak shaving Window
                                   </Text>
-                                  <Button
-                                    variant="ghost"
-                                    size="2xs"
-                                    onClick={() => removePeakWindow(w.id)}
-                                    leftIcon={<DeleteIcon />}
-                                  >
-                                    Remove
-                                  </Button>
-                                </HStack>
-                                <VStack align="stretch" spacing={1} fontSize="2xs">
-                                  <HStack>
-                                    <Text w="60px">Start</Text>
-                                    <Input
-                                      size="xs"
-                                      type="time"
-                                      value={w.start}
-                                      onChange={(e) =>
-                                        updatePeakWindow(w.id, {
-                                          start: e.target.value,
-                                        })
-                                      }
-                                    />
-                                  </HStack>
-                                  <HStack>
-                                    <Text w="60px">End</Text>
-                                    <Input
-                                      size="xs"
-                                      type="time"
-                                      value={w.end}
-                                      onChange={(e) =>
-                                        updatePeakWindow(w.id, { end: e.target.value })
-                                      }
-                                    />
-                                  </HStack>
-                                  <HStack>
-                                    <Text w="60px">Load</Text>
-                                    <Input
-                                      size="xs"
-                                      value={w.price}
-                                      onChange={(e) =>
-                                        updatePeakWindow(w.id, {
-                                          price: e.target.value,
-                                        })
-                                      }
-                                    />
-                                  </HStack>
-                                </VStack>
-                              </Box>
-                            ))}
-                          </SimpleGrid>
+                                </Box>
+                                <AccordionIcon />
+                              </AccordionButton>
+
+                              <AccordionPanel px={0} pb={2}>
+
+                                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                                  {peakWindows.map((w) => (
+                                    <Box
+                                      key={w.id}
+                                      borderRadius="8px"
+                                      p={2}
+                                      border={`1px solid ${cardBorder}`}
+                                    >
+                                      <HStack justify="space-between" mb={1}>
+                                        <Text fontWeight={600} fontSize="xs">
+                                          {w.name}
+                                        </Text>
+                                        <Button
+                                          variant="ghost"
+                                          size="2xs"
+                                          onClick={() => removePeakWindow(w.id)}
+                                          leftIcon={<DeleteIcon />}
+                                        >
+                                          Remove
+                                        </Button>
+                                      </HStack>
+
+                                      <VStack align="stretch" spacing={1} fontSize="2xs">
+                                        <HStack>
+                                          <Text w="60px">Start</Text>
+                                          <Input
+                                            size="xs"
+                                            type="time"
+                                            value={w.start}
+                                            onChange={(e) =>
+                                              updatePeakWindow(w.id, {
+                                                start: e.target.value,
+                                              })
+                                            }
+                                          />
+                                        </HStack>
+
+                                        <HStack>
+                                          <Text w="60px">End</Text>
+                                          <Input
+                                            size="xs"
+                                            type="time"
+                                            value={w.end}
+                                            onChange={(e) =>
+                                              updatePeakWindow(w.id, {
+                                                end: e.target.value,
+                                              })
+                                            }
+                                          />
+                                        </HStack>
+
+                                        <HStack>
+                                          <Text w="60px">Load</Text>
+                                          <Input
+                                            size="xs"
+                                            value={w.price}
+                                            onChange={(e) =>
+                                              updatePeakWindow(w.id, {
+                                                price: e.target.value,
+                                              })
+                                            }
+                                          />
+                                        </HStack>
+                                      </VStack>
+                                    </Box>
+                                  ))}
+                                </SimpleGrid>
+
+                              </AccordionPanel>
+
+                            </AccordionItem>
+                          </Accordion>
                           <Box
                             mt={2}
                             p={2}
@@ -1534,62 +1639,73 @@ export default function TariffConfigurationModal({
                               </Button>
                             </HStack>
                           </Box>
-                          <Box
-                            mt={2}
-                            borderRadius="8px"
-                            p={2}
-                            bg={softBg}
-                            border={`1px solid ${cardBorder}`}
-                          >
-                            <Text fontWeight={700} mb={1} fontSize="xs">
-                              Optimization Rules
-                            </Text>
-                            <SimpleGrid
-                              columns={2}
-                              spacing={2}
-                              alignItems="center"
-                              fontSize="2xs"
-                            >
-                              <Checkbox
-                                size="xs"
-                                isChecked={allowOffPeakCharge}
-                                onChange={(e) =>
-                                  setAllowOffPeakCharge(e.target.checked)
-                                }
-                              >
-                                Allow charging during off-peak
-                              </Checkbox>
-                              <HStack>
-                                <Checkbox
-                                  size="xs"
-                                  isChecked={allowChargeOnlySolar}
-                                  onChange={(e) =>
-                                    setAllowChargeOnlySolar(e.target.checked)
-                                  }
+                          <Accordion allowToggle defaultIndex={[]}>
+                            <AccordionItem border="none">
+                              <AccordionButton px={0}>
+                                <Box flex="1" textAlign="left">
+                                  <Text fontWeight={700} mb={1} fontSize="xs">
+                                    Optimization Rules
+                                  </Text>
+                                </Box>
+                                <AccordionIcon />
+                              </AccordionButton>
+                              <AccordionPanel px={0} pb={2}>
+                                <Box
+                                  mt={2}
+                                  borderRadius="8px"
+                                  p={2}
+                                  bg={softBg}
+                                  border={`1px solid ${cardBorder}`}
                                 >
-                                  Allow charging only from solar
-                                </Checkbox>
-                              </HStack>
-                              <Checkbox
-                                size="xs"
-                                isChecked={dischargeOnlyPeak}
-                                onChange={(e) =>
-                                  setDischargeOnlyPeak(e.target.checked)
-                                }
-                              >
-                                Discharge only during peak
-                              </Checkbox>
-                              <HStack>
-                                <Text>Reserve SOC:</Text>
-                                <Input
-                                  size="xs"
-                                  w="60px"
-                                  value={reserveSOC}
-                                  onChange={(e) => setReserveSOC(e.target.value)}
-                                />
-                              </HStack>
-                            </SimpleGrid>
-                          </Box>
+                                  <SimpleGrid
+                                    columns={2}
+                                    spacing={2}
+                                    alignItems="center"
+                                    fontSize="2xs"
+                                  >
+                                    <Checkbox
+                                      size="xs"
+                                      isChecked={allowOffPeakCharge}
+                                      onChange={(e) =>
+                                        setAllowOffPeakCharge(e.target.checked)
+                                      }
+                                    >
+                                      Allow charging during off-peak
+                                    </Checkbox>
+                                    <HStack>
+                                      <Checkbox
+                                        size="xs"
+                                        isChecked={allowChargeOnlySolar}
+                                        onChange={(e) =>
+                                          setAllowChargeOnlySolar(e.target.checked)
+                                        }
+                                      >
+                                        Allow charging only from solar
+                                      </Checkbox>
+                                    </HStack>
+                                    <Checkbox
+                                      size="xs"
+                                      isChecked={dischargeOnlyPeak}
+                                      onChange={(e) =>
+                                        setDischargeOnlyPeak(e.target.checked)
+                                      }
+                                    >
+                                      Discharge only during peak
+                                    </Checkbox>
+                                    <HStack>
+                                      <Text>Reserve SOC:</Text>
+                                      <Input
+                                        size="xs"
+                                        w="60px"
+                                        value={reserveSOC}
+                                        onChange={(e) => setReserveSOC(e.target.value)}
+                                      />
+                                    </HStack>
+                                  </SimpleGrid>
+                                </Box>
+                              </AccordionPanel>
+                            </AccordionItem>
+                          </Accordion>
                         </Box>
                         <Text fontWeight={600} mb={1} fontSize="2xs">
                           Peak Shaving Mode
@@ -1697,68 +1813,81 @@ export default function TariffConfigurationModal({
                         borderRadius="8px"
                         border={`1px solid ${cardBorder}`}
                       >
-                        <Text fontWeight={600} mb={1} fontSize="2xs">
-                          Advanced Settings
-                        </Text>
+                        <Accordion allowToggle defaultIndex={[]}>
+                          <AccordionItem border="none">
 
-                        <Grid
-                          templateColumns={{ base: "1fr", md: "1fr 1fr" }}
-                          gap={2}
-                        >
-                          <Box>
-                            <Text fontSize="2xs" mb={1}>
-                              Soft Limit (kW)
-                            </Text>
-                            <Input
-                              size="xs"
-                              placeholder=""
-                              value={softLimit}
-                              onChange={(e) => setSoftLimit(e.target.value)}
-                              isDisabled={!enablePeakShaving}
-                            />
-                          </Box>
+                            <AccordionButton px={0}>
+                              <Box flex="1" textAlign="left">
+                                <Text fontWeight={600} fontSize="2xs">
+                                  Advanced Settings
+                                </Text>
+                              </Box>
+                              <AccordionIcon />
+                            </AccordionButton>
 
-                          <Box>
-                            <Text fontSize="2xs" mb={1}>
-                              Hard Limit (kW)
-                            </Text>
-                            <Input
-                              size="xs"
-                              placeholder=""
-                              value={hardLimit}
-                              onChange={(e) => setHardLimit(e.target.value)}
-                              isDisabled={!enablePeakShaving}
-                            />
-                          </Box>
-                        </Grid>
+                            <AccordionPanel px={0} pb={2}>
+                              <Grid
+                                templateColumns={{ base: "1fr", md: "1fr 1fr" }}
+                                gap={2}
+                              >
+                                <Box>
+                                  <Text fontSize="2xs" mb={1}>
+                                    Soft Limit (kW)
+                                  </Text>
+                                  <Input
+                                    size="xs"
+                                    placeholder=""
+                                    value={softLimit}
+                                    onChange={(e) => setSoftLimit(e.target.value)}
+                                    isDisabled={!enablePeakShaving}
+                                  />
+                                </Box>
 
-                        <VStack
-                          align="start"
-                          spacing={1}
-                          mt={2}
-                          fontSize="2xs"
-                        >
-                          <Checkbox
-                            size="xs"
-                            isChecked={psMaintainSoft}
-                            onChange={(e) =>
-                              setPsMaintainSoft(e.target.checked)
-                            }
-                            isDisabled={!enablePeakShaving}
-                          >
-                            Maintain load under soft limit using BESS
-                          </Checkbox>
-                          <Checkbox
-                            size="xs"
-                            isChecked={psForceHard}
-                            onChange={(e) =>
-                              setPsForceHard(e.target.checked)
-                            }
-                            isDisabled={!enablePeakShaving}
-                          >
-                            Force control to stay under hard limit
-                          </Checkbox>
-                        </VStack>
+                                <Box>
+                                  <Text fontSize="2xs" mb={1}>
+                                    Hard Limit (kW)
+                                  </Text>
+                                  <Input
+                                    size="xs"
+                                    placeholder=""
+                                    value={hardLimit}
+                                    onChange={(e) => setHardLimit(e.target.value)}
+                                    isDisabled={!enablePeakShaving}
+                                  />
+                                </Box>
+                              </Grid>
+
+                              <VStack
+                                align="start"
+                                spacing={1}
+                                mt={2}
+                                fontSize="2xs"
+                              >
+                                <Checkbox
+                                  size="xs"
+                                  isChecked={psMaintainSoft}
+                                  onChange={(e) =>
+                                    setPsMaintainSoft(e.target.checked)
+                                  }
+                                  isDisabled={!enablePeakShaving}
+                                >
+                                  Maintain load under soft limit using BESS
+                                </Checkbox>
+                                <Checkbox
+                                  size="xs"
+                                  isChecked={psForceHard}
+                                  onChange={(e) =>
+                                    setPsForceHard(e.target.checked)
+                                  }
+                                  isDisabled={!enablePeakShaving}
+                                >
+                                  Force control to stay under hard limit
+                                </Checkbox>
+                              </VStack>
+                            </AccordionPanel>
+
+                          </AccordionItem>
+                        </Accordion>
                       </Box>
 
                       <Box
@@ -1766,39 +1895,43 @@ export default function TariffConfigurationModal({
                         borderRadius="8px"
                         border={`1px solid ${cardBorder}`}
                       >
-                        <Text fontWeight={700} mb={1} fontSize="2xs">
-                          Simulation Preview
-                        </Text>
+                        <HStack justify="flex-start" align="center">
+                          <Text fontWeight={700} fontSize="2xs">
+                            Simulation Preview
+                          </Text>
+                          <HStack spacing={1}>
+                            <Button size="xs" variant={simulationView === "chart" ? "solid" : "outline"} onClick={() => setSimulationView("chart")}>
+                              Chart
+                            </Button>
+                            <Button size="xs" variant={simulationView === "table" ? "solid" : "outline"} onClick={() => setSimulationView("table")}>
+                              Table
+                            </Button>
+                          </HStack>
+                        </HStack>
                         <Box
                           h="320px"
                           borderRadius="6px"
                           bg={useColorModeValue("#f3f4f6", "#071019")}
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
+                          pt="0"
+                          pb="0"
                         >
-                          {tariffMode === "peak" ? (
-                            <Tabs variant="unstyled" w="100%" h="100%">
-                              <TabList mb={1}>
-                                <Tab>Chart</Tab>
-                                <Tab>Table</Tab>
-                              </TabList>
-                              <TabPanels h="calc(100% - 30px)">
-                                <TabPanel p={0} h="100%">
-                                  <PeakShavingGraph
-                                    threshold={peakThreshold}
-                                    data={timelineData}
-                                  />
-                                </TabPanel>
-                                <TabPanel p={0} h="100%">
-                                  <PeakShavingTable timelineData={timelineData || []} />
-                                </TabPanel>
-                              </TabPanels>
-                            </Tabs>
+                          {simulationView === "chart" ? (
+                            <PeakShavingGraph
+                              threshold={peakThreshold ? Number(peakThreshold) : undefined}
+                              hard_limit_kw={hardLimit ? Number(hardLimit) : undefined}
+                              soft_limit_kw={softLimit ? Number(softLimit) : undefined}
+                              data={timelineData}
+                            />
                           ) : (
-                            <Text color={muted} fontSize="2xs">
-                              Load Curve + Threshold + BESS Discharge (Mock Chart)
-                            </Text>
+                            <PeakShavingTable
+                              timelineData={timelineData || []}
+                              summary={{
+                                initial_soc: simulationSummary.initial_soc ?? 0,
+                                final_soc: simulationSummary.final_soc ?? 0,
+                                total_energy_discharged: simulationSummary.total_energy_discharged ?? 0,
+                                windows_simulated: simulationSummary.windows_simulated ?? 0,
+                              }}
+                            />
                           )}
                         </Box>
                       </Box>
@@ -1837,74 +1970,92 @@ export default function TariffConfigurationModal({
                     bg={softBg}
                     border={`1px solid ${cardBorder}`}
                   >
-                    <Text fontWeight={700} mb={2} fontSize="xs">
-                      Time-of-Use (TOU) Settings
-                    </Text>
+                    <Accordion allowToggle defaultIndex={[]}>
+                      <AccordionItem border="none">
 
-                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
-                      {touWindows.map((w) => (
-                        <Box
-                          key={w.id}
-                          borderRadius="8px"
-                          p={2}
-                          border={`1px solid ${cardBorder}`}
-                        >
-                          <HStack justify="space-between" mb={1}>
-                            <Text fontWeight={600} fontSize="xs">
-                              {w.name}
+                        <AccordionButton px={0}>
+                          <Box flex="1" textAlign="left">
+                            <Text fontWeight={700} fontSize="xs">
+                              Time-of-Use (TOU) Settings
                             </Text>
-                            <Button
-                              variant="ghost"
-                              size="2xs"
-                              onClick={() => removeTouWindow(w.id)}
-                              leftIcon={<DeleteIcon />}
-                            >
-                              Remove
-                            </Button>
-                          </HStack>
+                          </Box>
+                          <AccordionIcon />
+                        </AccordionButton>
 
-                          <VStack align="stretch" spacing={1} fontSize="2xs">
-                            <HStack>
-                              <Text w="60px">Start</Text>
-                              <Input
-                                size="xs"
-                                type="time"
-                                value={w.start}
-                                onChange={(e) =>
-                                  updateTouWindow(w.id, {
-                                    start: e.target.value,
-                                  })
-                                }
-                              />
-                            </HStack>
-                            <HStack>
-                              <Text w="60px">End</Text>
-                              <Input
-                                size="xs"
-                                type="time"
-                                value={w.end}
-                                onChange={(e) =>
-                                  updateTouWindow(w.id, { end: e.target.value })
-                                }
-                              />
-                            </HStack>
-                            <HStack>
-                              <Text w="60px">Price</Text>
-                              <Input
-                                size="xs"
-                                value={w.price}
-                                onChange={(e) =>
-                                  updateTouWindow(w.id, {
-                                    price: e.target.value,
-                                  })
-                                }
-                              />
-                            </HStack>
-                          </VStack>
-                        </Box>
+                        <AccordionPanel px={0} pb={2}>
 
-                      ))}
-                    </SimpleGrid>
+                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                            {touWindows.map((w) => (
+                              <Box
+                                key={w.id}
+                                borderRadius="8px"
+                                p={2}
+                                border={`1px solid ${cardBorder}`}
+                              >
+                                <HStack justify="space-between" mb={1}>
+                                  <Text fontWeight={600} fontSize="xs">
+                                    {w.name}
+                                  </Text>
+                                  <Button
+                                    variant="ghost"
+                                    size="2xs"
+                                    onClick={() => removeTouWindow(w.id)}
+                                    leftIcon={<DeleteIcon />}
+                                  >
+                                    Remove
+                                  </Button>
+                                </HStack>
+
+                                <VStack align="stretch" spacing={1} fontSize="2xs">
+                                  <HStack>
+                                    <Text w="60px">Start</Text>
+                                    <Input
+                                      size="xs"
+                                      type="time"
+                                      value={w.start}
+                                      onChange={(e) =>
+                                        updateTouWindow(w.id, {
+                                          start: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </HStack>
+
+                                  <HStack>
+                                    <Text w="60px">End</Text>
+                                    <Input
+                                      size="xs"
+                                      type="time"
+                                      value={w.end}
+                                      onChange={(e) =>
+                                        updateTouWindow(w.id, {
+                                          end: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </HStack>
+
+                                  <HStack>
+                                    <Text w="60px">Price</Text>
+                                    <Input
+                                      size="xs"
+                                      value={w.price}
+                                      onChange={(e) =>
+                                        updateTouWindow(w.id, {
+                                          price: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </HStack>
+                                </VStack>
+                              </Box>
+                            ))}
+                          </SimpleGrid>
+
+                        </AccordionPanel>
+
+                      </AccordionItem>
+                    </Accordion>
 
                     <Box
                       mt={2}
@@ -1956,63 +2107,74 @@ export default function TariffConfigurationModal({
                       </HStack>
                     </Box>
 
-                    <Box
-                      mt={2}
-                      borderRadius="8px"
-                      p={2}
-                      bg={softBg}
-                      border={`1px solid ${cardBorder}`}
-                    >
-                      <Text fontWeight={700} mb={1} fontSize="xs">
-                        Optimization Rules
-                      </Text>
-                      <SimpleGrid
-                        columns={2}
-                        spacing={2}
-                        alignItems="center"
-                        fontSize="2xs"
-                      >
-                        <Checkbox
-                          size="xs"
-                          isChecked={allowOffPeakCharge}
-                          onChange={(e) =>
-                            setAllowOffPeakCharge(e.target.checked)
-                          }
-                        >
-                          Allow charging during off-peak
-                        </Checkbox>
-                        <HStack>
-                          <Checkbox
-                            size="xs"
-                            isChecked={allowChargeOnlySolar}
-                            onChange={(e) =>
-                              setAllowChargeOnlySolar(e.target.checked)
-                            }
+                    <Accordion allowToggle defaultIndex={[]}>
+                      <AccordionItem border="none">
+                        <AccordionButton px={0}>
+                          <Box flex="1" textAlign="left">
+                            <Text fontWeight={700} mb={1} fontSize="xs">
+                              Optimization Rules
+                            </Text>
+                          </Box>
+                          <AccordionIcon />
+                        </AccordionButton>
+                        <AccordionPanel px={0} pb={2}>
+                          <Box
+                            mt={2}
+                            borderRadius="8px"
+                            p={2}
+                            bg={softBg}
+                            border={`1px solid ${cardBorder}`}
                           >
-                            Allow charging only from solar
-                          </Checkbox>
-                        </HStack>
+                            <SimpleGrid
+                              columns={2}
+                              spacing={2}
+                              alignItems="center"
+                              fontSize="2xs"
+                            >
+                              <Checkbox
+                                size="xs"
+                                isChecked={allowOffPeakCharge}
+                                onChange={(e) =>
+                                  setAllowOffPeakCharge(e.target.checked)
+                                }
+                              >
+                                Allow charging during off-peak
+                              </Checkbox>
+                              <HStack>
+                                <Checkbox
+                                  size="xs"
+                                  isChecked={allowChargeOnlySolar}
+                                  onChange={(e) =>
+                                    setAllowChargeOnlySolar(e.target.checked)
+                                  }
+                                >
+                                  Allow charging only from solar
+                                </Checkbox>
+                              </HStack>
 
-                        <Checkbox
-                          size="xs"
-                          isChecked={dischargeOnlyPeak}
-                          onChange={(e) =>
-                            setDischargeOnlyPeak(e.target.checked)
-                          }
-                        >
-                          Discharge only during peak
-                        </Checkbox>
-                        <HStack>
-                          <Text>Reserve SOC:</Text>
-                          <Input
-                            size="xs"
-                            w="60px"
-                            value={reserveSOC}
-                            onChange={(e) => setReserveSOC(e.target.value)}
-                          />
-                        </HStack>
-                      </SimpleGrid>
-                    </Box>
+                              <Checkbox
+                                size="xs"
+                                isChecked={dischargeOnlyPeak}
+                                onChange={(e) =>
+                                  setDischargeOnlyPeak(e.target.checked)
+                                }
+                              >
+                                Discharge only during peak
+                              </Checkbox>
+                              <HStack>
+                                <Text>Reserve SOC:</Text>
+                                <Input
+                                  size="xs"
+                                  w="60px"
+                                  value={reserveSOC}
+                                  onChange={(e) => setReserveSOC(e.target.value)}
+                                />
+                              </HStack>
+                            </SimpleGrid>
+                          </Box>
+                        </AccordionPanel>
+                      </AccordionItem>
+                    </Accordion>
 
                     {/* SIMULATION PREVIEW */}
                     <Box
@@ -2020,7 +2182,7 @@ export default function TariffConfigurationModal({
                       p={3}
                       border={`1px dashed ${cardBorder}`}
                       borderRadius="8px"
-                      textAlign="center"
+                      textAlign="left"
                     >
                       <Text fontWeight={700} mb={1} fontSize="2xs">
                         Simulation Preview
@@ -2033,22 +2195,23 @@ export default function TariffConfigurationModal({
                       >
                         <Tabs variant="unstyled" w="100%" h="100%">
                           <TabList mb={1}>
-                            <Tab>Chart</Tab>
-                            <Tab>Table</Tab>
+                            <Tab></Tab>
                           </TabList>
 
                           <TabPanels h="calc(100% - 30px)">
-                            {/* CHART */}
                             <TabPanel p={0} h="100%">
-                              <PeakShavingGraph
-                                threshold="0"
-                                data={timelineData}
+                              <TouSimulationTable
+                                timelineData={timelineData || []}
+                                summary={{
+                                  energy_cost: simulationSummary.energy_cost ?? 0,
+                                  energy_revenue: simulationSummary.energy_revenue ?? 0,
+                                  net_profit: simulationSummary.net_profit ?? 0,
+                                  initial_soc: simulationSummary.initial_soc ?? 0,
+                                  final_soc: simulationSummary.final_soc ?? 0,
+                                  total_charge_kwh: simulationSummary.total_charge_kwh ?? 0,
+                                  total_discharge_kwh: simulationSummary.total_discharge_kwh ?? 0,
+                                }}
                               />
-                            </TabPanel>
-
-                            {/* TABLE */}
-                            <TabPanel p={0} h="100%">
-                              <TouSimulationTable timelineData={timelineData || []} />
                             </TabPanel>
                           </TabPanels>
                         </Tabs>
@@ -2084,7 +2247,7 @@ export default function TariffConfigurationModal({
           </ModalContent>
         </Modal>
 
-        {/* 🔥 Password Confirmation Modal */}
+        {/* Password Confirmation Modal */}
         <ConfirmPasswordModal
           isOpen={isPasswordOpen}
           onClose={() => setIsPasswordOpen(false)}

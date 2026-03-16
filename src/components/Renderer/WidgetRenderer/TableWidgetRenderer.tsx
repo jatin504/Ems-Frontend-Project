@@ -25,7 +25,7 @@ interface TableWidgetConfig {
   table?: {
     columns?: TableColumn[];
     pageSize?: number;
-    mode?: "latest" | "history"; // ✅ NEW
+    mode?: "latest" | "history"; //  NEW
   };
   dataSource?: {
     keys?: { key: string; alias?: string }[];
@@ -49,11 +49,11 @@ const TableWidgetRenderer: React.FC<TableWidgetRendererProps> = ({ config, data 
   const statusKeyConfig = config.dataSource?.statusKey;
   const staleThresholdSeconds = config.dataSource?.staleThresholdSeconds ?? 300;
 
-  // ✅ table mode
+  //  table mode
   const tableMode: "latest" | "history" =
     config.table?.mode === "history" ? "history" : "latest";
 
-  // ✅ Resolve backend envelopes
+  //  Resolve backend envelopes
   const incoming =
     data?.advanceTableData ??
     data?.tableData ??

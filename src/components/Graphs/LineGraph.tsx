@@ -72,19 +72,20 @@ const LineGraph = React.forwardRef<HighchartsReact.RefObject, LineGraphProps>(({
             tickLength: 0,
             
         },
-        yAxis: props.yAxis || {
+        yAxis: {
             title: {
                 text: '',
             },
             crosshair: true,
-            labels : {
-                enabled : true,
+            labels: {
+                enabled: true,
                 style: {
                     color: '#062D59',
                     fontSize: '12px'
                 }
             },
             tickAmount: !isFullscreen ? 6 : 10,
+            ...(props?.yAxis || {})
         },
         tooltip: {
             shared: true,

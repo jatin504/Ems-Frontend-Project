@@ -103,7 +103,7 @@ const BatteryBank2Dashboard = () => {
   legend: { enabled: false },
   tooltip: {
     shared: true,
-    backgroundColor: '#2D3748', // ✅ Chakra gray.800
+    backgroundColor: '#2D3748', //  Chakra gray.800
     borderColor: '#4A5568',
     style: { color: '#FFFFFF' },
     borderRadius: 6,

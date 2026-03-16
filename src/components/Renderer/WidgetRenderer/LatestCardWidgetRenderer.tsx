@@ -7,7 +7,7 @@ const CHART_COMPONENTS: Record<string, React.FC<any>> = {
 
 const LatestCardWidgetRenderer: React.FC<{ config: any; data: any }> = ({ config, data }) => {
 
-    // ✅ Guard checks
+    //  Guard checks
     if (!config || !config.latest_card || !config.latest_card.componentName) {
         console.warn(
             "LatestCardWidgetRenderer: latest_card config missing",
@@ -19,7 +19,7 @@ const LatestCardWidgetRenderer: React.FC<{ config: any; data: any }> = ({ config
     const LatestCardComponent =
         CHART_COMPONENTS[config.latest_card.componentName];
 
-    // ✅ Component not registered case
+    //  Component not registered case
     if (!LatestCardComponent) {
         console.warn(
             `LatestCardWidgetRenderer: Component not found for`,

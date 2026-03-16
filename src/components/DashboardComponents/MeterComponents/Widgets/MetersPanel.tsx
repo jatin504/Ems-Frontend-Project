@@ -125,7 +125,7 @@ export default function MetersPanel() {
     });
   }, [rows]);
 
-  /* ✅ SHORT SCREEN → ONLY 10 ROWS */
+  /*  SHORT SCREEN → ONLY 10 ROWS */
   const displayRows = useMemo(() => {
     return isShortScreen ? sortedRows.slice(0, 10) : sortedRows;
   }, [isShortScreen, sortedRows]);

@@ -1,0 +1,209 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { useColorModeValue } from "@chakra-ui/react";
+
+import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
+import ColumnGraph from "../../../Graphs/RevampCharts/ColumnGraph";
+
+import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
+import useTimeseriesData from "../../../../hooks/useTimeseriesData";
+
+import type { ExportFunctions } from "../../../../types/graphExport/export";
+
+const DAY = 24 * 60 * 60 * 1000;
+
+const CUFBarGraph: React.FC = () => {
+  /* TIME WINDOW  */
+  const {
+    config: timeWindow,
+    handleTimeWindowChange,
+    handleReset,
+  } = useTimeHandle(
+    12,
+    "hour",
+    "last",
+    [1, "day"],
+    60000,
+    {
+      timeRange: {
+        type: "last",
+        relativeType: "currentDaySoFar",
+        interval: 7,
+        intervalType: "day",
+      },
+    }
+  );
+
+  /* SOC (ALL BANKS - SPLINE */
+  const socFetch = {
+    dataSource: {
+      devices: { patterns: ["_bank_bank_"], ids: [] },
+      keys: [{ key: "power_factor", alias: "SoC (%)", keyType: "common" }],
+      aggregation: timeWindow.aggregation,
+      timeRange: timeWindow.timeRange,
+      orderBy: 'ASC'//timeWindow.orderBy,
+    },
+  };
+
+  const { data: socData, fetchData: fetchSoc } = useTimeseriesData();
+
+  /* CHARGE / DISCHARGE (BARS) */
+  const powerFetch = {
+    dataSource: {
+      devices: {
+        ids: ["plant_1_pcs_2_bank_bank_2"],
+        patterns: [],
+      },
+      keys: [
+        { key: "soc", alias: "Charge" },
+        { key: "power_factor", alias: "Discharge" },
+      ],
+      aggregation: timeWindow.aggregation,
+      timeRange: timeWindow.timeRange,
+      orderBy: timeWindow.orderBy,
+    },
+  };
+
+  const { data: powerData, fetchData: fetchPower } = useTimeseriesData();
+
+  /* FETCH */
+  useEffect(() => {
+    fetchSoc(socFetch.dataSource);
+    fetchPower(powerFetch.dataSource);
+  }, [timeWindow]);
+
+  /* MIXED SERIES (SOC + CHARGE/DISCHARGE)  */
+  const mixedSeries = useMemo(() => {
+    if (!socData || !powerData) return [];
+
+    const series: any[] = [];
+
+    /* SOC SPLINE (ALL BANKS) */
+    const socRoot = socData.data ?? socData;
+
+    Object.keys(socRoot).forEach((device) => {
+      const pts = socRoot[device]?.["SoC (%)"];
+      if (Array.isArray(pts)) {
+        series.push({
+          type: "spline",
+          name: `SOC (%)-${device.split("_").pop()}`,
+          data: pts.map((p: any) => [p.ts, Number(p.value)]),
+          yAxis: 1,
+          color: "#090cb2ff",
+          opacity: 0.35,
+          lineWidth: 2,
+          marker: { enabled: false },
+          zIndex: 1,
+        });
+      }
+    });
+
+    /* CHARGE / DISCHARGE BARS */
+    const powerRoot = powerData.data ?? powerData;
+    const dev = Object.keys(powerRoot)[0];
+
+    if (dev) {
+      const d = powerRoot[dev];
+
+      if (Array.isArray(d["Charge"])) {
+        series.push({
+          type: "column",
+          name: "Charge (kWh)",
+          data: d["Charge"].map((p: any) => [p.ts, Number(p.value)]),
+          yAxis: 0,
+          color: "#d43809ff",
+          pointRange: DAY,
+          zIndex: 3,
+        });
+      }
+
+      if (Array.isArray(d["Discharge"])) {
+        series.push({
+          type: "column",
+          name: "Discharge (kWh)",
+          data: d["Discharge"].map((p: any) => [p.ts, Number(p.value)]),
+          yAxis: 0,
+          color: "#0ad0e7ff",
+          pointRange: DAY,
+          zIndex: 3,
+        });
+      }
+    }
+
+    return series;
+  }, [socData, powerData]);
+
+  /* COLORS */
+  const textColor = useColorModeValue("#1A202C", "#E6E6E6");
+  const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
+  const gridColor = useColorModeValue(
+    "rgba(0,0,0,0.10)",
+    "rgba(255,255,255,0.08)"
+  );
+
+  const [exportFunctions, setExportFunctions] =
+    useState<ExportFunctions | null>(null);
+
+  /* ---------------- RENDER ---------------- */
+  return (
+    <GraphLayout
+      title="Charge / Discharge with SOC"
+      width={["578px"]}
+      height="344px"
+      fullScreen
+      timeWindow
+      onTimeWindowChange={handleTimeWindowChange}
+      onReset={handleReset}
+      onExport={exportFunctions}
+    >
+      <ColumnGraph
+        apiData={mixedSeries}
+        height={280}
+        onExportReady={setExportFunctions}
+        props={{
+          xAxis: {
+            type: "datetime",
+            labels: { style: { color: subTextColor } },
+            tickAmount: 7
+          },
+          yAxis: [
+            {
+              title: { text: "" },
+              labels: { style: { color: textColor } },
+              gridLineColor: gridColor,
+              tickAmount: 6,
+            },
+            {
+              title: { text: "" },
+              opposite: true,
+              tickAmount: 6,
+              // tickPositions: [0, 80, 160, 240, 320, 400], 
+              labels: { style: { color: textColor, fontSize: '12px' } },
+            },
+          ],
+          plotOptions: {
+            column: {
+              pointWidth: 18,
+              borderRadius: 6,
+              grouping: true,
+            },
+          },
+          tooltip: { 
+            shared: true,
+            backgroundColor: useColorModeValue(
+              "#fff",
+              "rgba(24,24,27,0.95)"
+            ),
+            style: { color: textColor },
+          },
+          legend: {
+            align: "center",
+            verticalAlign: "bottom",
+            itemStyle: { color: textColor },
+          },
+        }}
+      />
+    </GraphLayout>
+  );
+};
+
+export default CUFBarGraph;

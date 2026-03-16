@@ -28,14 +28,14 @@ const AlarmRow = ({
       px={2}
       py={1}
       borderRadius="sm"
-      overflow="hidden"              // ✅ safety
+      overflow="hidden"              //  safety
     >
       <Text minW="52px">{time}</Text>
 
       <Text
         flex="1"
         mx={2}
-        isTruncated                 // ✅ long source safe
+        isTruncated                 //  long source safe
         whiteSpace="nowrap"
       >
         {source}
@@ -61,8 +61,8 @@ export default function AlarmsEventsCard() {
       p={3}
       h="270px"
       display="flex"
-      flexDirection="column"        // ✅ column layout
-      overflow="hidden"             // ✅ prevent bleed
+      flexDirection="column"        //  column layout
+      overflow="hidden"             //  prevent bleed
       mt="-28"
     >
       {/* Title */}
@@ -75,7 +75,7 @@ export default function AlarmsEventsCard() {
 
       <Box h="1px" bg={borderColor} my={2} />
 
-      {/* 🔥 SCROLLABLE CONTENT */}
+      {/* SCROLLABLE CONTENT */}
       <Box flex="1" overflowY="auto" pr={1}>
         <VStack spacing={2} align="stretch">
           <AlarmRow time="11:41:02" source="REF615-FDR-03" level="HIGH" />
@@ -86,7 +86,7 @@ export default function AlarmsEventsCard() {
           <Text
             fontSize="11px"
             color="green.400"
-            whiteSpace="normal"      // ✅ wrap allowed
+            whiteSpace="normal"      //  wrap allowed
             wordBreak="break-word"
           >
             ▶ 11:32:48 Protection Test Passed

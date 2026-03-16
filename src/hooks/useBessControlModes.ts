@@ -103,7 +103,7 @@ export function useBessControlModes() {
 
   const startBessModeAutoRefresh = (
     onUpdate: (data: any) => void,
-    intervalMs = 3000
+    intervalMs = 60000
   ) => {
     // first load
     getBessControlModes().then(onUpdate);

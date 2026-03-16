@@ -4,7 +4,7 @@ import {
   useColorModeValue, useDisclosure, Icon, useToast, Input,
 } from "@chakra-ui/react";
 import { FiCalendar } from "react-icons/fi";
-import { useNavigate } from "react-router-dom"; // ✅ UPDATED: for navigation
+import { useNavigate } from "react-router-dom"; //  UPDATED: for navigation
 import AddScheduleCommandModal from "./AddScheduleCommandModal";
 import { useFetchSchedules } from "../../../../hooks/energy_strategy/useFetchSchedules";
 import { useCurrentStrategy } from "../../../../hooks/current_strategy/useCurrentStrategy";
@@ -69,7 +69,7 @@ export default function ScheduledCommands() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const fetchSchedules = useFetchSchedules();
-  const navigate = useNavigate(); // ✅ UPDATED
+  const navigate = useNavigate(); //  UPDATED
 
   // initial from hook
   const { strategy, strategyName } = (useCurrentStrategy() as any) ?? {};
@@ -196,7 +196,7 @@ export default function ScheduledCommands() {
                       _hover={{ bg: useColorModeValue("#EEF1F2", chipBg) }}
                       _active={{ bg: useColorModeValue("#E7EAEC", chipBg) }}
                       aria-label="Open calendar dashboard"
-                      onClick={() => navigate("/calendar")} // ✅ UPDATED: navigate to Calendar Dashboard
+                      onClick={() => navigate("/calendar")} //  UPDATED: navigate to Calendar Dashboard
                       title="Open Calendar"
                     >
                       <Icon as={FiCalendar} boxSize="16px" />
@@ -212,7 +212,7 @@ export default function ScheduledCommands() {
                       w="32px"
                       h="32px"
                       opacity={0}
-                      pointerEvents="none"   // ✅ UPDATED: don't intercept clicks
+                      pointerEvents="none"   //  UPDATED: don't intercept clicks
                       tabIndex={-1}
                       aria-hidden
                       onChange={(e) => {

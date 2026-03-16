@@ -90,7 +90,7 @@ const SolidGaugeChart: React.FC<SolidGaugeChartProps> = ({ width = 420 }) => {
   ];
 
   const segments = segmentColors.length;
-  const gapAngle = 3; // 🔥 cut between segments
+  const gapAngle = 3; // cut between segments
   const segmentAngle = totalAngle / segments;
 
   // ---------- TICKS (minor only, no numbers) ----------

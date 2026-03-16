@@ -15,8 +15,6 @@ import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import type { ExportFunctions } from "../../../types/graphExport/export";
 
-/* ================= TYPES ================= */
-
 interface WidgetPoint {
   ts: number;
   value: number;
@@ -28,16 +26,13 @@ interface WidgetData {
   };
 }
 
-/* ================= CONSTANTS ================= */
-
 const FREQ_ALIAS = "Frequency";
 const POWER_ALIAS = "Power";
-
-/* ================= COMPONENT ================= */
 
 const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
   selectedMeter,
 }) => {
+
   const [tabIndex, setTabIndex] = useState(0);
   const [graphHeight, setGraphHeight] = useState(200);
   const [exportFunctions, setExportFunctions] =
@@ -45,7 +40,6 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
 
   const { data, fetchData } = useTimeseriesData();
 
-  /* ---------- Time window ---------- */
   const { config: timeWindow, handleTimeWindowChange, handleReset } =
     useTimeHandle(
       12,
@@ -61,15 +55,30 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
       }
     );
 
-  /* ================= API CALL ================= */
+  /* ⭐ DATE STATE */
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const formattedDate = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const d = String(currentDate.getDate()).padStart(2, "0");
+    return `${y}/${m}/${d}`;
+  }, [currentDate]);
+
+  const isToday = useMemo(() => {
+    const t = new Date();
+    return (
+      currentDate.getFullYear() === t.getFullYear() &&
+      currentDate.getMonth() === t.getMonth() &&
+      currentDate.getDate() === t.getDate()
+    );
+  }, [currentDate]);
+
   useEffect(() => {
     if (!selectedMeter) return;
 
     fetchData({
-      devices: {
-        patterns: [],
-        ids: [selectedMeter],
-      },
+      devices: { patterns: [], ids: [selectedMeter] },
       keys: [
         {
           key: "soc",
@@ -92,14 +101,64 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
     } as any);
   }, [timeWindow, selectedMeter]);
 
-  /* ================= FULLSCREEN HEIGHT FIX ================= */
+  /* ⭐ ABSOLUTE */
+  const applyAbsoluteDay = (date: Date) => {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    handleTimeWindowChange({
+      aggregation: timeWindow.aggregation,
+      orderBy: "ASC",
+      timeRange: {
+        type: "absolute",
+        startTs: start.getTime(),
+        endTs: end.getTime(),
+      },
+    });
+  };
+
+  const goPrevDay = () => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 1);
+      applyAbsoluteDay(d);
+      return d;
+    });
+  };
+
+  const goNextDay = () => {
+    if (isToday) return;
+
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 1);
+
+      const today = new Date();
+
+      const reachedToday =
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+
+      if (reachedToday) {
+        handleReset();
+      } else {
+        applyAbsoluteDay(d);
+      }
+
+      return d;
+    });
+  };
+
+  /* ⭐ HEIGHT FIX */
   useEffect(() => {
     const updateHeight = () => {
       if (document.fullscreenElement) {
-        // fullscreen height
         setGraphHeight(window.innerHeight - 260);
       } else {
-        // normal card height
         setGraphHeight(240);
       }
     };
@@ -114,22 +173,19 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
     };
   }, []);
 
-  /* ================= SERIES MAP ================= */
   const { frequencySeries, powerSeries } = useMemo(() => {
     const widgetData = data as WidgetData | null;
     if (!widgetData || !selectedMeter)
       return { frequencySeries: [], powerSeries: [] };
 
     const deviceData = widgetData[selectedMeter];
-    if (!deviceData)
-      return { frequencySeries: [], powerSeries: [] };
 
     return {
       frequencySeries: [
         {
           type: "spline",
           name: `Frequency (Hz)`,
-          data: (deviceData[FREQ_ALIAS] || []).map((p) => [p.ts, p.value]),
+          data: (deviceData?.[FREQ_ALIAS] || []).map((p) => [p.ts, p.value]),
           marker: { enabled: true },
           color: "#22c55e",
         },
@@ -138,15 +194,13 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
         {
           type: "spline",
           name: `Power (kW)`,
-          data: (deviceData[POWER_ALIAS] || []).map((p) => [p.ts, p.value]),
+          data: (deviceData?.[POWER_ALIAS] || []).map((p) => [p.ts, p.value]),
           marker: { enabled: true },
           color: "#3b82f6",
         },
       ],
     };
   }, [data, selectedMeter]);
-
-  /* ================= THEME ================= */
 
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
   const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
@@ -172,16 +226,46 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
     },
     tooltip: {
       shared: true,
-      backgroundColor: useColorModeValue("#fff", 'rgba(24,24,27,0.95)'),
+      backgroundColor: useColorModeValue("#fff", "rgba(24,24,27,0.95)"),
       style: { color: textColor },
     },
   };
 
-  /* ================= RENDER ================= */
-
   return (
     <GraphLayout
-      title="Frequency vs PF"
+      title={
+        <Box display="flex" alignItems="center" w="100%">
+
+          <Box fontWeight="600">Frequency vs PF</Box>
+
+          <Box
+            ml="130px"
+            display="flex"
+            alignItems="center"
+            bg={useColorModeValue("gray.100", "gray.700")}
+            borderRadius="6px"
+            px={2}
+            height="22px"
+            gap={2}
+          >
+            <Box cursor="pointer" fontSize="12px" onClick={goPrevDay}>‹</Box>
+
+            <Box fontSize="11px" fontWeight="600" minW="78px" textAlign="center">
+              {formattedDate}
+            </Box>
+
+            <Box
+              cursor={isToday ? "not-allowed" : "pointer"}
+              opacity={isToday ? 0.35 : 1}
+              fontSize="12px"
+              onClick={goNextDay}
+            >
+              ›
+            </Box>
+          </Box>
+
+        </Box>
+      }
       width="100%"
       height="100%"
       fullScreen

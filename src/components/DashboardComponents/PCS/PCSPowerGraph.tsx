@@ -1,4 +1,3 @@
-// PCSPowerGraph.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useColorModeValue, Select, Box } from "@chakra-ui/react";
 
@@ -20,39 +19,112 @@ interface WidgetData {
 }
 
 interface DeviceOption {
-  id: string; 
+  id: string;
   label: string;
 }
 
-const POWER_ALIAS = "Power (kW)"; 
+const POWER_ALIAS = "Power (kW)";
 
 const PCSPowerGraph: React.FC = () => {
-  const { config: timeWindow, handleTimeWindowChange, handleReset } =
-    useTimeHandle(
-      12,
-      "hour",
-      "avg",
-      [15, "minute"],
-      60000,
-      {
-        timeRange: {
-          type: "relative",
-          relativeType: "currentDaySoFar",
-          interval: 1,
-          intervalType: "minute",
-        },
-      }
-    );
+  const {
+    config: timeWindow,
+    handleTimeWindowChange,
+    handleReset,
+  } = useTimeHandle(
+    12,
+    "hour",
+    "avg",
+    [15, "minute"],
+    60000,
+    {
+      timeRange: {
+        type: "relative",
+        relativeType: "currentDaySoFar",
+        interval: 1,
+        intervalType: "minute",
+      },
+    }
+  );
 
- 
-  const [selectedDevice, setSelectedDevice] = useState<string>("ALL");
+  const [selectedDevice, setSelectedDevice] = useState("ALL");
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
+  const [exportFunctions, setExportFunctions] =
+    useState<ExportFunctions | null>(null);
 
-  
+  /* ⭐ DATE STATE */
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const formattedDate = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const d = String(currentDate.getDate()).padStart(2, "0");
+    return `${y}/${m}/${d}`;
+  }, [currentDate]);
+
+  const isToday = useMemo(() => {
+    const t = new Date();
+    return (
+      currentDate.getFullYear() === t.getFullYear() &&
+      currentDate.getMonth() === t.getMonth() &&
+      currentDate.getDate() === t.getDate()
+    );
+  }, [currentDate]);
+
+  const applyAbsoluteDay = (date: Date) => {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    handleTimeWindowChange({
+      aggregation: timeWindow.aggregation,
+      orderBy: timeWindow.orderBy,
+      timeRange: {
+        type: "absolute",
+        startTs: start.getTime(),
+        endTs: end.getTime(),
+      },
+    });
+  };
+
+  const goPrevDay = () => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 1);
+      applyAbsoluteDay(d);
+      return d;
+    });
+  };
+
+  const goNextDay = () => {
+    if (isToday) return;
+
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 1);
+
+      const today = new Date();
+
+      const reachedToday =
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+
+      if (reachedToday) {
+        handleReset();
+      } else {
+        applyAbsoluteDay(d);
+      }
+
+      return d;
+    });
+  };
+
   const dataSource = {
     devices: {
       patterns: ["_bank_bank_"],
-      ids: [] as string[],
+      ids: [],
     },
     keys: [
       {
@@ -60,7 +132,6 @@ const PCSPowerGraph: React.FC = () => {
         alias: POWER_ALIAS,
         keyType: "common",
         type: "spline",
-        color: "#ef4444",
       },
     ],
     aggregation: timeWindow.aggregation,
@@ -70,51 +141,27 @@ const PCSPowerGraph: React.FC = () => {
 
   const { data, fetchData } = useTimeseriesData();
 
-  
   useEffect(() => {
     fetchData(dataSource as any);
-    
   }, [timeWindow]);
 
   useEffect(() => {
     const widgetData = data as WidgetData | null;
-    if (!widgetData) {
-      setDeviceOptions([]);
-      return;
-    }
+    if (!widgetData) return;
 
-    const options: DeviceOption[] = [];
-
-    Object.keys(widgetData).forEach((deviceId) => {
-      const match = deviceId.match(/_(\d+)$/);
-      const suffix = match ? match[1] : "";
-      const label = suffix ? `PCS_${suffix}` : deviceId;
-
-      options.push({ id: deviceId, label });
+    const options = Object.keys(widgetData).map((deviceId) => {
+      const suf = deviceId.match(/_(\d+)$/)?.[1];
+      return { id: deviceId, label: suf ? `PCS_${suf}` : deviceId };
     });
 
     options.sort((a, b) => a.label.localeCompare(b.label));
     setDeviceOptions(options);
   }, [data]);
 
-  
-  useEffect(() => {
-    if (
-      selectedDevice !== "ALL" &&
-      !deviceOptions.find((opt) => opt.id === selectedDevice)
-    ) {
-      setSelectedDevice("ALL");
-    }
-  }, [deviceOptions, selectedDevice]);
-
-  
   const seriesForChart = useMemo(() => {
     const widgetData = data as WidgetData | null;
     if (!widgetData) return [];
 
-    const series: any[] = [];
-
-    // Color palette (wraps if more devices than colors)
     const COLORS = [
       "#ef4444",
       "#f97316",
@@ -128,38 +175,27 @@ const PCSPowerGraph: React.FC = () => {
       "#ec4899",
     ];
 
+    const series: any[] = [];
+
     Object.keys(widgetData).forEach((deviceId) => {
-      
       if (selectedDevice !== "ALL" && selectedDevice !== deviceId) return;
 
-      const deviceData = widgetData[deviceId];
-      if (!deviceData) return;
+      const pts = widgetData[deviceId]?.[POWER_ALIAS];
+      if (!pts?.length) return;
 
-      const points = deviceData[POWER_ALIAS] || [];
-      if (!points || points.length === 0) return;
+      const suf = deviceId.match(/_(\d+)$/)?.[1] || deviceId;
 
-      // Label for legend (Power (kW) - PCS_8)
-      const match = deviceId.match(/_(\d+)$/);
-      const suffix = match ? match[1] : "";
-      const pcsLabel = suffix ? `PCS_${suffix}` : deviceId;
-      const seriesName = suffix
-  ? `Power(kW)-${suffix}`
-  : `Power(kW)-${deviceId}`;
-
-
-      // Deterministic color assignment: prefer numeric suffix if present,
-      // otherwise use current series length to pick a color.
-      const colorIndex = suffix
-        ? ((parseInt(suffix, 10) - 1) % COLORS.length + COLORS.length) % COLORS.length
-        : series.length % COLORS.length;
-      const color = COLORS[colorIndex];
+      const colorIndex =
+        !isNaN(Number(suf))
+          ? (parseInt(suf) - 1) % COLORS.length
+          : series.length % COLORS.length;
 
       series.push({
         type: "spline",
-        name: seriesName,
-        data: points.map((p) => [p.ts, p.value]),
-        marker: { enabled: true, fillColor: color },
-        color,
+        name: `Power(kW)-${suf}`,
+        data: pts.map((p) => [p.ts, p.value]),
+        marker: { enabled: true },
+        color: COLORS[colorIndex],
       });
     });
 
@@ -177,52 +213,67 @@ const PCSPowerGraph: React.FC = () => {
     "rgba(255,255,255,0.06)"
   );
 
-  const [exportFunctions, setExportFunctions] =
-    useState<ExportFunctions | null>(null);
-
   return (
     <GraphLayout
       title={
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          w="100%"
-        >
-          <Box>PCS Power</Box>
+        <Box display="flex" alignItems="center" w="100%">
+          <Box display="flex" alignItems="center" gap={3}>
+            <Box fontWeight="600">Power</Box>
 
-          {/* 🔹 Compact device dropdown: label = PCS_x, value = deviceId */}
-          <Select
-            value={selectedDevice}
-            onChange={(e) => setSelectedDevice(e.target.value)}
-            size="xs"
-            width="80px"
-            minW="89px"
-            height="24px"
-            fontSize="11px"
+            <Select
+              value={selectedDevice}
+              onChange={(e) => setSelectedDevice(e.target.value)}
+              size="xs"
+              minW="90px"
+              height="24px"
+              fontSize="11px"
+              bg={useColorModeValue("gray.100", "gray.700")}
+            >
+              <option value="ALL">ALL</option>
+              {deviceOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </Select>
+          </Box>
+
+          <Box ml="88px"
+            display="flex"
+            alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}
-            borderRadius="4px"
-            paddingInline="2"
+            borderRadius="6px"
+            px={2}
+            height="22px"
+            gap={2}
           >
-            <option value="ALL">ALL</option>
-            {deviceOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.label}
-              </option>
-            ))}
-          </Select>
+            <Box cursor="pointer" fontSize="12px" onClick={goPrevDay}>‹</Box>
+
+            <Box fontSize="11px" fontWeight="600" minW="78px" textAlign="center">
+              {formattedDate}
+            </Box>
+
+            <Box
+              cursor={isToday ? "not-allowed" : "pointer"}
+              opacity={isToday ? 0.35 : 1}
+              fontSize="12px"
+              onClick={goNextDay}
+            >
+              ›
+            </Box>
+          </Box>
         </Box>
       }
-      width={["100%"]}   
-      height={"100%"}    
+      width={["100%"]}
+      height="100%"
       fullScreen
-      timeWindow={true}
-      onTimeWindowChange={(config) => handleTimeWindowChange(config)}
+      timeWindow
+      onTimeWindowChange={handleTimeWindowChange}
       onReset={handleReset}
       onExport={exportFunctions}
     >
       <SpineGraph
-        apiData={seriesForChart} 
+        apiData={seriesForChart}
         height={250}
         onExportReady={setExportFunctions}
         props={{
@@ -234,26 +285,9 @@ const PCSPowerGraph: React.FC = () => {
           },
           xAxis: {
             type: "datetime",
-            crosshair: { color: "rgba(255,255,255,0.15)" },
             labels: { style: { color: subTextColor } },
             lineColor: axisLineColor,
             gridLineColor: gridColor,
-            gridLineDashStyle: "ShortDot",
-            gridLineWidth: 1,
-          },
-          legend: {
-            align: "center",
-            verticalAlign: "bottom",
-            layout: "horizontal",
-            itemStyle: { color: textColor },
-          },
-          tooltip: {
-            shared: true,
-            backgroundColor: useColorModeValue(
-              "#fff",
-              "rgba(24,24,27,0.95)"
-            ),
-            style: { color: textColor },
           },
         }}
       />

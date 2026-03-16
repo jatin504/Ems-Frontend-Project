@@ -119,7 +119,7 @@ const GraphWidgetRenderer: React.FC<{ config: any; data: any; loading?: boolean 
                     height="100%"
                     fullScreen={true}
                     onExport={exportFunctions}
-                    timeWindow={true} // 🔥 Enable TimeWindow control
+                    timeWindow={true} // Enable TimeWindow control
                     onTimeWindowChange={(twConfig) => {
                         // Merge new time window config into widget config and fetch
                         const updatedWidget = {

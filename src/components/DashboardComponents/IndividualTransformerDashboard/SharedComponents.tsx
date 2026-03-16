@@ -54,8 +54,8 @@ export const Section = ({
   return (
     <Box
       bg={primaryBg}
-      rounded="12px"     // ✅ box style
-      p="16px"           // ✅ box padding
+      rounded="12px"     //  box style
+      p="16px"           //  box padding
       minW="220px"
       height="250px"
       display="flex"

@@ -36,11 +36,10 @@ const arraysEqual = (a: string[], b: string[]) => {
 /* 🔁 INTERVAL → TABLE SUFFIX MAP */
 
 const intervalSuffixMap: Record<string, string> = {
-  "1min": "_1_min",
+  // 1min intentionally NO suffix
   "5min": "_5_min",
   "15min": "_15_min",
   "30min": "_30_min",
-  // support both shorthand and long forms for hours
   "1hr": "_1_hour",
   "1hour": "_1_hour",
   "2hr": "_2_hour",
@@ -50,6 +49,10 @@ const intervalSuffixMap: Record<string, string> = {
 
 /* Resolve final device id based on interval */
 const resolveDeviceId = (baseDeviceId: string, interval: string) => {
+
+  // ⭐IMPORTANT: for 1min always return base id
+  if (interval === "1min") return baseDeviceId;
+
   const suffix = intervalSuffixMap[interval];
   return suffix ? `${baseDeviceId}${suffix}` : baseDeviceId;
 };
@@ -104,7 +107,7 @@ const useReports = () => {
             )
             .map((d) => d.device_id);
 
-    // 🔥 interval-aware resolved ids
+    // interval-aware resolved ids
     const resolvedIds = baseIds.map((id) =>
       resolveDeviceId(id, selectedInterval)
     );

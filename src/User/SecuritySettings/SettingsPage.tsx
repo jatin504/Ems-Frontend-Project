@@ -39,7 +39,7 @@ export default function SettingsPage() {
           Change Password
         </Button>
 
-        {/* ✅ ALWAYS SHOW PERMISSIONS BUTTON */}
+        {/*  ALWAYS SHOW PERMISSIONS BUTTON */}
         <Button
           colorScheme={activeSection === "permissions" ? "blue" : "gray"}
           onClick={() => setActiveSection("permissions")}

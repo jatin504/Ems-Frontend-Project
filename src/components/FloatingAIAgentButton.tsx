@@ -14,13 +14,21 @@ import {
   HStack,
   Button,
   extendTheme,
+  useDisclosure,
+  ModalHeader,
+  Table,
+  Thead,
+  Tr,
+  Th,
+  Tbody,
+  Td,
 } from "@chakra-ui/react";
 import { AiOutlineRobot } from "react-icons/ai";
 import { keyframes } from "@emotion/react";
 
 /* ===== Constants ===== */
-const API_BASE_URL = "http://75.119.146.115:5000";
-const API_URL = API_BASE_URL + "/query";
+const API_BASE_URL = (import.meta as any).env?.VITE_AI_API_BASE?.toString(); 
+const API_URL = API_BASE_URL + "/bess_query";
 const SESSION_STORAGE_KEY = "session_id";
 const TOKEN_STORAGE_KEY = "token";
 
@@ -224,6 +232,11 @@ function TerminalContent({
   setInputValue,
   isSending,
   sessionId,
+  softActions,
+  hardActions,
+  onSoftActionClicked,
+  onHardActionClicked,
+  onClear,
 }: {
   messages: { type: string; text: string }[];
   onSend: (text: string) => Promise<void>;
@@ -231,6 +244,11 @@ function TerminalContent({
   setInputValue: (v: string) => void;
   isSending: boolean;
   sessionId: string | null;
+  softActions: string[];
+  hardActions: string[];
+  onSoftActionClicked: (text: string) => void;
+  onHardActionClicked: (text: string) => void;
+  onClear: () => void;
 }) {
   // banner text — using static ASCII art header (replaced generated header)
   const asciiHeader = [
@@ -344,6 +362,33 @@ function TerminalContent({
                 {m.text}
               </Text>
             ))}
+            {(softActions.length > 0 || hardActions.length > 0) && (
+                <Box mt="10px" display="flex" gap="8px" flexWrap="wrap">
+
+                  {softActions.map((a) => (
+                    <Button
+                      key={a}
+                      size="xs"
+                      colorScheme="teal"
+                      onClick={() => onSoftActionClicked(a)}
+                    >
+                      {a}
+                    </Button>
+                  ))}
+
+                  {hardActions.map((a) => (
+                    <Button
+                      key={a}
+                      size="xs"
+                      colorScheme="orange"
+                      onClick={() => onHardActionClicked(a)}
+                    >
+                      {a}
+                    </Button>
+                  ))}
+
+                </Box>
+              )}
           </VStack>
         </Box>
 
@@ -384,6 +429,16 @@ function TerminalContent({
             >
               Send
             </Button>
+            <Button
+              size="sm"
+              onClick={() => 
+                onClear()
+              }
+              isDisabled={isSending}
+              colorScheme="red"
+            >
+              Clear
+            </Button>
           </HStack>
         </Box>
 
@@ -398,9 +453,21 @@ function TerminalContent({
 
 /* ===== Main floating component with API integration + animated open/close ===== */
 export default function FloatingEMSAIAgentSuperAnimated(_: Props) {
+  // fetch token from localStorage (change key if needed)
+  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY) || "";
+
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
+
+  // Action buttons
+  const [softActions, setSoftActions] = useState<string[]>([]);
+  const [hardActions, setHardActions] = useState<string[]>([]);
+  const [metadataAction, setMetadataAction] = useState<any | null>(null);
+  const [resultJson, setResultJson] = useState<any>(null);
+
+  // Preview Modal
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   // chat state
   const [messages, setMessages] = useState<{ type: string; text: string }[]>([
@@ -431,6 +498,86 @@ export default function FloatingEMSAIAgentSuperAnimated(_: Props) {
     setMessages((prev) => [...prev, m]);
   };
 
+  const onClearMessage = () => {
+    setMessages([
+      { type: "ai", text: "ARKA: Hello! How can I assist your energy system today?" },
+    ]);
+    setSoftActions([]);
+    setHardActions([]);
+    setMetadataAction([]);
+    setResultJson(null);
+  };
+
+  const handleSoftAction = (action: string) => {
+
+    if (!resultJson) return;
+
+    if (action === "preview") {
+      console.log("Preview schedule");
+      safeAppendMessage({
+        type: "ai",
+        text: "ARKA: Opening schedule preview..."
+      });
+
+      // you can open modal or table here
+      // console.table(resultJson.records);
+      onOpen();
+    }
+
+    if (action === "download") {
+
+      const records = resultJson.records || [];
+
+      const headers = Object.keys(records[0] || {});
+      const csvRows = [
+        headers.join(","),
+        ...records.map((r: any) => headers.map(h => r[h]).join(","))
+      ];
+
+      const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "schedule.csv";
+      a.click();
+
+      safeAppendMessage({
+        type: "info",
+        text: "Schedule downloaded as CSV."
+      });
+    }
+  };
+
+  const handleHardAction = async (action: string) => {
+
+    if (action === "create") {
+
+      safeAppendMessage({
+        type: "ai",
+        text: "ARKA: Creating dispatch schedule..."
+      });
+
+      const res = await fetch(API_BASE_URL + metadataAction.create.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
+        body: JSON.stringify({ session_id: sessionId, result_json: resultJson.records })
+      });
+
+      if (!res.ok) {
+        const textBody = await res.text();
+        safeAppendMessage({ type: "ai", text: `ARKA: (error) ${res.status} ${res.statusText}` });
+        safeAppendMessage({ type: "info", text: textBody || "" });
+        return;
+      }
+
+      safeAppendMessage({
+        type: "ai",
+        text: "ARKA: Dispatch schedule created successfully."
+      });
+    }
+  };
+
   const handleOpen = () => {
     setOpen(true);
     setClosing(false);
@@ -454,7 +601,7 @@ export default function FloatingEMSAIAgentSuperAnimated(_: Props) {
     if (!trimmed) return;
 
     // append user immediately
-    safeAppendMessage({ type: "user", text: `YOU:    ${trimmed}` });
+    safeAppendMessage({ type: "user", text: `YOU: ${trimmed}` });
     setInputValue("");
     setIsSending(true);
 
@@ -462,9 +609,6 @@ export default function FloatingEMSAIAgentSuperAnimated(_: Props) {
       // prepare payload
       const payload: { query: string; session_id?: string } = { query: trimmed };
       if (sessionId) payload.session_id = sessionId;
-
-      // fetch token from localStorage (change key if needed)
-      const token = sessionStorage.getItem(TOKEN_STORAGE_KEY) || "";
 
       const res = await fetch(API_URL, {
         method: "POST",
@@ -502,6 +646,23 @@ export default function FloatingEMSAIAgentSuperAnimated(_: Props) {
       // Expect { Response, Session_id } as per your spec
       const aiResp = data.Response ?? data.response ?? data.message ?? "";
       const newSession = data.Session_id ?? data.session_id ?? data.session ?? null;
+      if (data.result_json) {
+        setResultJson(data.result_json);
+      }
+
+      if (data.soft_actions) {
+        setSoftActions(data.soft_actions);
+      } else {
+        setSoftActions([]);
+      }
+
+      if (data.hard_action) {
+        setHardActions(data.hard_action);
+        setMetadataAction(data.metadata_action);
+      } else {
+        setHardActions([]);
+        setMetadataAction([]);
+      }
 
       if (newSession) {
         try {
@@ -587,7 +748,44 @@ export default function FloatingEMSAIAgentSuperAnimated(_: Props) {
                 setInputValue={setInputValue}
                 isSending={isSending}
                 sessionId={sessionId}
+                softActions={softActions}
+                hardActions={hardActions}
+                onSoftActionClicked={handleSoftAction}
+                onHardActionClicked={handleHardAction}
+                onClear={onClearMessage}
               />
+              <Modal isOpen={isOpen} onClose={onClose} size="6xl" scrollBehavior="inside">
+                <ModalOverlay />
+
+                <ModalContent>
+                  <ModalHeader>Schedule Preview</ModalHeader>
+                  <ModalCloseButton />
+
+                  <ModalBody>
+
+                    <Table variant="simple" size="sm">
+                      <Thead>
+                        <Tr>
+                          {Object.keys(resultJson?.records?.[0] || {}).map((header) => (
+                            <Th key={header}>{header}</Th>
+                          ))}
+                        </Tr>
+                      </Thead>
+
+                      <Tbody>
+                        {resultJson?.records?.map((row: any, i: number) => (
+                          <Tr key={i}>
+                            {Object.keys(row).map((key) => (
+                              <Td key={key}>{row[key]}</Td>
+                            ))}
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+
+                  </ModalBody>
+                </ModalContent>
+              </Modal>
             </VStack>
           </ModalBody>
         </ModalContent>

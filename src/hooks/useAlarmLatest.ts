@@ -75,8 +75,8 @@ export function useAlarmLatest(initialPageSize: number = 10) {
 
             return {
               device,
-              deviceId: item.device_id,     // ✅ keep raw
-              rawTimeStamp: item.time_stamp, // ✅ keep raw
+              deviceId: item.device_id,     //  keep raw
+              rawTimeStamp: item.time_stamp, //  keep raw
               time: activationTime,
               type: item.tag_name,
               severity: item.severity,
@@ -154,7 +154,7 @@ export function useAlarmLatest(initialPageSize: number = 10) {
       body: JSON.stringify({
         device_id: row.deviceId,
         tag_name: row.state,
-        time_stamp: row.rawTimeStamp, // ✅ RAW timestamp
+        time_stamp: row.rawTimeStamp, //  RAW timestamp
         action,
         comment: row.inputValue,
       }),
@@ -169,10 +169,10 @@ export function useAlarmLatest(initialPageSize: number = 10) {
     const row = rows[globalIndex];
     if (!row) return;
 
-    // 🔥 BACKEND UPDATE
+    // BACKEND UPDATE
     await updateAlarm(row, action);
 
-    // 🔥 UI UPDATE (optimistic, old behaviour same)
+    // UI UPDATE (optimistic, old behaviour same)
     if (action === "ack") {
       setRows((prev) => {
         const copy = [...prev];

@@ -287,10 +287,10 @@ const CustomDashboardView = () => {
       },
     };
 
-    // ✅ Only update state
+    //  Only update state
     setDashboardConfig(updatedDashboard);
 
-    // ✅ Only refetch this widget
+    //  Only refetch this widget
     await fetchForWidget(merged);
 
     setEditingWidget(null);

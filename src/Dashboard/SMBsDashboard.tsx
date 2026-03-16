@@ -14,8 +14,8 @@ const SMBsDashboard = () => {
   return (
     <Box
       mt="8px"
-      w="100%"          // ✅ FULL WIDTH
-      mx="10px"         // ✅ left + right = 10px only
+      w="100%"          //  FULL WIDTH
+      mx="10px"         //  left + right = 10px only
       px="0"
       minH="calc(100vh - 160px)"
       overflowY="auto"

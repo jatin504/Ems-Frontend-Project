@@ -42,7 +42,7 @@ export default function ConfirmPasswordModal({
     try {
       setVerifying(true);
 
-      // 🔥 PASSWORD VERIFY API CALL
+      // PASSWORD VERIFY API CALL
       const res = await fetch(`${API_BASE}/verify-password`, {
         method: "POST",
         headers: {
@@ -51,6 +51,8 @@ export default function ConfirmPasswordModal({
         },
         body: JSON.stringify({
           password: password,
+          control_type: (window as any).__CONTROL_TYPE__ || "SERVICE",
+          module: (window as any).__CONTROL_MODULE__ || "BESS"
         }),
       });
 
@@ -60,7 +62,7 @@ export default function ConfirmPasswordModal({
         throw new Error(data?.message || "Password verification failed");
       }
 
-      // ✅ PASSWORD CORRECT
+      //  PASSWORD CORRECT
       onConfirm(password);
       setPassword("");
       onClose();
@@ -77,8 +79,8 @@ export default function ConfirmPasswordModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent>
+      <ModalOverlay zIndex="1400" />
+      <ModalContent zIndex="1401">
         <ModalHeader>Confirm Password</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>

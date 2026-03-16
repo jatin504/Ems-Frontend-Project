@@ -42,7 +42,7 @@ const AreaspineGraph = React.forwardRef<
       isFullscreen = false,
       onExportReady,
       inFullScreen,
-      enableMultiAxis = false, // ✅ default = old behaviour
+      enableMultiAxis = false, //  default = old behaviour
     },
     ref
   ) => {

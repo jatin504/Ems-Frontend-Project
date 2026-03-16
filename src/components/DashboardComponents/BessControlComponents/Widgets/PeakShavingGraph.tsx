@@ -1,27 +1,39 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
-import SplineGraph from "../../../Graphs/RevampCharts/SplineGraph";
+import AreasplineGraph from "../../../Graphs/RevampCharts/AreasplineGraph";
+// import ColumnGraph from "../../../Graphs/RevampCharts/ColumnGraph";
+import LineGraph from "../../../Graphs/LineGraph";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 import { useColorModeValue } from "@chakra-ui/react";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
 
+interface PeakShavingGraphProps {
+  threshold?: number;
+  hard_limit_kw?: number;
+  soft_limit_kw?: number;
+  data?: any[];
+  max_charge_kw?: number;
+  max_discharge_kw?: number;
+}
+
 const hour = 60 * 60 * 1000;
 
-// ---- DUMMY FALLBACK ----
 const dummySeries = (() => {
   const now = new Date();
   const start = Date.UTC(
     now.getUTCFullYear(),
     now.getUTCMonth(),
     now.getUTCDate(),
-    12, 0, 0
+    12,
+    0,
+    0
   );
 
   return [
     {
-      type: "spline" as const,
-      name: "Power (kW)",
+      type: "areaspline" as const,
+      name: "BESS Power",
       data: Array.from({ length: 12 }, (_, i) => [
         start + i * hour,
         Math.random() * 1000,
@@ -29,18 +41,43 @@ const dummySeries = (() => {
       marker: { enabled: true },
     },
     {
-      type: "spline" as const,
-      name: "POA (W/m²)",
+      type: "areaspline" as const,
+      name: "Load Power",
       data: Array.from({ length: 12 }, (_, i) => [
         start + i * hour,
         Math.random() * 800,
       ]),
       marker: { enabled: true },
     },
+    {
+      type: "areaspline" as const,
+      name: "Grid Power",
+      data: Array.from({ length: 12 }, (_, i) => [
+        start + i * hour,
+        Math.random() * 600,
+      ]),
+      marker: { enabled: true },
+    },
+    {
+      type: "areaspline" as const,
+      name: "PV Power",
+      data: Array.from({ length: 12 }, (_, i) => [
+        start + i * hour,
+        Math.random() * 1200,
+      ]),
+      marker: { enabled: true },
+    },
   ];
 })();
 
-const PowerCurve = () => {
+const PowerCurve = ({
+  threshold,
+  hard_limit_kw,
+  soft_limit_kw,
+  data: externalData,
+  max_charge_kw = 10000,
+  max_discharge_kw = 500,
+}: PeakShavingGraphProps = {}) => {
   const {
     config: timeWindowPowerCurve,
     handleTimeWindowChange,
@@ -68,12 +105,10 @@ const PowerCurve = () => {
         ids: ["plant_1_pcs_2_bank_bank_1"],
       },
       keys: [
-        {
-          key: "active_power",
-          alias: "Power (kW)",
-          keyType: "common",
-        },
-        
+        { key: "rated_power", alias: "BESS Power", keyType: "common" },
+        { key: "rated_capacity", alias: "Load Power", keyType: "common" },
+        { key: "power_factor", alias: "Grid Power", keyType: "common" },
+        { key: "reactive_power", alias: "PV Power", keyType: "common" },
       ],
       aggregation: timeWindowPowerCurve.aggregation,
       timeRange: timeWindowPowerCurve.timeRange,
@@ -87,30 +122,81 @@ const PowerCurve = () => {
     fetchData(fetchingToServerObj.dataSource);
   }, [timeWindowPowerCurve]);
 
-  // ---- TRANSFORM API DATA ----
-  const seriesForChart = useMemo(() => {
-    if (data && typeof data === "object") {
-      const series: any[] = [];
+  const thresholdValue = threshold ? Number(threshold) : null;
+  const hardLimitValue = hard_limit_kw ? Number(hard_limit_kw) : null;
+  const softLimitValue = soft_limit_kw ? Number(soft_limit_kw) : null;
 
+  const seriesForChart = useMemo(() => {
+    let series: any[] = [];
+
+    if (data && typeof data === "object") {
       Object.values(data).forEach((deviceObj: any) => {
         if (deviceObj && typeof deviceObj === "object") {
           Object.entries(deviceObj).forEach(([metric, points]: any) => {
             if (Array.isArray(points)) {
               series.push({
-                type: "spline",
+                type: "areaspline",
                 name: metric,
                 data: points.map((p) => [p.ts, p.value]),
                 marker: { enabled: true },
+                zIndex: 2,
+                yAxis: 0, // LEFT AXIS
               });
             }
           });
         }
       });
-
-      return series.length ? series : dummySeries;
     }
-    return dummySeries;
-  }, [data]);
+
+    const timestamps = series[0]?.data?.map((d: any) => d[0]) || [];
+
+    /* THRESHOLD LINE */
+    if (thresholdValue && timestamps.length) {
+      series.push({
+        type: "line",
+        name: "Peak Threshold",
+        data: timestamps.map((t: any) => [t, thresholdValue]),
+        color: "#FF0000",
+        dashStyle: "Dash",
+        lineWidth: 3,
+        marker: { enabled: false },
+        zIndex: 4,
+        yAxis: 1, // RIGHT AXIS
+      });
+    }
+
+    /* SOFT LIMIT LINE */
+    if (softLimitValue && timestamps.length) {
+      series.push({
+        type: "line",
+        name: "Soft Limit",
+        data: timestamps.map((t: any) => [t, softLimitValue]),
+        color: "#FFA500",
+        dashStyle: "ShortDash",
+        lineWidth: 2,
+        marker: { enabled: false },
+        zIndex: 3,
+        yAxis: 1, // RIGHT AXIS
+      });
+    }
+
+    /* HARD LIMIT LINE */
+    if (hardLimitValue && timestamps.length) {
+      series.push({
+        type: "line",
+        name: "Hard Limit",
+        data: timestamps.map((t: any) => [t, hardLimitValue]),
+        color: "#8B0000",
+        dashStyle: "Dash",
+        lineWidth: 2,
+        marker: { enabled: false },
+        zIndex: 3,
+        yAxis: 1, // RIGHT AXIS
+      });
+    }
+
+    return series;
+  }, [data, thresholdValue, hardLimitValue, softLimitValue]);
 
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
   const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
@@ -128,68 +214,20 @@ const PowerCurve = () => {
 
   return (
     <GraphLayout
-      
       width={["578px"]}
-      height="250px"
+      height="300px"
       fullScreen
       timeWindow
       onTimeWindowChange={handleTimeWindowChange}
       onReset={handleReset}
       onExport={exportFunctions}
     >
-      <SplineGraph
+      <AreasplineGraph
         apiData={seriesForChart}
-        height={200}
+        height={250}
+        enableMultiAxis={true}
         onExportReady={setExportFunctions}
         props={{
-          chart: {
-            events: {
-              mouseOut() {
-                // 🔥 hover stuck fix (hard reset)
-                this.series.forEach((s: any) => {
-                  s.setState("", true);
-                });
-              },
-            },
-          },
-
-          plotOptions: {
-            series: {
-              shadow: false,
-              lineWidth: 2,
-
-              // 🔥 IMPORTANT FIX
-              states: {
-                inactive: {
-                  opacity: 1, // cursor hatate hi sab normal
-                },
-                hover: {
-                  enabled: true,
-                  lineWidth: 2,
-                },
-              },
-
-              marker: {
-                enabled: true,
-                radius: 4,
-                lineWidth: 2,
-                lineColor: "#FFFFFF",
-              },
-            },
-          },
-
-          yAxis: {
-            tickAmount: 6,
-            title: { text: null },
-            labels: {
-              style: { color: textColor },
-              formatter() {
-                return this.value.toFixed(2);
-              },
-            },
-            gridLineColor: gridColor,
-          },
-
           xAxis: {
             type: "datetime",
             crosshair: { color: "rgba(255,255,255,0.15)", width: 1 },
@@ -200,14 +238,37 @@ const PowerCurve = () => {
             gridLineWidth: 1,
           },
 
+          yAxis: [
+            {
+              // LEFT AXIS → Power curves
+              tickAmount: 6,
+              title: { text: null },
+              labels: { style: { color: textColor, fontSize: "12px" } },
+              gridLineColor: gridColor,
+            },
+            {
+              // RIGHT AXIS → Limits
+              title: { text: null },
+              opposite: true,
+              labels: { style: { color: textColor, fontSize: "12px" } },
+              gridLineWidth: 0,
+            },
+          ],
+          plotOptions: {
+            series: {
+              shadow: false,
+              lineWidth: 2,
+              marker: {
+                enabled: true,
+                radius: 4,
+                lineWidth: 2,
+                lineColor: "#FFFFFF",
+              },
+            },
+          },
+
           tooltip: {
             shared: true,
-            hideDelay: 0,
-            backgroundColor: useColorModeValue(
-              "#fff",
-              "rgba(24,24,27,0.95)"
-            ),
-            style: { color: textColor },
             valueDecimals: 2,
           },
 

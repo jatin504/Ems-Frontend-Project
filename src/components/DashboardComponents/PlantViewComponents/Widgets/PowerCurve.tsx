@@ -3,7 +3,7 @@ import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import SplineGraph from "../../../Graphs/RevampCharts/SplineGraph";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
-import { useColorModeValue } from "@chakra-ui/react";
+import { useColorModeValue, Box } from "@chakra-ui/react";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
 
 const hour = 60 * 60 * 1000;
@@ -61,11 +61,81 @@ const PowerCurve = () => {
     }
   );
 
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [dateNavEnabled, setDateNavEnabled] = useState(true);
+
+  const formattedDate = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const d = String(currentDate.getDate()).padStart(2, "0");
+    return `${y}/${m}/${d}`;
+  }, [currentDate]);
+
+  const isToday = useMemo(() => {
+    const t = new Date();
+    return (
+      currentDate.getFullYear() === t.getFullYear() &&
+      currentDate.getMonth() === t.getMonth() &&
+      currentDate.getDate() === t.getDate()
+    );
+  }, [currentDate]);
+
+  const applyAbsoluteDay = (date: Date) => {
+    const start = new Date(date);
+    start.setHours(0,0,0,0);
+
+    const end = new Date(date);
+    end.setHours(23,59,59,999);
+
+    handleTimeWindowChange({
+      aggregation: timeWindowPowerCurve.aggregation,
+      orderBy: timeWindowPowerCurve.orderBy,
+      timeRange:{
+        type:"absolute",
+        startTs:start.getTime(),
+        endTs:end.getTime()
+      }
+    });
+  };
+
+  const goPrevDay = () => {
+    setCurrentDate(prev=>{
+      const d = new Date(prev);
+      d.setDate(d.getDate()-1);
+      applyAbsoluteDay(d);
+      return d;
+    });
+  };
+
+  const goNextDay = () => {
+    if (isToday) return;
+
+    setCurrentDate(prev=>{
+      const d = new Date(prev);
+      d.setDate(d.getDate()+1);
+
+      const today = new Date();
+
+      const reachedToday =
+        d.getFullYear()===today.getFullYear() &&
+        d.getMonth()===today.getMonth() &&
+        d.getDate()===today.getDate();
+
+      if(reachedToday){
+        handleReset();
+      } else {
+        applyAbsoluteDay(d);
+      }
+
+      return d;
+    });
+  };
+
   const fetchingToServerObj = {
     dataSource: {
       devices: {
         patterns: [],
-        ids: ["plant_1_pcs_2_bank_bank_1"],
+        ids: ["plant_1_pcs_2_bank_bank_11"],
       },
       keys: [
         {
@@ -132,7 +202,39 @@ const PowerCurve = () => {
 
   return (
     <GraphLayout
-      title="Plant Power vs POA"
+      title={
+        <Box display="flex" alignItems="center" w="100%">
+
+          <Box fontWeight="600">Power Curve</Box>
+
+          <Box ml="28"
+            display="flex"
+            alignItems="center"
+            bg={useColorModeValue("gray.100","gray.700")}
+            borderRadius="6px"
+            px={2}
+            height="22px"
+            gap={2}
+          >
+            <Box cursor="pointer" fontSize="12px" onClick={goPrevDay}>‹</Box>
+
+            <Box fontSize="11px" fontWeight="600" minW="78px" textAlign="center">
+              {formattedDate}
+            </Box>
+
+            <Box
+              cursor={isToday ? "not-allowed" : "pointer"}
+              opacity={isToday ? 0.35 : 1}
+              fontSize="12px"
+              onClick={goNextDay}
+            >
+              ›
+            </Box>
+          </Box>
+
+        </Box>
+      }
+      
       width={["578px"]}
       height="344px"
       fullScreen
@@ -149,7 +251,7 @@ const PowerCurve = () => {
           chart: {
             events: {
               mouseOut() {
-                // 🔥 hover stuck fix (hard reset)
+                // hover stuck fix (hard reset)
                 this.series.forEach((s: any) => {
                   s.setState("", true);
                 });
@@ -162,7 +264,7 @@ const PowerCurve = () => {
               shadow: false,
               lineWidth: 2,
 
-              // 🔥 IMPORTANT FIX
+              // IMPORTANT FIX
               states: {
                 inactive: {
                   opacity: 1, // cursor hatate hi sab normal

@@ -27,7 +27,7 @@ interface WidgetData {
 const SmbStaticInfos = () => {
   const { data, fetchData } = useTimeseriesData();
 
-  // ✅ TEMP / DEFAULT SMB ID (jab tak selection wire na ho)
+  //  TEMP / DEFAULT SMB ID (jab tak selection wire na ho)
   const smbId = "plant_1_pcs_2_bank_bank_1";
 
   /* ================= API CALL ================= */

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useColorModeValue, Box } from "@chakra-ui/react";
 import GraphLayout from "../../../components/Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import SplineGraph from "../../../components/Graphs/RevampCharts/SplineGraph";
@@ -35,6 +35,74 @@ const WindGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }) => {
     );
 
   const { data, fetchData } = useTimeseriesData();
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const formattedDate = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const d = String(currentDate.getDate()).padStart(2, "0");
+    return `${y}/${m}/${d}`;
+  }, [currentDate]);
+
+  const isToday = useMemo(() => {
+    const t = new Date();
+    return (
+      currentDate.getFullYear() === t.getFullYear() &&
+      currentDate.getMonth() === t.getMonth() &&
+      currentDate.getDate() === t.getDate()
+    );
+  }, [currentDate]);
+
+  const applyAbsoluteDay = (date: Date) => {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    handleTimeWindowChange({
+      aggregation: timeWindow.aggregation,
+      orderBy: "ASC",
+      timeRange: {
+        type: "absolute",
+        startTs: start.getTime(),
+        endTs: end.getTime(),
+      },
+    });
+  };
+
+  const goPrevDay = () => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 1);
+      applyAbsoluteDay(d);
+      return d;
+    });
+  };
+
+  const goNextDay = () => {
+    if (isToday) return;
+
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 1);
+
+      const today = new Date();
+
+      const reachedToday =
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+
+      if (reachedToday) {
+        handleReset();
+      } else {
+        applyAbsoluteDay(d);
+      }
+
+      return d;
+    });
+  };
 
     useEffect(() => {
       if (!selectedWMS) return;
@@ -95,7 +163,39 @@ const WindGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }) => {
 
   return (
     <GraphLayout
-      title={<Box>Wind</Box>}
+      title={
+        <Box display="flex" alignItems="center" w="100%">
+
+          <Box fontWeight="600">Wind</Box>
+
+          <Box
+            ml="318px"
+            display="flex"
+            alignItems="center"
+            bg={useColorModeValue("gray.100", "gray.700")}
+            borderRadius="6px"
+            px={2}
+            height="22px"
+            gap={2}
+          >
+            <Box cursor="pointer" fontSize="12px" onClick={goPrevDay}>‹</Box>
+
+            <Box fontSize="11px" fontWeight="600" minW="78px" textAlign="center">
+              {formattedDate}
+            </Box>
+
+            <Box
+              cursor={isToday ? "not-allowed" : "pointer"}
+              opacity={isToday ? 0.35 : 1}
+              fontSize="12px"
+              onClick={goNextDay}
+            >
+              ›
+            </Box>
+          </Box>
+
+        </Box>
+      }
       titleLengthSVG={100}
       titleLengthLongSVG={720}
       width={["100%"]}

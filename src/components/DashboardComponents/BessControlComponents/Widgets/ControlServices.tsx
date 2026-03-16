@@ -242,7 +242,7 @@ export default function ControlServices() {
 
     fetchModes(); // first load
 
-    const interval = setInterval(fetchModes, 3000); 
+    const interval = setInterval(fetchModes, 10000); 
 
     return () => clearInterval(interval);
   }, []);
@@ -263,7 +263,7 @@ export default function ControlServices() {
     setIsPasswordOpen(true);
   };
 
-  // 🔥 PASSWORD CONFIRM HANDLER
+  // PASSWORD CONFIRM HANDLER
   const handlePasswordConfirm = async () => {
     if (!pendingPayload) return;
 

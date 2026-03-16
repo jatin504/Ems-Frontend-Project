@@ -137,7 +137,7 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
         navigation: { enabled: true },
       },
 
-      // ✅ TOOLTIP FIXED HERE
+      //  TOOLTIP FIXED HERE
       tooltip: {
         enabled: true,
         shared: true,

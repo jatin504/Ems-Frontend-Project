@@ -133,7 +133,7 @@ const buildSocEvents = (data: [number, number][]) => {
     prevSoc = soc;
   }
 
-  // 🔥 extend last band to avoid right cut
+  // extend last band to avoid right cut
   plotBands.push(
     createBand(
       start,
@@ -352,7 +352,7 @@ series.push({
             gridLineDashStyle: "ShortDot",
             gridLineWidth: 1,
 
-            /* 🔥 RIGHT CUT FIX */
+            /* RIGHT CUT FIX */
             endOnTick: false,
             startOnTick: false,
             minPadding: 0.02,

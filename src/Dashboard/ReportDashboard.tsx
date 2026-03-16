@@ -60,7 +60,7 @@ export default function ReportDashboard() {
 
   const [page, setPage] = React.useState(0);
   const [reportName, setReportName] = React.useState(editTemplate?.reportName ?? "");
-  const [schedule, setSchedule] = React.useState(editTemplate?.email ? "email" : "self");
+  const [schedule, setSchedule] = React.useState<"email" | "self">(editTemplate?.email ? "email" : "self");
   const [email, setEmail] = React.useState(editTemplate?.email ?? "");
   const [scheduleTime, setScheduleTime] = React.useState(editTemplate?.scheduleTime ?? "");
   const [scheduleLive, setScheduleLive] = React.useState(editTemplate?.scheduleLive ?? "");
@@ -189,7 +189,14 @@ export default function ReportDashboard() {
         return;
       }
         try {
-          await saveOrSchedule(payload, schedule as any);
+          const shouldSchedule =
+            payload.scheduleTime !== "" &&
+            payload.scheduleTime !== null &&
+            payload.scheduleLive !== "" &&
+            payload.scheduleLive !== null &&
+            Number(payload.scheduleLive) > 0;
+
+          await saveOrSchedule(payload, schedule, shouldSchedule);
           toast({
             title: "Template saved!",
             description: `Report "${reportName}" saved for ${schedule}${schedule === "email" ? ` (${email})` : ""}.`,

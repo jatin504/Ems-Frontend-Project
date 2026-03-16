@@ -105,7 +105,7 @@ export default function TransformerDashboard() {
         columns={{
           base: 1,
           md: 3,
-          lg: 5,   // ✅ 5 transformers per row
+          lg: 5,   //  5 transformers per row
         }}
         spacing={4}
       >

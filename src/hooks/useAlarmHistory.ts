@@ -51,7 +51,7 @@ export function useAlarmHistory(initialPageSize: number = 10) {
     try {
       let url = `${API_BASE}/api/alarms/history?limit=5000`;
 
-      // 🔥 NEW: timestamp range support
+      // NEW: timestamp range support
       if (startTs && endTs) {
         url += `&startTs=${encodeURIComponent(startTs)}&endTs=${encodeURIComponent(endTs)}`;
       }
@@ -75,7 +75,7 @@ export function useAlarmHistory(initialPageSize: number = 10) {
           device: item.device_id,
           tag: item.tag_name,
           time: formattedTime,             // UI display
-          rawTimestamp: item.time_stamp,   // 🔥 DB exact timestamp
+          rawTimestamp: item.time_stamp,   // DB exact timestamp
           type: item.alarm_type,
           severity: item.severity,
           status,
@@ -156,7 +156,7 @@ export function useAlarmHistory(initialPageSize: number = 10) {
         return;
       }
 
-      // 🔥 Refresh from DB so UI = DB
+      // Refresh from DB so UI = DB
       await fetchHistory();
     } catch (err) {
       console.error("Update alarm error:", err);

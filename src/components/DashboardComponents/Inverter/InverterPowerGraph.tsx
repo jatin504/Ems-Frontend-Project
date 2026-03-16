@@ -8,8 +8,6 @@ import useTimeseriesData from "../../../hooks/useTimeseriesData";
 import { useTimeHandle } from "../../../Services/TimeWindowSetting";
 import type { ExportFunctions } from "../../../types/graphExport/export";
 
-/*TYPES */
-
 interface WidgetPoint {
   ts: number;
   value: number;
@@ -26,41 +24,24 @@ interface DeviceOption {
   label: string;
 }
 
-/* CONSTANTS */
-
 const POWER_ALIAS = "Power (kW)";
 
 const COLORS = [
-  "#ef4444",
-  "#f97316",
-  "#f59e0b",
-  "#84cc16",
-  "#10b981",
-  "#06b6d4",
-  "#3b82f6",
-  "#6366f1",
-  "#a855f7",
-  "#ec4899",
+  "#ef4444","#f97316","#f59e0b","#84cc16","#10b981",
+  "#06b6d4","#3b82f6","#6366f1","#a855f7","#ec4899",
 ];
 
-/*  interval → ms helper  */
 const intervalToMs = (interval: number, unit: string) => {
   switch (unit) {
-    case "second":
-      return interval * 1000;
-    case "minute":
-      return interval * 60 * 1000;
-    case "hour":
-      return interval * 60 * 60 * 1000;
-    default:
-      return 60_000;
+    case "second": return interval * 1000;
+    case "minute": return interval * 60 * 1000;
+    case "hour": return interval * 60 * 60 * 1000;
+    default: return 60000;
   }
 };
 
-/*  COMPONENT */
-
 const InverterPowerGraph: React.FC = () => {
-  /* TIME WINDOW */
+
   const {
     config: timeWindow,
     handleTimeWindowChange,
@@ -70,7 +51,7 @@ const InverterPowerGraph: React.FC = () => {
     12,
     "hour",
     "none",
-    [1, "minute"], 
+    [1, "minute"],
     60000,
     {
       timeRange: {
@@ -82,173 +63,266 @@ const InverterPowerGraph: React.FC = () => {
     }
   );
 
-  /* keep latest config  */
   const timeWindowRef = useRef(timeWindow);
-  useEffect(() => {
-    timeWindowRef.current = timeWindow;
-  }, [timeWindow]);
+  useEffect(() => { timeWindowRef.current = timeWindow; }, [timeWindow]);
 
-  /* STATE */
-  const [selectedDevice, setSelectedDevice] = useState<string>("ALL");
+  const [selectedDevice, setSelectedDevice] = useState("ALL");
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [dateNavEnabled, setDateNavEnabled] = useState(true);
+
   const { data, fetchData } = useTimeseriesData();
 
-  /* DATASOURCE */
-  const buildDataSource = () => ({
-    devices: {
-      patterns: ["_bank_bank_"],
-      ids: [] as string[],
-    },
-    keys: [
-      {
-        key: "active_power",
-        alias: POWER_ALIAS,
-        keyType: "common",
-        type: "spline",
-      },
-    ],
-    aggregation: timeWindowRef.current.aggregation,
-    timeRange: timeWindowRef.current.timeRange,
-    orderBy: "ASC",
-  });
-
-  /* FETCH ON TIME WINDOW CHANGE*/
+  /* ⭐⭐⭐ TIMEWINDOW → NAVIGATOR SYNC */
   useEffect(() => {
-    fetchData(buildDataSource() as any);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeWindow]);
 
-  /*AUTO REFRESH (DYNAMIC INTERVAL) */
-  useEffect(() => {
-    const { interval, intervalType } = timeWindow.timeRange;
+    const tw = timeWindow.timeRange;
 
-    const refreshMs = intervalToMs(interval, intervalType);
-
-    const intervalId = setInterval(() => {
-      fetchData(buildDataSource() as any);
-    }, refreshMs);
-
-    return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    timeWindow.timeRange.interval,
-    timeWindow.timeRange.intervalType,
-  ]);
-
-  /*DEVICE OPTIONS */
-  useEffect(() => {
-    const widgetData = data as WidgetData | null;
-    if (!widgetData) {
-      setDeviceOptions([]);
+    if (tw.type === "absolute") {
+      if (tw.startTs) {
+        setCurrentDate(new Date(tw.startTs));
+        setDateNavEnabled(true);
+      }
       return;
     }
 
-    const options: DeviceOption[] = Object.keys(widgetData).map((deviceId) => {
-      const match = deviceId.match(/_(\d+)$/);
-      const suffix = match ? match[1] : "";
-      return {
-        id: deviceId,
-        label: suffix ? `INV_${suffix}` : deviceId,
-      };
+    if (tw.type === "relative") {
+
+      if (tw.relativeType === "currentDaySoFar") {
+        setCurrentDate(new Date());
+        setDateNavEnabled(true);
+        return;
+      }
+
+      if (tw.relativeType === "yesterday") {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        setCurrentDate(d);
+        setDateNavEnabled(true);
+        return;
+      }
+
+      setDateNavEnabled(false);
+      return;
+    }
+
+    if (tw.type === "last") {
+      setDateNavEnabled(false);
+    }
+
+  }, [timeWindow]);
+
+  const formattedDate = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const d = String(currentDate.getDate()).padStart(2, "0");
+    return `${y}/${m}/${d}`;
+  }, [currentDate]);
+
+  const isToday = useMemo(() => {
+    const t = new Date();
+
+    return (
+      currentDate.getFullYear() === t.getFullYear() &&
+      currentDate.getMonth() === t.getMonth() &&
+      currentDate.getDate() === t.getDate()
+    );
+  }, [currentDate]);
+
+  const applyAbsoluteDay = (date: Date) => {
+
+    if (!dateNavEnabled) return;
+
+    const start = new Date(date);
+    start.setHours(0,0,0,0);
+
+    const end = new Date(date);
+    end.setHours(23,59,59,999);
+
+    handleTimeWindowChange({
+      aggregation: timeWindowRef.current.aggregation,
+      orderBy: "ASC",
+      timeRange:{
+        type:"absolute",
+        startTs:start.getTime(),
+        endTs:end.getTime()
+      }
+    });
+  };
+
+  const goPrevDay = () => {
+    if (!dateNavEnabled) return;
+
+    setCurrentDate(prev=>{
+      const d = new Date(prev);
+      d.setDate(d.getDate()-1);
+      applyAbsoluteDay(d);
+      return d;
+    });
+  };
+
+  const goNextDay = () => {
+    if (!dateNavEnabled || isToday) return;
+
+    setCurrentDate(prev=>{
+      const d = new Date(prev);
+      d.setDate(d.getDate()+1);
+
+      const today = new Date();
+
+      const reachedToday =
+        d.getFullYear()===today.getFullYear() &&
+        d.getMonth()===today.getMonth() &&
+        d.getDate()===today.getDate();
+
+      if(reachedToday){
+        handleReset();   // back to relative
+      } else {
+        applyAbsoluteDay(d);
+      }
+
+      return d;
+    });
+  };
+
+  const buildDataSource = () => ({
+    devices:{ patterns:["_bank_bank_"], ids:[] },
+    keys:[{
+      key:"active_power",
+      alias:POWER_ALIAS,
+      keyType:"common",
+      type:"spline"
+    }],
+    aggregation: timeWindowRef.current.aggregation,
+    timeRange: timeWindowRef.current.timeRange,
+    orderBy:"ASC"
+  });
+
+  useEffect(()=>{
+    fetchData(buildDataSource() as any);
+  },[timeWindow]);
+
+  useEffect(()=>{
+    const {interval,intervalType}=timeWindow.timeRange;
+    const refreshMs = intervalToMs(interval,intervalType);
+
+    const id = setInterval(()=>{
+      fetchData(buildDataSource() as any);
+    },refreshMs);
+
+    return ()=>clearInterval(id);
+  },[
+    timeWindow.timeRange.interval,
+    timeWindow.timeRange.intervalType
+  ]);
+
+  useEffect(()=>{
+    const widgetData = data as WidgetData | null;
+    if(!widgetData){ setDeviceOptions([]); return; }
+
+    const options = Object.keys(widgetData).map(id=>{
+      const suf = id.match(/_(\d+)$/)?.[1];
+      return { id, label: suf ? `INV_${suf}` : id };
     });
 
-    options.sort((a, b) => a.label.localeCompare(b.label));
+    options.sort((a,b)=>a.label.localeCompare(b.label));
     setDeviceOptions(options);
-  }, [data]);
+  },[data]);
 
-  /* RESET INVALID SELECTION */
-  useEffect(() => {
-    if (
-      selectedDevice !== "ALL" &&
-      !deviceOptions.find((d) => d.id === selectedDevice)
-    ) {
-      setSelectedDevice("ALL");
-    }
-  }, [deviceOptions, selectedDevice]);
-
-  /* SERIES */
-  const seriesForChart = useMemo(() => {
+  const seriesForChart = useMemo(()=>{
     const widgetData = data as WidgetData | null;
-    if (!widgetData) return [];
+    if(!widgetData) return [];
 
-    const series: any[] = [];
+    const series:any[]=[];
 
-    Object.keys(widgetData).forEach((deviceId) => {
-      if (selectedDevice !== "ALL" && selectedDevice !== deviceId) return;
+    Object.keys(widgetData).forEach(deviceId=>{
+      if(selectedDevice!=="ALL" && selectedDevice!==deviceId) return;
 
-      const points = widgetData[deviceId]?.[POWER_ALIAS];
-      if (!points?.length) return;
+      const pts = widgetData[deviceId]?.[POWER_ALIAS];
+      if(!pts?.length) return;
 
-      const suffix = deviceId.match(/_(\d+)$/)?.[1];
-      // Legend label: Power (kW)-1, Power (kW)-2, ...
-      let legendNum = suffix ? suffix : undefined;
-      if (!legendNum) {
-        // fallback: try to extract any trailing number
-        const fallbackNum = deviceId.match(/(\d+)(?!.*\d)/)?.[1];
-        legendNum = fallbackNum || deviceId;
-      }
-      const colorIndex = legendNum && !isNaN(Number(legendNum))
-        ? (parseInt(legendNum, 10) - 1) % COLORS.length
-        : series.length % COLORS.length;
+      const suf = deviceId.match(/_(\d+)$/)?.[1] || deviceId;
+
+      const colorIndex =
+        !isNaN(Number(suf))
+          ? (parseInt(suf)-1)%COLORS.length
+          : series.length%COLORS.length;
 
       series.push({
-        type: "spline",
-        name: `${POWER_ALIAS}-${legendNum}`,
-        data: points.map((p) => [p.ts, p.value]),
-        marker: { enabled: false },
-        color: COLORS[colorIndex],
+        type:"spline",
+        name:`${POWER_ALIAS}-${suf}`,
+        data: pts.map(p=>[p.ts,p.value]),
+        marker:{enabled:true},
+        color:COLORS[colorIndex]
       });
     });
 
     return series;
-  }, [data, selectedDevice]);
+  },[data,selectedDevice]);
 
-  /*THEME*/
-  const textColor = useColorModeValue("#1A202C", "#E6E6E6");
-  const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
-  const gridColor = useColorModeValue(
-    "rgba(0,0,0,0.10)",
-    "rgba(255,255,255,0.08)"
-  );
-  const axisLineColor = useColorModeValue(
-    "rgba(0,0,0,0.16)",
-    "rgba(255,255,255,0.06)"
-  );
-
-  /* RENDER */
+  const textColor = useColorModeValue("#1A202C","#E6E6E6");
+  const subTextColor = useColorModeValue("#4A5568","#B9B9B9");
+  const gridColor = useColorModeValue("rgba(0,0,0,0.10)","rgba(255,255,255,0.08)");
+  const axisLineColor = useColorModeValue("rgba(0,0,0,0.16)","rgba(255,255,255,0.06)");
 
   return (
     <GraphLayout
       title={
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          w="100%"
-        >
-          <Box>Power</Box>
+        <Box display="flex" alignItems="center" w="100%">
 
-          <Select
-            value={selectedDevice}
-            onChange={(e) => setSelectedDevice(e.target.value)}
-            size="xs"
-            minW="90px"
-            height="24px"
-            fontSize="11px"
-            bg={useColorModeValue("gray.100", "gray.700")}
-            borderRadius="4px"
-            ml={2}
+          {/* LEFT */}
+          <Box display="flex" alignItems="center" gap={3}>
+            <Box fontWeight="600">Power</Box>
+
+            <Select
+              value={selectedDevice}
+              onChange={(e)=>setSelectedDevice(e.target.value)}
+              size="xs"
+              minW="90px"
+              height="24px"
+              fontSize="11px"
+              bg={useColorModeValue("gray.100","gray.700")}
+              borderRadius="4px"
+            >
+              <option value="ALL">ALL</option>
+              {deviceOptions.map(opt=>(
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </Select>
+          </Box>
+
+          {/* ⭐ DATE NAVIGATOR */}
+          <Box
+            ml="28"
+            opacity={dateNavEnabled ? 1 : 0.4}
+            pointerEvents={dateNavEnabled ? "auto" : "none"}
+            display="flex"
+            alignItems="center"
+            bg={useColorModeValue("gray.100","gray.700")}
+            borderRadius="6px"
+            px={2}
+            height="22px"
+            gap={2}
           >
-            <option value="ALL">ALL</option>
-            {deviceOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.label}
-              </option>
-            ))}
-          </Select>
+            <Box cursor="pointer" fontSize="12px" onClick={goPrevDay}>‹</Box>
+
+            <Box fontSize="12px" fontWeight="600" minW="100px" textAlign="center">
+              {formattedDate}
+            </Box>
+
+            <Box
+              cursor={isToday ? "not-allowed" : "pointer"}
+              opacity={isToday ? 0.35 : 1}
+              fontSize="12px"
+              onClick={goNextDay}
+            >
+              ›
+            </Box>
+          </Box>
+
         </Box>
       }
       width={["100%"]}
@@ -264,52 +338,20 @@ const InverterPowerGraph: React.FC = () => {
         height={260}
         onExportReady={setExportFunctions}
         props={{
-          yAxis: {
-            tickAmount: 6,
-            title: { text: null },
-            labels: { style: { color: textColor } },
-            gridLineColor: gridColor,
+          yAxis:{
+            tickAmount:6,
+            title:{text:null},
+            labels:{style:{color:textColor}},
+            gridLineColor:gridColor
           },
-          xAxis: {
-            type: "datetime",
-            crosshair: { color: "rgba(255,255,255,0.15)" },
-            labels: { style: { color: subTextColor } },
-            lineColor: axisLineColor,
-            gridLineColor: gridColor,
-            gridLineDashStyle: "ShortDot",
-            gridLineWidth: 1,
-            tickInterval: 60 * 60 * 2 * 1000,
-            min : !manualChanges ? undefined : new Date(new Date().setHours(4, 0, 0, 0)).getTime(),
-            max : !manualChanges ? undefined : new Date(new Date().setHours(20, 0, 0, 0)).getTime()
-          },
-          legend: {
-            align: "center",
-            verticalAlign: "bottom",
-            layout: "horizontal",
-            itemStyle: { color: textColor },
-          },
-          tooltip: {
-            shared: true,
-            backgroundColor: useColorModeValue(
-              "#fff",
-              "rgba(24,24,27,0.95)"
-            ),
-            style: { color: textColor },
-          },
-          plotOptions: {
-            series: {
-              boostThreshold: 500,
-              shadow: false,
-              animation: false,
-              marker: {
-                enabled: false
-              }
-            },
-            spline: {
-              marker: {
-                enabled: false,
-              }
-            }
+          xAxis:{
+            type:"datetime",
+            labels:{style:{color:subTextColor}},
+            lineColor:axisLineColor,
+            gridLineColor:gridColor,
+            tickInterval:60*60*2*1000,
+            min: !manualChanges ? undefined : new Date(new Date().setHours(4,0,0,0)).getTime(),
+            max: !manualChanges ? undefined : new Date(new Date().setHours(20,0,0,0)).getTime()
           }
         }}
       />

@@ -155,7 +155,7 @@ export const useTimeHandle = (
     defaultAggregate: string = "AVG",
     defaultGroupInterval: [number, string] = [5, "minute"],
     autoUpdateIntervalMs: number = 60000,
-    initialConfig?: Partial<TimeConfig>  // ✅ NEW: Optional full config override
+    initialConfig?: Partial<TimeConfig>  //  NEW: Optional full config override
 ) => {
     // Build fallback config from legacy params
     const fallbackConfig: TimeConfig = {

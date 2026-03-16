@@ -129,7 +129,7 @@ const CheckboxOptionPCS = (props: any) => {
 /* ================= MAIN ================= */
 
 const CapacityAndStrategyCard: React.FC = () => {
-  // 🔥 Permission logic
+  //Permission logic
   const { permissions } = usePermissions();
   const role = (sessionStorage.getItem("role") || "").toLowerCase();
   const myPermission = permissions.find(
@@ -152,7 +152,7 @@ const CapacityAndStrategyCard: React.FC = () => {
   const [pcsByMode, setPcsByMode] = useState<Record<string, any[]>>({});
   const [activePCSMode, setActivePCSMode] = useState<string | null>(null);
   const [localRemoteMode, setLocalRemoteMode] = useState<"Local" | "Remote">("Local");
-  const [backendModes, setBackendModes] = useState<any>({}); // ✅ NEW
+  const [backendModes, setBackendModes] = useState<any>({}); 
   const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   // Password modal state for Apply
@@ -181,7 +181,7 @@ const CapacityAndStrategyCard: React.FC = () => {
     getBessControlModes().then((res) => {
       const data = res?.data || {};
 
-      setBackendModes(data); // ✅ NEW
+      setBackendModes(data); 
 
       const preSelectedModes: any[] = [];
       const pcsMap: Record<string, any[]> = {};
@@ -215,7 +215,13 @@ const CapacityAndStrategyCard: React.FC = () => {
   /* ================= APPLY ================= */
 
   const handleApply = async () => {
+
+    
+    (window as any).__CONTROL_TYPE__ = "STRATEGY";
+    (window as any).__CONTROL_MODULE__ = "PCS_MODE";
+
     setIsPasswordOpen(true);
+
   };
 
   // Actual apply logic after password confirmation
@@ -261,7 +267,7 @@ const CapacityAndStrategyCard: React.FC = () => {
       minH="210px"
       p="16px"
       position="relative"
-      // 🔥 FULL UI LOCK
+      // FULL UI LOCK
       pointerEvents={!canControl ? "none" : "auto"}
       opacity={!canControl ? 0.6 : 1}
     >

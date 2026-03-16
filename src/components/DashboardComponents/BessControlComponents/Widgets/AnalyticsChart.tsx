@@ -213,7 +213,7 @@ export default function AnalyticsChart() {
           <HStack>
             <Text fontSize="18px" fontWeight={600} color={TITLE}>{selectedTitle}</Text>
 
-            {/* ✅ DROPDOWN FIXED ONLY */}
+            {/*  DROPDOWN FIXED ONLY */}
             <Menu placement="bottom-start" strategy="fixed" gutter={8}>
               <MenuButton as={IconButton} aria-label="Open chart" icon={<FaAngleDown />} size="xs" />
               <MenuList

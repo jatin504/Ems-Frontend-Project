@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5179";
+  import.meta.env.VITE_API_BASE_URL || "http://75.119.146.115:5179";
 
 /* ================= TYPES ================= */
 
@@ -28,7 +28,7 @@ export function useMarketConfig() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔥 GLOBAL TOKEN HELPER (EMS STANDARD)
+  // GLOBAL TOKEN HELPER (EMS STANDARD)
   function getToken(): string {
     return sessionStorage.getItem("token") || "";
   }

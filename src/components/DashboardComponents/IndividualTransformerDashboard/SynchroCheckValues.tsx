@@ -10,7 +10,7 @@ const Row = ({ label, value }: { label: string; value: string }) => {
         fontSize="11px"
         textAlign="right"
         px="6px"
-        borderRadius="4px"   // ✅ box only
+        borderRadius="4px"   //  box only
       >
         {value}
       </Box>

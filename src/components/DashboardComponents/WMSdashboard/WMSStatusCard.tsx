@@ -26,7 +26,7 @@ const WMSStatusCard = () => {
 
       const data = res.data;
 
-      // ✅ FINAL & CORRECT MAPPING
+      //  FINAL & CORRECT MAPPING
       setOnline(data.active);     // active ---- Online
       setOffline(data.inactive);  // inactive ---- Offline
       setTotal(data.online);      // online ---- Total

@@ -8,7 +8,7 @@ import { useTimeHandle } from "../../../Services/TimeWindowSetting";
 /* ================= PROPS ================= */
 
 interface PerformanceRatioChartProps {
-  deviceId: string; // ✅ IMPORTANT
+  deviceId: string; //  IMPORTANT
 }
 
 /* ================= COMPONENT ================= */

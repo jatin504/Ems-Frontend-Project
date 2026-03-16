@@ -145,7 +145,7 @@ export default function PolicyPanel() {
         body: JSON.stringify(body)
       });
 
-      // ✅ UX: Show specific toast for forbidden
+      //  UX: Show specific toast for forbidden
       if (res.status === 403) {
         await loadPolicy(role);
         toast({
@@ -155,7 +155,7 @@ export default function PolicyPanel() {
         });
         return;
       }
-      // ✅ IMPORTANT FIX — if forbidden or any fail → reload DB value immediately
+      //  IMPORTANT FIX — if forbidden or any fail → reload DB value immediately
       if (!res.ok) {
         await loadPolicy(role);   // 👈 yahi main fix hai
         const e = await res.json().catch(() => ({}));

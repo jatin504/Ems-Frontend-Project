@@ -70,7 +70,7 @@ const AnalogTrendPanel: React.FC = () => {
           chart: {
             spacingTop: 8,
             spacingBottom: 40,
-            marginBottom: 70, // 🔥 THIS FIXES X-AXIS CUT IN FULLSCREEN
+            marginBottom: 70, // THIS FIXES X-AXIS CUT IN FULLSCREEN
           },
           yAxis: {
             tickAmount: 5,

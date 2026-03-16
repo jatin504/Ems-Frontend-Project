@@ -37,7 +37,7 @@ const GridStackBarGraph: React.FC = () => {
   const gridFetch = {
     dataSource: {
       devices: {
-        ids: ["plant_1_pcs_2_bank_bank_2"],
+        ids: ["plant_1_pcs_2_bank_bank_20"],
         patterns: [],
       },
       keys: [

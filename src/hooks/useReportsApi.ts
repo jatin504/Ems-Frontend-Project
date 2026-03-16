@@ -12,6 +12,8 @@ const safeJson = async (res: Response) => {
   }
 };
 
+type ScheduleMode = "email" | "self";
+
 export default function useReportsApi() {
   const [loading, setLoading] = useState(false);
 
@@ -55,9 +57,31 @@ export default function useReportsApi() {
     }
   };
 
-  const saveOrSchedule = async (payload: any, deliveryType: "self" | "email") => {
-    if (deliveryType === "email") return scheduleReport(payload);
-    return createTemplate(payload);
+  const saveOrSchedule = async (
+    payload: any,
+    mode: ScheduleMode,
+    shouldSchedule: boolean
+  ) => {
+    const url = shouldSchedule
+      ? "/api/reports/schedule"
+      : "/api/reports/templates";
+    try {
+      setLoading(true);
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(`${BASE_URL}${url}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await safeJson(res);
+      if (!res.ok || !data?.ok) throw new Error(data?.error || `Status ${res.status}`);
+      return data;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return { loading, createTemplate, scheduleReport, saveOrSchedule };

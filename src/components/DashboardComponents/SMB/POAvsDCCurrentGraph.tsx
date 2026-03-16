@@ -170,17 +170,17 @@ const POAvsDCCurrentGraph = () => {
             },
           },
 
-          /* 🔥 FIX HERE */
+          /* FIX HERE */
           yAxis: [
   {
-    tickAmount: 6,              // ✅ LEFT Y-AXIS → 6 pointers
-    title: { text: null },      // ✅ no text
+    tickAmount: 6,              //  LEFT Y-AXIS → 6 pointers
+    title: { text: null },      //  no text
     labels: { style: { color: textColor } },
     gridLineColor: gridColor,
   },
   {
-    tickAmount: 6,              // ✅ RIGHT Y-AXIS → 6 pointers
-    title: { text: null },      // ✅ no text (removes "Values")
+    tickAmount: 6,              //  RIGHT Y-AXIS → 6 pointers
+    title: { text: null },      //  no text (removes "Values")
     labels: { style: { color: textColor } },
     opposite: true,
     gridLineColor: gridColor,

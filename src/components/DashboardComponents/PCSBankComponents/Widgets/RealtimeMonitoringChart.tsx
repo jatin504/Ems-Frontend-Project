@@ -1,30 +1,18 @@
-import { useColorModeValue, Text } from "@chakra-ui/react";
-import ErrorBoundary from "../../../Errors/ErrorBoundary";
+import { useColorModeValue, Box } from "@chakra-ui/react";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
-import { useEffect, useMemo, useState } from "react";
-import { transformToHighchartsTimeSeries } from "../../../../Services/APIDataFormatter/TimeseriesGraphs";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SplineGraph from "../../../Graphs/RevampCharts/SplineGraph";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
-import { useNavigate, useLocation } from "react-router-dom";
-
-// [
-//   { type: "spline", name: "Max Module Temp", color: "#4F8BFF", yAxis: 0, data: tempMax, marker: { enabled: true }, tooltip: { valueSuffix: " °C" } },
-//   { type: "spline", name: "Min Module Temp", color: "#7ED957", yAxis: 0, data: tempMin, marker: { enabled: true }, tooltip: { valueSuffix: " °C" } },
-//   { type: "spline", name: "Max String Voltage", color: "#F6AD55", yAxis: 1, data: stringVoltage, marker: { enabled: true }, tooltip: { valueSuffix: " V" } },
-// ]
 
 interface RealtimeMonitoringChartProps {
   bankId: string;
 }
 
-// ✅ BANK ID → DB DEVICE ID
 function buildBankDeviceId(bankId: string) {
-  // pcs_2_bank_2 → plant_1_pcs_2_bank_bank_2
   const match = bankId.match(/pcs_(\d+)_bank_(\d+)/);
   if (!match) return null;
-
   const [, pcs, bank] = match;
   return `plant_1_pcs_${pcs}_bank_bank_${bank}`;
 }
@@ -33,74 +21,187 @@ const RealtimeMonitoringChart: React.FC<RealtimeMonitoringChartProps> = ({ bankI
 
   const {
     config: timeWindowMonitoring,
-    handleTimeWindowChange: handleTimeWindowMonitoringChange,
-    handleReset: MonitoringHandleReset,
+    handleTimeWindowChange,
+    handleReset,
   } = useTimeHandle(
     12,
-    'hour',
-    'avg',
-    [15, 'minute'],
+    "hour",
+    "avg",
+    [15, "minute"],
     60000,
     {
       timeRange: {
-        type: 'relative',
-        relativeType: 'currentDaySoFar',
+        type: "relative",
+        relativeType: "currentDaySoFar",
         interval: 1,
-        intervalType: "hour"
+        intervalType: "hour",
       },
     }
   );
 
+  const timeWindowRef = useRef(timeWindowMonitoring);
+  useEffect(() => {
+    timeWindowRef.current = timeWindowMonitoring;
+  }, [timeWindowMonitoring]);
+
+  /* ⭐ DATE STATE */
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [dateNavEnabled, setDateNavEnabled] = useState(true);
+
+  /* ⭐ TIMEWINDOW SYNC */
+  useEffect(() => {
+
+    const tw = timeWindowMonitoring.timeRange;
+
+    if (tw.type === "absolute") {
+      if (tw.startTs) {
+        setCurrentDate(new Date(tw.startTs));
+        setDateNavEnabled(true);
+      }
+      return;
+    }
+
+    if (tw.type === "relative") {
+
+      if (tw.relativeType === "currentDaySoFar") {
+        setCurrentDate(new Date());
+        setDateNavEnabled(true);
+        return;
+      }
+
+      if (tw.relativeType === "yesterday") {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        setCurrentDate(d);
+        setDateNavEnabled(true);
+        return;
+      }
+
+      setDateNavEnabled(false);
+      return;
+    }
+
+    if (tw.type === "last") {
+      setDateNavEnabled(false);
+    }
+
+  }, [timeWindowMonitoring]);
+
+  const formattedDate = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const d = String(currentDate.getDate()).padStart(2, "0");
+    return `${y}/${m}/${d}`;
+  }, [currentDate]);
+
+  const isToday = useMemo(() => {
+    const t = new Date();
+    return (
+      currentDate.getFullYear() === t.getFullYear() &&
+      currentDate.getMonth() === t.getMonth() &&
+      currentDate.getDate() === t.getDate()
+    );
+  }, [currentDate]);
+
+  const applyAbsoluteDay = (date: Date) => {
+
+    if (!dateNavEnabled) return;
+
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    handleTimeWindowChange({
+      aggregation: timeWindowRef.current.aggregation,
+      orderBy: "ASC",
+      timeRange: {
+        type: "absolute",
+        startTs: start.getTime(),
+        endTs: end.getTime(),
+      },
+    });
+  };
+
+  const goPrevDay = () => {
+    if (!dateNavEnabled) return;
+
+    setCurrentDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 1);
+      applyAbsoluteDay(d);
+      return d;
+    });
+  };
+
+  const goNextDay = () => {
+    if (!dateNavEnabled || isToday) return;
+
+    setCurrentDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 1);
+
+      const today = new Date();
+
+      const reachedToday =
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+
+      if (reachedToday) {
+        handleReset();
+      } else {
+        applyAbsoluteDay(d);
+      }
+
+      return d;
+    });
+  };
+
   const deviceId = buildBankDeviceId(bankId);
 
-  // BANK BASED DEVICE ID (FIXED)
-  const fetchingToServerObj = {
-    dataSource: {
-      devices: {
-        patterns: [],
-        ids: deviceId ? [deviceId] : [],
-      },
+  const { data, fetchData } = useTimeseriesData();
+
+  useEffect(() => {
+    if (!deviceId) return;
+
+    fetchData({
+      devices: { patterns: [], ids: [deviceId] },
       keys: [
-        {
-          key: 'soc',
-          alias: 'Current (A)',
-          keyType: 'individual',
-          type: "spline",
-          color: "#4F8BFF"
-        },
-        {
-          key: 'bcu_1_lowest_pack_voltage',
-          alias: 'Voltage (V)',
-          keyType: 'individual',
-          type: "spline",
-          color: "#7ED957"
-        },
-        {
-          key: 'bcu_1_highest_pack_temperature',
-          alias: 'Temp (°C)',
-          keyType: 'individual',
-          type: "spline",
-          color: "#F6AD55",
-          yAxis: 1
-        },
-        // Add more keys as needed
+        { key: "soc", alias: "Current (A)", keyType: "individual", type: "spline" },
+        { key: "bcu_1_lowest_pack_voltage", alias: "Voltage (V)", keyType: "individual", type: "spline" },
+        { key: "bcu_1_highest_pack_temperature", alias: "Temp (°C)", keyType: "individual", type: "spline" },
       ],
       aggregation: timeWindowMonitoring.aggregation,
       timeRange: timeWindowMonitoring.timeRange,
       orderBy: timeWindowMonitoring.orderBy,
-    },
-  };
+    } as any);
 
-  // Fetch data using new hook
-  const { data, fetchData } = useTimeseriesData();
-
-  useEffect(() => {
-    if (deviceId) {
-      fetchData(fetchingToServerObj.dataSource);
-    }
   }, [timeWindowMonitoring, deviceId]);
 
-  // Light / Dark mode values
+  const seriesForChart = useMemo(() => {
+    if (!data) return [];
+
+    const s: any[] = [];
+
+    Object.values(data).forEach((deviceObj: any) => {
+      Object.entries(deviceObj).forEach(([metric, pts]: any) => {
+        if (Array.isArray(pts)) {
+          s.push({
+            type: "spline",
+            name: metric,
+            data: pts.map((p: any) => [p.ts, p.value]),
+            marker: { enabled: true },
+            yAxis: metric === "Temp (°C)" ? 1 : 0,
+          });
+        }
+      });
+    });
+
+    return s;
+  }, [data]);
+
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
   const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
   const gridColor = useColorModeValue("rgba(0,0,0,0.10)", "rgba(255,255,255,0.08)");
@@ -108,99 +209,67 @@ const RealtimeMonitoringChart: React.FC<RealtimeMonitoringChartProps> = ({ bankI
 
   const [exportFunctions, setExportFunctions] = useState<ExportFunctions | null>(null);
 
-  const seriesForChart = useMemo(() => {
-    if (!data || typeof data !== "object") return [];
-
-    const allSeries: any[] = [];
-    Object.entries(data).forEach(([deviceKey, deviceObj]) => {
-      if (typeof deviceObj === "object" && deviceObj !== null) {
-        Object.entries(deviceObj).forEach(([metric, points]) => {
-          if (Array.isArray(points) && points.length > 0) {
-            allSeries.push({
-              type: "spline",
-              name: metric,
-              data: points.map((p: any) => [p.ts, p.value]),
-              marker: { enabled: true },
-              yAxis: metric === "Temp (°C)" ? 1 : 0,
-            });
-          }
-        });
-      }
-    });
-    return allSeries;
-  }, [data]);
-
-  const navigate = useNavigate();
-  const location = useLocation();
-
   return (
     <GraphLayout
-      title="Real Time Monitoring"
+      title={
+        <Box display="flex" alignItems="center" w="100%">
+          <Box fontWeight="600">Real Time Monitoring</Box>
+
+          <Box ml="170px"
+            opacity={dateNavEnabled ? 1 : 0.4}
+            pointerEvents={dateNavEnabled ? "auto" : "none"}
+            display="flex"
+            alignItems="center"
+            bg={useColorModeValue("gray.100", "gray.700")}
+            borderRadius="6px"
+            px={2}
+            height="22px"
+            gap={2}
+          >
+            <Box cursor="pointer" fontSize="12px" onClick={goPrevDay}>‹</Box>
+
+            <Box fontSize="11px" fontWeight="600" minW="78px" textAlign="center">
+              {formattedDate}
+            </Box>
+
+            <Box
+              cursor={isToday ? "not-allowed" : "pointer"}
+              opacity={isToday ? 0.35 : 1}
+              fontSize="12px"
+              onClick={goNextDay}
+            >
+              ›
+            </Box>
+          </Box>
+        </Box>
+      }
       width={["930px"]}
       height="534px"
       fullScreen
-      downloadOption
-      WidgetProps={{
-        mt: "0",
-        gap: "12px",
-        opacity: 1,
-        transform: "rotate(0deg)",
-        borderRadius: "12px",
-        pl: "16px",
-        pr: "16px",
-      }}
       timeWindow
-      onTimeWindowChange={(config) => handleTimeWindowMonitoringChange(config)}
-      onReset={MonitoringHandleReset}
+      onTimeWindowChange={handleTimeWindowChange}
+      onReset={handleReset}
       onExport={exportFunctions}
     >
-      {/* <ErrorBoundary> */}
       <SplineGraph
         apiData={seriesForChart}
-        height={458} // 534 - header/legend spacing
+        height={458}
         onExportReady={setExportFunctions}
         props={{
           yAxis: [
-            {
-              tickAmount: 6,
-              title: { text: null },
-              labels: { style: { color: textColor } },
-              gridLineColor: gridColor,
-            },
-            {
-              tickAmount: 6,
-              title: { text: null },
-              gridLineColor: gridColor,
-              opposite: true,
-              labels: {
-                style: { color: textColor, fontSize: "11px" },
-              },
-            },
+            { tickAmount: 6, title: { text: null }, labels: { style: { color: textColor } }, gridLineColor: gridColor },
+            { tickAmount: 6, opposite: true, title: { text: null }, gridLineColor: gridColor, labels: { style: { color: textColor } } }
           ],
           xAxis: {
             type: "datetime",
-            crosshair: { color: 'rgba(255,255,255,0.15)', width: 1 },
             labels: { style: { color: subTextColor } },
             lineColor: axisLineColor,
             gridLineColor: gridColor,
-            gridLineDashStyle: "dashed",
-            gridLineWidth: 0,
           },
-          tooltip: {
-            shared: true,
-            backgroundColor: useColorModeValue("#fff", 'rgba(24,24,27,0.95)'),
-            style: { color: textColor },
-          },
-          legend: {
-            align: "center",
-            verticalAlign: "bottom",
-            layout: "horizontal",
-            itemStyle: { color: textColor },
-          },
-          series: seriesForChart,
+          tooltip: { shared: true },
+          legend: { align: "center", verticalAlign: "bottom" }
         }}
       />
-      {/* </ErrorBoundary> */}
     </GraphLayout>
   );
 };

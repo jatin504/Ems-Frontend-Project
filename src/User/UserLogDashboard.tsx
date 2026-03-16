@@ -23,7 +23,14 @@ import {
   Tooltip,
   useColorModeValue,
   Select,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from "@chakra-ui/react";
+import DashboardLog from "./DashboardLog"; // render dashboard log content
+import StrategyLog from "./StrategyLog"; // new strategy log tab component
 import { SearchIcon, RepeatIcon, CalendarIcon, CloseIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { authFetch } from "../hooks/UseAuth";
 
@@ -151,215 +158,240 @@ if (to) params.set("to", to);
 
   return (
     <Box px={{ base: 3, md: 6 }} py={4} minH={"85vh"} w="100%">
-      <Heading size="md" mb={4}>
-        User Log
-      </Heading>
+      <Tabs defaultIndex={0} variant="soft-rounded" colorScheme="blue">
+        <TabList mb={4}>
+          <Tab>User Log</Tab>
+          <Tab>Control Log</Tab>
+          <Tab>Strategy Log</Tab>
+        </TabList>
 
-      {/* Controls Row */}
-      <Grid
-        templateColumns={{ base: "1fr", md: "1fr 220px 220px auto" }}
-        gap={3}
-        mb={3}
-        alignItems="center"
-      >
-        <GridItem>
-          <InputGroup>
-            <InputLeftElement pointerEvents="none">
-              <SearchIcon opacity={0.7} />
-            </InputLeftElement>
-            <Input
-              placeholder="Search (user / message / IP)"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && load()}
-              borderColor={borderCol}
-            />
-          </InputGroup>
-        </GridItem>
+        <TabPanels>
 
-        <GridItem>
-          <InputGroup>
-            <InputLeftElement pointerEvents="none">
-              <CalendarIcon opacity={0.7} />
-            </InputLeftElement>
-            <Input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              placeholder="dd-mm-yyyy"
-              borderColor={borderCol}
-            />
-          </InputGroup>
-        </GridItem>
+          {/* USER LOG TAB */}
+          <TabPanel p={0}>
+            <Heading size="md" mb={4}>
+              User Log
+            </Heading>
 
-        <GridItem>
-          <InputGroup>
-            <InputLeftElement pointerEvents="none">
-              <CalendarIcon opacity={0.7} />
-            </InputLeftElement>
-            <Input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="dd-mm-yyyy"
-              borderColor={borderCol}
-            />
-          </InputGroup>
-        </GridItem>
-
-        <GridItem justifySelf={{ base: "stretch", md: "end" }}>
-          <HStack spacing={2} justify="flex-end">
-            <Tooltip label="Clear filters">
-              <IconButton
-                aria-label="Clear"
-                icon={<CloseIcon boxSize={3} />}
-                onClick={clearFilters}
-                variant="outline"
-              />
-            </Tooltip>
-            <Tooltip label="Refresh">
-              <IconButton
-                aria-label="Refresh"
-                icon={<RepeatIcon />}
-                onClick={load}
-                isLoading={loading}
-                colorScheme="blue"
-              />
-            </Tooltip>
-          </HStack>
-        </GridItem>
-      </Grid>
-
-      {/* Table Card */}
-      <Box
-        bg={bgCard}
-        borderWidth="1px"
-        borderColor={borderCol}
-        borderRadius="xl"
-        overflow="hidden"
-      >
-        <Box
-          overflowX="auto"
-          sx={{
-            "tbody tr:hover td": {
-              bg: useColorModeValue("gray.100", "whiteAlpha.100"),
-            },
-          }}
-        >
-          <Table size="sm" variant="simple" bg={bgTable} color={textCol}>
-            <Thead
-              sx={{
-                position: "sticky",
-                top: 0,
-                zIndex: 1,
-                bg: bgHeader,
-              }}
+            {/* Controls Row */}
+            <Grid
+              templateColumns={{ base: "1fr", md: "1fr 220px 220px auto" }}
+              gap={3}
+              mb={3}
+              alignItems="center"
             >
-              <Tr>
-                <Th minW="240px" color={textCol}>EVENT TIME</Th>
-                <Th minW="140px" color={textCol}>MESSAGE</Th>
-                <Th minW="160px" color={textCol}>USER</Th>
-                {/* RIGHTS column removed */}
-                <Th minW="140px" color={textCol}>IP</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {logs.map((row) => {
-                const msgUpper = String(row.message).toUpperCase();
-                const isOff = msgUpper === "LOGOFF";
-                const isOn = msgUpper === "LOGON";
-                const isFailed = msgUpper.includes("FAILED");
-                return (
-                  <Tr key={row.id} borderColor={borderCol}>
-                    <Td fontFamily="mono" color={textCol}>{formatIST(row.ts)}</Td>
-                    <Td>
-                      {isOff ? (
-                        <Badge colorScheme={useColorModeValue("red", "red")} variant="solid">
-                          LOGOFF
-                        </Badge>
-                      ) : isOn ? (
-                        <Badge colorScheme={useColorModeValue("green", "green")} variant="solid">
-                          LOGON
-                        </Badge>
-                      ) : isFailed ? (
-                        <Badge colorScheme={useColorModeValue("orange", "orange")} variant="solid">
-                          {row.message}
-                        </Badge>
-                      ) : (
-                        <Text color={textCol}>{row.message}</Text>
-                      )}
-                    </Td>
-                    <Td color={textCol}>{row.user || "-"}</Td>
-                    {/* RIGHTS column removed */}
-                    <Td color={textCol}>{row.ip || "-"}</Td>
-                  </Tr>
-                );
-              })}
-              {logs.length === 0 && (
-                <Tr>
-                  <Td colSpan={5}>
-                    <Box py={6} textAlign="center" color="gray.400">
-                      No logs found for selected filters.
-                    </Box>
-                  </Td>
-                </Tr>
-              )}
-            </Tbody>
-          </Table>
-        </Box>
-      </Box>
+              <GridItem>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <SearchIcon opacity={0.7} />
+                  </InputLeftElement>
+                  <Input
+                    placeholder="Search (user / message / IP)"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && load()}
+                    borderColor={borderCol}
+                  />
+                </InputGroup>
+              </GridItem>
 
-      {/* Pagination Controls */}
-      <Box mt={4}>
-        <HStack spacing={4} justify="space-between" align="center">
-          <HStack spacing={2}>
-            <Text fontSize="sm" color={textCol}>
-              Rows per page:
-            </Text>
-            <Select
-              w="100px"
-              size="sm"
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1);
-              }}
+              <GridItem>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <CalendarIcon opacity={0.7} />
+                  </InputLeftElement>
+                  <Input
+                    type="date"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    placeholder="dd-mm-yyyy"
+                    borderColor={borderCol}
+                  />
+                </InputGroup>
+              </GridItem>
+
+              <GridItem>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <CalendarIcon opacity={0.7} />
+                  </InputLeftElement>
+                  <Input
+                    type="date"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    placeholder="dd-mm-yyyy"
+                    borderColor={borderCol}
+                  />
+                </InputGroup>
+              </GridItem>
+
+              <GridItem justifySelf={{ base: "stretch", md: "end" }}>
+                <HStack spacing={2} justify="flex-end">
+                  <Tooltip label="Clear filters">
+                    <IconButton
+                      aria-label="Clear"
+                      icon={<CloseIcon boxSize={3} />}
+                      onClick={clearFilters}
+                      variant="outline"
+                    />
+                  </Tooltip>
+                  <Tooltip label="Refresh">
+                    <IconButton
+                      aria-label="Refresh"
+                      icon={<RepeatIcon />}
+                      onClick={load}
+                      isLoading={loading}
+                      colorScheme="blue"
+                    />
+                  </Tooltip>
+                </HStack>
+              </GridItem>
+            </Grid>
+
+            {/* Table Card */}
+            <Box
               bg={bgCard}
+              borderWidth="1px"
               borderColor={borderCol}
-              color={textCol}
+              borderRadius="xl"
+              overflow="hidden"
             >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </Select>
-          </HStack>
+              <Box
+                overflowX="auto"
+                sx={{
+                  "tbody tr:hover td": {
+                    bg: useColorModeValue("gray.100", "whiteAlpha.100"),
+                  },
+                }}
+              >
+                <Table size="sm" variant="simple" bg={bgTable} color={textCol}>
+                  <Thead
+                    sx={{
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 1,
+                      bg: bgHeader,
+                    }}
+                  >
+                    <Tr>
+                      <Th minW="240px" color={textCol}>EVENT TIME</Th>
+                      <Th minW="140px" color={textCol}>MESSAGE</Th>
+                      <Th minW="160px" color={textCol}>USER</Th>
+                      {/* RIGHTS column removed */}
+                      <Th minW="140px" color={textCol}>IP</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {logs.map((row) => {
+                      const msgUpper = String(row.message).toUpperCase();
+                      const isOff = msgUpper === "LOGOFF";
+                      const isOn = msgUpper === "LOGON";
+                      const isFailed = msgUpper.includes("FAILED");
+                      return (
+                        <Tr key={row.id} borderColor={borderCol}>
+                          <Td fontFamily="mono" color={textCol}>{formatIST(row.ts)}</Td>
+                          <Td>
+                            {isOff ? (
+                              <Badge colorScheme={useColorModeValue("red", "red")} variant="solid">
+                                LOGOFF
+                              </Badge>
+                            ) : isOn ? (
+                              <Badge colorScheme={useColorModeValue("green", "green")} variant="solid">
+                                LOGON
+                              </Badge>
+                            ) : isFailed ? (
+                              <Badge colorScheme={useColorModeValue("orange", "orange")} variant="solid">
+                                {row.message}
+                              </Badge>
+                            ) : (
+                              <Text color={textCol}>{row.message}</Text>
+                            )}
+                          </Td>
+                          <Td color={textCol}>{row.user || "-"}</Td>
+                          {/* RIGHTS column removed */}
+                          <Td color={textCol}>{row.ip || "-"}</Td>
+                        </Tr>
+                      );
+                    })}
+                    {logs.length === 0 && (
+                      <Tr>
+                        <Td colSpan={5}>
+                          <Box py={6} textAlign="center" color="gray.400">
+                            No logs found for selected filters.
+                          </Box>
+                        </Td>
+                      </Tr>
+                    )}
+                  </Tbody>
+                </Table>
+              </Box>
+            </Box>
 
-          <HStack spacing={2}>
-            <Text fontSize="sm" color={textCol}>
-              Page {page} of {totalPages || 1} ({total} total)
-            </Text>
-            <Tooltip label="Previous page">
-              <IconButton
-                aria-label="Previous"
-                icon={<ChevronLeftIcon />}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                isDisabled={page === 1 || loading}
-                size="sm"
-              />
-            </Tooltip>
-            <Tooltip label="Next page">
-              <IconButton
-                aria-label="Next"
-                icon={<ChevronRightIcon />}
-                onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
-                isDisabled={page >= totalPages || loading}
-                size="sm"
-              />
-            </Tooltip>
-          </HStack>
-        </HStack>
-      </Box>
+            {/* Pagination Controls */}
+            <Box mt={4}>
+              <HStack spacing={4} justify="space-between" align="center">
+                <HStack spacing={2}>
+                  <Text fontSize="sm" color={textCol}>
+                    Rows per page:
+                  </Text>
+                  <Select
+                    w="100px"
+                    size="sm"
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    bg={bgCard}
+                    borderColor={borderCol}
+                    color={textCol}
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </Select>
+                </HStack>
+
+                <HStack spacing={2}>
+                  <Text fontSize="sm" color={textCol}>
+                    Page {page} of {totalPages || 1} ({total} total)
+                  </Text>
+                  <Tooltip label="Previous page">
+                    <IconButton
+                      aria-label="Previous"
+                      icon={<ChevronLeftIcon />}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      isDisabled={page === 1 || loading}
+                      size="sm"
+                    />
+                  </Tooltip>
+                  <Tooltip label="Next page">
+                    <IconButton
+                      aria-label="Next"
+                      icon={<ChevronRightIcon />}
+                      onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+                      isDisabled={page >= totalPages || loading}
+                      size="sm"
+                    />
+                  </Tooltip>
+                </HStack>
+              </HStack>
+            </Box>
+          </TabPanel>
+
+          {/* DASHBOARD LOG TAB */}
+          <TabPanel p={0}>
+            {/* render DashboardLog component so tab content isn't blank */}
+            <DashboardLog />
+          </TabPanel>
+
+          {/* STRATEGY LOG TAB */}
+          <TabPanel p={0}>
+            <StrategyLog />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </Box>
   );
 }

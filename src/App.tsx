@@ -11,6 +11,7 @@ import ReportTemplateDashboard from "./Dashboard/ReportTemplateDashboard";
 import SLDDashboard from "./Dashboard/SLDDashboard";
 import Navbar from "./components/NavBar";
 import AlarmLatest from "./Dashboard/Alarm_Latest";
+import DashboardLog from "./User/DashboardLog";
 import AlarmHistory from "./Dashboard/Alarm_History";
 // import AlarmEvents from "./Dashboard/Alarm_Events";
 import ConfigDashboard from "./Dashboard/ConfigDashboard";
@@ -47,6 +48,7 @@ import RTMAdjustmentDashboard from "./Dashboard/RTMAdjustmentDashboard";
 import PlantConfigDashboard from "./components/DeviceConfig/PlantConfig";
 import MarqueeNewsHeadline from "./components/MarqueeNewsHeadline";
 import NetworkDashboard from "./Dashboard/networkDashboard"; // Corrected import path
+import SolarView from "./Dashboard/SolarView";
 
 /* Report routes are mapped below directly to DashboardLayout */
 
@@ -59,7 +61,7 @@ function App() {
       <Box>
         <Navbar />
 
-        {/* ✅ Hide marquee on login page only */}
+        {/*  Hide marquee on login page only */}
         {location.pathname !== "/login" && <MarqueeNewsHeadline />}
 
         <Box bg={useColorModeValue("#F4F6F6", "#0E1111")}>
@@ -154,6 +156,19 @@ function App() {
               }
             />
             <Route
+              path="/solarview"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Solar View" },
+                  ]}
+                >
+                  <SolarView />
+                </DashboardLayout>
+              }
+            />
+            <Route
               path="/config/plant"
               element={
                 <DashboardLayout
@@ -197,7 +212,7 @@ function App() {
                   <UserLogDashboard />
                 </DashboardLayout>
               }
-            />
+            /> <Route path="/dashboardlog" element={<DashboardLog />} />
             <Route
               path="/settings"
               element={
