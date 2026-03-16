@@ -24,6 +24,9 @@ import useReportTemplate from "../hooks/useReportTemplate";
 import { useNavigate } from "react-router-dom";
 import { ChevronRightIcon } from "@chakra-ui/icons";
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 type Template = {
   reportName: string;
   email?: string;
@@ -128,7 +131,7 @@ export default function ReportTemplateDashboard() {
   React.useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://75.119.146.115:5179/api/reports/templates");
+        const res = await fetch(`${API_BASE}/api/reports/templates`);
         const data = await res.json();
         if (res.ok) setItems(data);
         else toast({ title: "Error fetching templates", status: "error" });
@@ -142,7 +145,7 @@ export default function ReportTemplateDashboard() {
   const remove = async (reportName: string) => {
     try {
       const res = await fetch(
-        `http://75.119.146.115:5179/api/reports/templates/${encodeURIComponent(reportName)}`,
+        `${API_BASE}/api/reports/templates/${encodeURIComponent(reportName)}`,
         { method: "DELETE" }
       );
       const data = await res.json();

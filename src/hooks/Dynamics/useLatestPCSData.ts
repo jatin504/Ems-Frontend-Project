@@ -1,18 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import type { LatestData, UseLatestDataReturn } from '../../types/latest/latestData';
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import type { LatestData, UseLatestDataReturn } from "../../types/latest/latestData";
 
-const API_URL = 'http://75.119.146.115:5179/latest';
+const BASE_URL = import.meta.env.VITE_API_BASE;
+const API_URL = `${BASE_URL}/latest`;
 
-type Status = 'idle' | 'loading' | 'success' | 'error';
+type Status = "idle" | "loading" | "success" | "error";
 
-export const useLatestDynamicData = (keys: string[], pattern : string): UseLatestDataReturn => {
+export const useLatestDynamicData = (
+  keys: string[],
+  pattern: string
+): UseLatestDataReturn => {
   const [data, setData] = useState<LatestData[] | null>(null);
-  const [status, setStatus] = useState<Status>('idle');
+  const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  // Wrap keys in ref so we can access them inside setInterval without retriggering it
   const keysRef = useRef(keys);
+
   useEffect(() => {
     keysRef.current = keys;
   }, [keys]);
@@ -20,42 +24,42 @@ export const useLatestDynamicData = (keys: string[], pattern : string): UseLates
   const fetchData = async () => {
     if (keys.length === 0) {
       setData([]);
-      setStatus('success');
+      setStatus("success");
       return;
     }
 
-    setStatus('loading');
+    setStatus("loading");
+
     try {
-      const params = new URLSearchParams({ keys: keys.join(',') });
-      const response = await axios.get<LatestData[]>(`${API_URL}/${pattern}?${params}`);
+      const params = new URLSearchParams({ keys: keys.join(",") });
+
+      const response = await axios.get<LatestData[]>(
+        `${API_URL}/${pattern}?${params}`
+      );
+
       setData(response.data);
-      setStatus('success');
+      setStatus("success");
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch ESS data');
-      setStatus('error');
+      setError(err.message || "Failed to fetch ESS data");
+      setStatus("error");
     }
   };
 
   useEffect(() => {
-    // Initial fetch immediately
     fetchData();
 
-    // Calculate time until next minute starts
     const now = new Date();
-    const msUntilNextMinute = 60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
+    const msUntilNextMinute =
+      60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
 
-    // Wait until the next full minute before starting regular polling
     const initialTimeout = setTimeout(() => {
-      fetchData(); // First poll exactly at the next full minute
-      const intervalId = setInterval(fetchData, 60000); // Then every minute
+      fetchData();
 
-      // Cleanup interval on unmount
-      return () => {
-        clearInterval(intervalId);
-      };
+      const intervalId = setInterval(fetchData, 60000);
+
+      return () => clearInterval(intervalId);
     }, msUntilNextMinute);
 
-    // Cleanup timeout if component unmounts before first poll
     return () => clearTimeout(initialTimeout);
   }, []);
 

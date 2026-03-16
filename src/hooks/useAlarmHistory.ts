@@ -1,12 +1,11 @@
-// src/hooks/useAlarmHistory.ts
 import { useEffect, useState } from "react";
 
 export type RowStatus = "Self Resolved" | "Ack Alarm" | "Cleared";
 
 export type AlarmBase = {
   device: string;
-  time: string;              // formatted for UI
-  rawTimestamp: string;      // EXACT DB timestamp
+  time: string;
+  rawTimestamp: string;
   tag: string;
   type: string;
   severity: string;
@@ -32,31 +31,28 @@ export type AlarmApiRow = {
   comment?: string;
 };
 
-const API_BASE = "http://75.119.146.115:5179";
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export function useAlarmHistory(initialPageSize: number = 10) {
   const [rows, setRows] = useState<AlarmRow[]>([]);
   const [activePopover, setActivePopover] = useState<number | null>(null);
 
-  // pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
 
   // ================= FETCH HISTORY =================
-  const fetchHistory = async (
-    startTs?: string,
-    endTs?: string
-  ) => {
+  const fetchHistory = async (startTs?: string, endTs?: string) => {
     try {
       let url = `${API_BASE}/api/alarms/history?limit=5000`;
 
-      // NEW: timestamp range support
       if (startTs && endTs) {
         url += `&startTs=${encodeURIComponent(startTs)}&endTs=${encodeURIComponent(endTs)}`;
       }
 
       const res = await fetch(url);
+
       if (!res.ok) {
         console.error("Failed to fetch alarm history");
         return;
@@ -74,8 +70,8 @@ export function useAlarmHistory(initialPageSize: number = 10) {
         return {
           device: item.device_id,
           tag: item.tag_name,
-          time: formattedTime,             // UI display
-          rawTimestamp: item.time_stamp,   // DB exact timestamp
+          time: formattedTime,
+          rawTimestamp: item.time_stamp,
           type: item.alarm_type,
           severity: item.severity,
           status,
@@ -94,7 +90,6 @@ export function useAlarmHistory(initialPageSize: number = 10) {
     }
   };
 
-  // default load (old behaviour intact)
   useEffect(() => {
     fetchHistory();
   }, []);
@@ -121,10 +116,16 @@ export function useAlarmHistory(initialPageSize: number = 10) {
   // ================= COMMENT INPUT =================
   const handleCommentChange = (indexInPage: number, value: string) => {
     const globalIndex = startIndex + indexInPage;
+
     setRows((prev) => {
       const updated = [...prev];
       if (!updated[globalIndex]) return prev;
-      updated[globalIndex] = { ...updated[globalIndex], inputValue: value };
+
+      updated[globalIndex] = {
+        ...updated[globalIndex],
+        inputValue: value,
+      };
+
       return updated;
     });
   };
@@ -141,11 +142,13 @@ export function useAlarmHistory(initialPageSize: number = 10) {
     try {
       const res = await fetch(`${API_BASE}/api/alarms/update`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           device_id: row.device,
           tag_name: row.tag,
-          time_stamp: row.rawTimestamp, // EXACT DB timestamp
+          time_stamp: row.rawTimestamp,
           action,
           comment: row.inputValue,
         }),
@@ -156,7 +159,6 @@ export function useAlarmHistory(initialPageSize: number = 10) {
         return;
       }
 
-      // Refresh from DB so UI = DB
       await fetchHistory();
     } catch (err) {
       console.error("Update alarm error:", err);
@@ -174,7 +176,6 @@ export function useAlarmHistory(initialPageSize: number = 10) {
   };
 
   return {
-    // data
     rows,
     pageRows,
     totalRows,
@@ -183,11 +184,9 @@ export function useAlarmHistory(initialPageSize: number = 10) {
     safeCurrentPage,
     startIndex,
 
-    // popover
     activePopover,
     setActivePopover,
 
-    // handlers
     handleCommentChange,
     handleCommentSave,
     handlePageSizeChange,
@@ -196,10 +195,8 @@ export function useAlarmHistory(initialPageSize: number = 10) {
     goToNext,
     goToLast,
 
-    
     fetchHistory,
 
-    // helpers
     getRowBg,
   };
 }

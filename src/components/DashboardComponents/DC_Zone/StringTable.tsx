@@ -39,6 +39,8 @@ export default function StringTable() {
     [tableMode]
   );
 
+  const BASE_URL = import.meta.env.VITE_API_BASE;
+
   const [rows, setRows] = useState<StringRow[]>([]);
   const [dataMap, setDataMap] = useState<Record<string, any>>({});
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,7 +90,7 @@ export default function StringTable() {
 
   useEffect(() => {
     fetch(
-      "http://75.119.146.115:5179/api/lastest-direct-data/multiple-latest-devices",
+      `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,7 +102,7 @@ export default function StringTable() {
       .then((r) => r.json())
       .then((j) => j.success && setDataMap(j.data))
       .catch(console.error);
-  }, []);
+  }, [BASE_URL]);
 
   /* ================= MAP DATA ================= */
 

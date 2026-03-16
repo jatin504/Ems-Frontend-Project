@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 export interface BessSimulateResponse {
   result: {
@@ -27,16 +27,20 @@ export interface BessSimulateResponse {
   status: string;
 }
 
-const SimulateBessOptimizeAPI = async (strategy: string = "peak_shaving"): Promise<BessSimulateResponse> => {
-  const BASE_URL = (import.meta as any).env?.VITE_API_BASE?.toString() || "http://75.119.146.115:5179";
+const BASE_URL = import.meta.env.VITE_API_BASE;
 
+const SimulateBessOptimizeAPI = async (
+  strategy: string = "peak_shaving"
+): Promise<BessSimulateResponse> => {
   try {
-    const response = await axios.post(`${BASE_URL}/api/bess_control/sim_optimize`, {
-      strategy: strategy
-    });
+    const response = await axios.post(
+      `${BASE_URL}/api/bess_control/sim_optimize`,
+      { strategy }
+    );
+
     return response.data;
   } catch (error) {
-    console.error('Error simulating BESS optimize:', error);
+    console.error("Error simulating BESS optimize:", error);
     throw error;
   }
 };

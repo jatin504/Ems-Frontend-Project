@@ -1,14 +1,24 @@
-import axios from 'axios';
+import axios from "axios";
 
-const GetDashboardDataAPI  = async (dashboardConfig : any) => {
-    const BASE_URL = "http://75.119.146.115:5179/";
+/* ================= API BASE ================= */
 
-    try {
-        const response = await axios.post(`${BASE_URL}/get-dashboard-data`, dashboardConfig);
-        return response.data;
-    } catch (error) {
-        console.error(error)
-    }
-}
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") ||
+  "";
+
+/* ================= API ================= */
+
+const GetDashboardDataAPI = async (dashboardConfig: any) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE}/get-dashboard-data`,
+      dashboardConfig
+    );
+    return response.data;
+  } catch (error) {
+    console.error("GetDashboardDataAPI error:", error);
+    throw error;
+  }
+};
 
 export default GetDashboardDataAPI;

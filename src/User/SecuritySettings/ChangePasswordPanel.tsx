@@ -21,7 +21,8 @@ import {
 const STRONG_PW =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-const API_BASE = "http://75.119.146.115:5179";
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
 const ChangePasswordPanel: React.FC = () => {
   const [mode, setMode] = useState<"withCurrent" | "withoutCurrent">("withCurrent");

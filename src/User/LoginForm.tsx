@@ -20,6 +20,9 @@ import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 export default function LoginForm() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -69,7 +72,7 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://75.119.146.115:5179/api/login", {
+      const res = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password }),

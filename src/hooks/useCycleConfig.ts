@@ -8,7 +8,7 @@ interface LockoutBehaviour {
 }
 
 interface PriceLogicOverrides {
-  disable_aggrassive_charging: boolean; 
+  disable_aggrassive_charging: boolean;
   disable_peak_shaving: boolean;
   disable_arbitrage: boolean;
   disable_low_price_charging: boolean;
@@ -36,8 +36,7 @@ interface CycleConfigResponse {
   soc_safety_management?: Partial<SocSafetyManagement>;
 }
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://75.119.146.115:5179";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export const useCycleConfig = (isOpen: boolean, initialValue: string) => {
   const [maxCycles, setMaxCycles] = useState<number>(
@@ -47,15 +46,16 @@ export const useCycleConfig = (isOpen: boolean, initialValue: string) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // cycle counting method (0 = throughput, 1 = full_cycle, 2 = dod_weighted)
-  const [cycleCountingMethod, setCycleCountingMethod] = useState<string>("0");
+  const [cycleCountingMethod, setCycleCountingMethod] =
+    useState<string>("0");
 
-  const [lockoutBehaviour, setLockoutBehaviour] = useState<LockoutBehaviour>({
-    allow_safety_charging: true,
-    allow_reserve_charging: true,
-    block_economic_charging: false,
-    block_discharging: false,
-  });
+  const [lockoutBehaviour, setLockoutBehaviour] =
+    useState<LockoutBehaviour>({
+      allow_safety_charging: true,
+      allow_reserve_charging: true,
+      block_economic_charging: false,
+      block_discharging: false,
+    });
 
   const [priceLogicOverrides, setPriceLogicOverrides] =
     useState<PriceLogicOverrides>({
@@ -65,11 +65,12 @@ export const useCycleConfig = (isOpen: boolean, initialValue: string) => {
       disable_low_price_charging: true,
     });
 
-  const [notifications, setNotifications] = useState<NotificationsCfg>({
-    notify_at_80_percent_usage: true,
-    notify_lockout_activated: true,
-    mobile_push_notification: false,
-  });
+  const [notifications, setNotifications] =
+    useState<NotificationsCfg>({
+      notify_at_80_percent_usage: true,
+      notify_lockout_activated: true,
+      mobile_push_notification: false,
+    });
 
   const [socSafetyManagement, setSocSafetyManagement] =
     useState<SocSafetyManagement>({
@@ -83,13 +84,13 @@ export const useCycleConfig = (isOpen: boolean, initialValue: string) => {
 
     const fetchConfig = async () => {
       setIsLoading(true);
+
       try {
         const resp = await fetch(
-          `${API_BASE_URL}/cycle-management/cycle-config`
+          `${API_BASE}/cycle-management/cycle-config`
         );
 
         if (!resp.ok) {
-          console.error("Failed to fetch cycle config", resp.statusText);
           const parsed = Number(initialValue);
           setMaxCycles(Number.isFinite(parsed) ? parsed : 5);
           return;
@@ -99,54 +100,39 @@ export const useCycleConfig = (isOpen: boolean, initialValue: string) => {
 
         if (typeof data.max_cycles_per_day === "number") {
           setMaxCycles(data.max_cycles_per_day);
-        } else {
-          const parsed = Number(initialValue);
-          setMaxCycles(Number.isFinite(parsed) ? parsed : 5);
         }
 
         if (typeof data.cycle_used_today === "number") {
           setCyclesUsedToday(data.cycle_used_today);
         }
 
-        // NEW: cycle counting method
         if (typeof data.cycle_counting_method === "string") {
           setCycleCountingMethod(data.cycle_counting_method);
-        } else {
-          setCycleCountingMethod("0");
         }
 
         if (data.lockout_behaviour) {
-          setLockoutBehaviour((prev) => ({
-            ...prev,
-            ...data.lockout_behaviour,
-          }));
+          setLockoutBehaviour((p) => ({ ...p, ...data.lockout_behaviour }));
         }
 
         if (data.price_logic_overrides) {
-          setPriceLogicOverrides((prev) => ({
-            ...prev,
+          setPriceLogicOverrides((p) => ({
+            ...p,
             ...data.price_logic_overrides,
           }));
         }
 
         if (data.notifications) {
-          setNotifications((prev) => ({
-            ...prev,
-            ...data.notifications,
-          }));
+          setNotifications((p) => ({ ...p, ...data.notifications }));
         }
 
         if (data.soc_safety_management) {
-          setSocSafetyManagement((prev) => ({
-            ...prev,
+          setSocSafetyManagement((p) => ({
+            ...p,
             ...data.soc_safety_management,
           }));
         }
       } catch (err) {
         console.error("Error fetching cycle config:", err);
-        const parsed = Number(initialValue);
-        setMaxCycles(Number.isFinite(parsed) ? parsed : 5);
-        setCycleCountingMethod("0");
       } finally {
         setIsLoading(false);
       }
@@ -157,71 +143,39 @@ export const useCycleConfig = (isOpen: boolean, initialValue: string) => {
 
   const saveConfig = useCallback(async (): Promise<boolean> => {
     setIsSaving(true);
+
     try {
       const resp = await fetch(
-        `${API_BASE_URL}/cycle-management/cycle-config`,
+        `${API_BASE}/cycle-management/cycle-config`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             max_cycles_per_day: maxCycles,
-            cycle_counting_method: cycleCountingMethod, // NEW
+            cycle_counting_method: cycleCountingMethod,
             lockout_behaviour: lockoutBehaviour,
             price_logic_overrides: priceLogicOverrides,
-            notifications: notifications,
+            notifications,
             soc_safety_management: socSafetyManagement,
           }),
         }
       );
 
-      if (!resp.ok) {
-        const errText = await resp.text();
-        console.error("Failed to save cycle config:", errText);
-        return false;
-      }
+      if (!resp.ok) return false;
 
       const updated: CycleConfigResponse = await resp.json();
 
-      if (typeof updated.max_cycles_per_day === "number") {
+      if (updated.max_cycles_per_day !== undefined)
         setMaxCycles(updated.max_cycles_per_day);
-      }
-      if (typeof updated.cycle_used_today === "number") {
-        setCyclesUsedToday(updated.cycle_used_today);
-      }
-      if (typeof updated.cycle_counting_method === "string") {
-        setCycleCountingMethod(updated.cycle_counting_method);
-      }
 
-      if (updated.lockout_behaviour) {
-        setLockoutBehaviour((prev) => ({
-          ...prev,
-          ...updated.lockout_behaviour,
-        }));
-      }
-      if (updated.price_logic_overrides) {
-        setPriceLogicOverrides((prev) => ({
-          ...prev,
-          ...updated.price_logic_overrides,
-        }));
-      }
-      if (updated.notifications) {
-        setNotifications((prev) => ({
-          ...prev,
-          ...updated.notifications,
-        }));
-      }
-      if (updated.soc_safety_management) {
-        setSocSafetyManagement((prev) => ({
-          ...prev,
-          ...updated.soc_safety_management,
-        }));
-      }
+      if (updated.cycle_used_today !== undefined)
+        setCyclesUsedToday(updated.cycle_used_today);
+
+      if (updated.cycle_counting_method)
+        setCycleCountingMethod(updated.cycle_counting_method);
 
       return true;
-    } catch (err) {
-      console.error("Error saving cycle config:", err);
+    } catch {
       return false;
     } finally {
       setIsSaving(false);

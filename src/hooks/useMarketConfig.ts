@@ -1,7 +1,6 @@
 import { useState } from "react";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://75.119.146.115:5179";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 /* ================= TYPES ================= */
 
@@ -28,7 +27,6 @@ export function useMarketConfig() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // GLOBAL TOKEN HELPER (EMS STANDARD)
   function getToken(): string {
     return sessionStorage.getItem("token") || "";
   }
@@ -40,7 +38,7 @@ export function useMarketConfig() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`${API_BASE_URL}/api/market/dam-timing`, {
+      const res = await fetch(`${API_BASE}/api/market/dam-timing`, {
         method: "GET",
         cache: "no-store",
         headers: {
@@ -80,7 +78,7 @@ export function useMarketConfig() {
         headers["X-Confirm-Password"] = password;
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/market/dam-timing`, {
+      const res = await fetch(`${API_BASE}/api/market/dam-timing`, {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
@@ -105,7 +103,7 @@ export function useMarketConfig() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`${API_BASE_URL}/api/market/rtm-timing`, {
+      const res = await fetch(`${API_BASE}/api/market/rtm-timing`, {
         method: "GET",
         cache: "no-store",
         headers: {
@@ -145,7 +143,7 @@ export function useMarketConfig() {
         headers["X-Confirm-Password"] = password;
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/market/rtm-timing`, {
+      const res = await fetch(`${API_BASE}/api/market/rtm-timing`, {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
@@ -163,18 +161,11 @@ export function useMarketConfig() {
     }
   };
 
-  /* ================= EXPORT ================= */
-
   return {
-    /* state */
     loading,
     error,
-
-    /* DAM */
     getDAMConfig,
     saveDAMConfig,
-
-    /* RTM */
     getRTMConfig,
     saveRTMConfig,
   };

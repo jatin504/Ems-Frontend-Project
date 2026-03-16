@@ -18,7 +18,8 @@ type Policy = {
   updated_at?: string;
 };
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? "http://75.119.146.115:5179/api";
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
 /* ---------- tiny inline auth helpers (no new file) ---------- */
 function _forceLogout() {

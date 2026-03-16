@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Box, HStack, Text, useColorModeValue } from "@chakra-ui/react";
 
+/* ================= API BASE ================= */
+
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 /* ================= CONFIG ================= */
 
-const MAIN_DEVICE_ID = "plant_1_pcs_2_bank_bank_1"; // main device
-const POWER_DEVICE_ID = "plant_1_pcs_2_bank_bank_2"; // power device
+const MAIN_DEVICE_ID = "plant_1_pcs_2_bank_bank_1";
+const POWER_DEVICE_ID = "plant_1_pcs_2_bank_bank_2";
 
 const METRICS = [
   { label: "Net Export", deviceId: MAIN_DEVICE_ID, key: "Reactive_power", unit: "MWh" },
@@ -38,13 +43,20 @@ const MarqueeNewsHeadline: React.FC = () => {
   const [values, setValues] = useState<Record<string, any>>(initialValues);
 
   useEffect(() => {
-    const deviceIds = Array.from(new Set(METRICS.map((m) => m.deviceId).filter(Boolean)));
+    const deviceIds = Array.from(
+      new Set(METRICS.map((m) => m.deviceId).filter(Boolean))
+    );
 
-    fetch("http://75.119.146.115:5179/api/lastest-direct-data/multiple-latest-devices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device_ids: deviceIds.join(",") }),
-    })
+    fetch(
+      `${API_BASE}/api/lastest-direct-data/multiple-latest-devices`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          device_ids: deviceIds.join(","),
+        }),
+      }
+    )
       .then((r) => r.json())
       .then((j) => {
         if (!j?.success) return;
@@ -56,19 +68,19 @@ const MarqueeNewsHeadline: React.FC = () => {
             newVals[m.label] = m.dummy ?? "--";
             return;
           }
+
           const dev = j.data?.[m.deviceId];
           const raw = dev?.[m.key];
 
-let v = "--";
+          let v = "--";
 
-if (raw && typeof raw === "object") {
-  v = raw.value ?? raw.v ?? "--";   
-} else if (raw !== undefined && raw !== null) {
-  v = raw;
-}
+          if (raw && typeof raw === "object") {
+            v = raw.value ?? raw.v ?? "--";
+          } else if (raw !== undefined && raw !== null) {
+            v = raw;
+          }
 
-newVals[m.label] = v;
-
+          newVals[m.label] = v;
         });
 
         setValues(newVals);
@@ -77,8 +89,6 @@ newVals[m.label] = v;
         console.error("Failed to load marquee metrics:", e);
       });
   }, []);
-
-  /* ================= RENDER ================= */
 
   return (
     <Box
@@ -118,7 +128,7 @@ newVals[m.label] = v;
   );
 };
 
-/* ================= SMALL HELPER ================= */
+/* ================= HELPER ================= */
 
 const Metric = ({
   label,

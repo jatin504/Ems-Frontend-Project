@@ -32,6 +32,8 @@ import {
 
 import { useEffect, useState } from "react";
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 export default function DashboardLog() {
   const bgCard = useColorModeValue("white", "gray.800");
   const bgTable = useColorModeValue("gray.50", "#0f141a");
@@ -65,7 +67,7 @@ export default function DashboardLog() {
       }
 
       const res = await fetch(
-        `http://75.119.146.115:5179/api/dashboard/logs?${params.toString()}`
+        `${API_BASE}/api/dashboard/logs?${params.toString()}`
       );
 
       const data = await res.json();

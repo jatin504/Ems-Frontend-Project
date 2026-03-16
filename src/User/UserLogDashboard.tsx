@@ -32,7 +32,7 @@ import {
 import DashboardLog from "./DashboardLog"; // render dashboard log content
 import StrategyLog from "./StrategyLog"; // new strategy log tab component
 import { SearchIcon, RepeatIcon, CalendarIcon, CloseIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
-import { authFetch } from "../hooks/UseAuth";
+import { authFetch } from "../hooks/useAuth";
 
 type AuditLog = {
   id: string;

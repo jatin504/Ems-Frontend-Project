@@ -15,6 +15,9 @@ import { ExpandIcon, SqeezIcon } from "../../../assets/Icons";
 
 /* ================= TYPES ================= */
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 interface StringRow {
   stringName: string;
   status: string | null;
@@ -88,7 +91,7 @@ export default function StringTable() {
 
   useEffect(() => {
     fetch(
-      "http://75.119.146.115:5179/api/lastest-direct-data/multiple-latest-devices",
+      `${API_BASE}/api/lastest-direct-data/multiple-latest-devices`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

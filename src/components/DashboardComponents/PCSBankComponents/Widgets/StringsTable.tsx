@@ -37,6 +37,9 @@ import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import SplineGraph from "../../../../components/Graphs/RevampCharts/SplineGraph";
 import GraphLayout from "../../../../components/Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 type Row = {
   name: string;
   enabled: boolean;
@@ -172,7 +175,7 @@ const StringsTable: React.FC<{ bankNum?: number }> = ({ bankNum = 1 }) => {
 
   useEffect(() => {
     fetch(
-      "http://75.119.146.115:5179/api/lastest-direct-data/multiple-latest-devices",
+      `${API_BASE}/api/lastest-direct-data/multiple-latest-devices`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

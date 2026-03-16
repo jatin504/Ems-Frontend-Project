@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 /* ================= TYPES ================= */
 
@@ -29,8 +29,7 @@ export type MarketBid = {
 
 /* ================= CONSTANTS ================= */
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://75.119.146.115:5179";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 /* ================= HOOK ================= */
 
@@ -46,10 +45,12 @@ export function useMarketBids(selectedDate: string) {
         setError(null);
 
         const res = await fetch(
-          `${API_BASE_URL}/api/market-bids?trade_date=${selectedDate}`
+          `${API_BASE}/api/market-bids?trade_date=${selectedDate}`
         );
 
-        if (!res.ok) throw new Error("Failed to fetch market bids");
+        if (!res.ok) {
+          throw new Error("Failed to fetch market bids");
+        }
 
         const json = await res.json();
         setMarketBids(json.data || []);
@@ -64,5 +65,9 @@ export function useMarketBids(selectedDate: string) {
     fetchMarketBids();
   }, [selectedDate]);
 
-  return { marketBids, loading, error };
+  return {
+    marketBids,
+    loading,
+    error,
+  };
 }

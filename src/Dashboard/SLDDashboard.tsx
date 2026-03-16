@@ -40,7 +40,8 @@ const SLDDashboard = () => {
 
   const stageRef = useRef<any>(null);
 
-  const baseURL = import.meta.env.VITE_API_URL || "http://75.119.146.115:5179";  //localhost
+  const API_BASE =
+    (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
   const optionColor = useColorModeValue("gray.800", "gray.100");
   const textColor = useColorModeValue("gray.900", "white");
@@ -89,7 +90,7 @@ const SLDDashboard = () => {
   );
 
   useSSE({
-    url: `${baseURL}/stream?topics=${topics.join(",")}`,
+    url: `${API_BASE}/stream?topics=${topics.join(",")}`,
     paused: ssePaused,   // add this (update hook if needed)
     onMessage: ({ topic, message }) => {
       setDataMap((prev) => ({ ...prev, [topic]: message }));

@@ -12,6 +12,9 @@ import { MaterialReactTable, type MRT_ColumnDef } from "material-react-table";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { useMediaQuery } from "@chakra-ui/react";
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 interface MeterData {
   deviceId: string;
   name: string;
@@ -70,7 +73,7 @@ export default function MetersPanel() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch("http://75.119.146.115:5179/api/lastest-direct-data/multiple-latest-devices", {
+    fetch(`${API_BASE}/api/lastest-direct-data/multiple-latest-devices`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ device_id_patterns: ["_bank_bank_"] }),
@@ -203,13 +206,13 @@ export default function MetersPanel() {
                   overflow: isFullscreen ? "auto" : "hidden",
                 },
               }}
-              muiTableBodyRowProps={{
-                onClick: (_, row) => {
+              muiTableBodyRowProps={({ row }) => ({
+                onClick: () => {
                   setSelectedMeter(row.original);
                   onOpen();
                 },
                 sx: { cursor: "pointer" },
-              }}
+              })}
             />
           </ThemeProvider>
         </Box>
@@ -219,4 +222,10 @@ export default function MetersPanel() {
   );
 }
 
-const MeterModal = () => null;
+interface MeterModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedMeter: MeterData | null;
+}
+
+const MeterModal: React.FC<MeterModalProps> = () => null;

@@ -13,8 +13,13 @@ import {
 } from "@chakra-ui/react";
 import React from "react";
 
+/* ================= API BASE ================= */
+
 const API_BASE =
-  (import.meta as any).env?.VITE_API_URL ?? "http://75.119.146.115:5179/api";
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") ||
+  "";
+
+/* ================= TOKEN ================= */
 
 function getToken(): string {
   return sessionStorage.getItem("token") || "";
@@ -42,8 +47,7 @@ export default function ConfirmPasswordModal({
     try {
       setVerifying(true);
 
-      // PASSWORD VERIFY API CALL
-      const res = await fetch(`${API_BASE}/verify-password`, {
+      const res = await fetch(`${API_BASE}/api/verify-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,7 +56,7 @@ export default function ConfirmPasswordModal({
         body: JSON.stringify({
           password: password,
           control_type: (window as any).__CONTROL_TYPE__ || "SERVICE",
-          module: (window as any).__CONTROL_MODULE__ || "BESS"
+          module: (window as any).__CONTROL_MODULE__ || "BESS",
         }),
       });
 
@@ -62,7 +66,6 @@ export default function ConfirmPasswordModal({
         throw new Error(data?.message || "Password verification failed");
       }
 
-      //  PASSWORD CORRECT
       onConfirm(password);
       setPassword("");
       onClose();

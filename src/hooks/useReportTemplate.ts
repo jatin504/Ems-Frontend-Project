@@ -1,15 +1,13 @@
 import { useState } from "react";
 
-const BASE_URL =
-  (import.meta as any).env?.VITE_API_BASE ||
-  "http://75.119.146.115:5179";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function useReportTemplate() {
   const [loading, setLoading] = useState(false);
   const [templateData, setTemplateData] = useState<any>(null);
 
   // ===============================
-  // 🔵 SAFE JSON PARSER
+  // SAFE JSON PARSER
   // ===============================
   const safeJson = async (res: Response) => {
     try {
@@ -19,15 +17,20 @@ export default function useReportTemplate() {
     }
   };
 
+  const getAuthHeader = () => {
+    const token = sessionStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   // ===============================
-  // 🔵 GET SINGLE TEMPLATE
+  // GET SINGLE TEMPLATE
   // ===============================
   const fetchTemplateByName = async (reportName: string) => {
     try {
       setLoading(true);
 
       const res = await fetch(
-        `${BASE_URL}/api/reports/templates/${encodeURIComponent(reportName)}`
+        `${API_BASE}/api/reports/templates/${encodeURIComponent(reportName)}`
       );
 
       const data = await safeJson(res);
@@ -38,16 +41,13 @@ export default function useReportTemplate() {
 
       setTemplateData(data);
       return data;
-    } catch (err) {
-      console.error("fetchTemplateByName error:", err);
-      throw err;
     } finally {
       setLoading(false);
     }
   };
 
   // ===============================
-  // 🟢 CLEAN PAYLOAD BUILDER
+  // CLEAN PAYLOAD BUILDER
   // ===============================
   const buildUpdatePayload = (payload: any) => {
     return {
@@ -70,23 +70,21 @@ export default function useReportTemplate() {
   };
 
   // ===============================
-  // 🟢 UPDATE TEMPLATE (FIXED)
+  // UPDATE TEMPLATE
   // ===============================
   const updateTemplate = async (reportName: string, payload: any) => {
     try {
       setLoading(true);
 
-      const token = sessionStorage.getItem("token");
-
       const cleanPayload = buildUpdatePayload(payload);
 
       const res = await fetch(
-        `${BASE_URL}/api/reports/templates/${encodeURIComponent(reportName)}`,
+        `${API_BASE}/api/reports/templates/${encodeURIComponent(reportName)}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...getAuthHeader(),
           },
           body: JSON.stringify(cleanPayload),
         }
@@ -99,9 +97,6 @@ export default function useReportTemplate() {
       }
 
       return data;
-    } catch (err) {
-      console.error("updateTemplate error:", err);
-      throw err;
     } finally {
       setLoading(false);
     }

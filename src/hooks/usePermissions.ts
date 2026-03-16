@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 
-const API_BASE =
-  (import.meta as any).env?.VITE_API_URL ?? "http://75.119.146.115:5179/api";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 function getToken(): string {
   return sessionStorage.getItem("token") || "";
@@ -15,10 +14,10 @@ export interface RolePermission {
   can_delete_user: boolean;
   can_settings_user: boolean;
 
-  //  CONTROL PERMISSIONS
+  // CONTROL PERMISSIONS
   can_control_bess: boolean;
-  can_control_service?: boolean;     
-  can_control_switchgear?: boolean;   
+  can_control_service?: boolean;
+  can_control_switchgear?: boolean;
 
   updated_at?: string;
 }
@@ -46,7 +45,6 @@ export default function usePermissions() {
 
       const data = await res.json();
 
-      // SAFETY DEFAULTS (important for old DB rows)
       const normalized = (data || []).map((p: any) => ({
         ...p,
         can_control_bess: !!p.can_control_bess,

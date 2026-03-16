@@ -5,10 +5,10 @@ import type { DeviceConfig } from "../components/DeviceConfig/DeviceConfigFullSc
 type DevicesResponse = { devices: DeviceConfig[] };
 type AddDevicePayload = { device_data: DeviceConfig };
 
-const DEFAULT_BASE =
-  (import.meta as any).env?.VITE_API_BASE?.toString() || "http://75.119.146.115:5179";
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
-export function useDevices(baseUrl: string = DEFAULT_BASE) {
+export function useDevices(baseUrl: string = API_BASE) {
   const [devices, setDevices] = useState<DeviceConfig[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);

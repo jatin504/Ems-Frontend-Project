@@ -13,6 +13,11 @@ import {
 import { ChevronDownIcon } from "@chakra-ui/icons";
 import { useEffect, useState } from "react";
 
+/* ================= API BASE ================= */
+
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 /* Resolution mapping */
 const resolutionMap: Record<string, string> = {
   daily: "today",
@@ -43,7 +48,12 @@ const statusInfoMap: Record<string, any[]> = {
     { key: "Active_power", alias: "PV Generation kWh", agg: "avg", unit: "kWh" },
     { key: "Power_factor", alias: "PV Power kW", agg: "avg", unit: "kW" },
     { key: "Energy_charged_today", alias: "CUF%", agg: "avg", unit: "%" },
-    { key: "Control_unit_cabin_dew_point_temperature", alias: "CO2 Saving kg", agg: "avg", unit: "kg" },
+    {
+      key: "Control_unit_cabin_dew_point_temperature",
+      alias: "CO2 Saving kg",
+      agg: "avg",
+      unit: "kg",
+    },
     { key: "soc", alias: "PR %", agg: "avg", unit: "%" },
   ],
 
@@ -52,7 +62,6 @@ const statusInfoMap: Record<string, any[]> = {
     { key: "soc", alias: "Grid Outages", agg: "avg", unit: "" },
     { key: "soc", alias: "Grid Availability", agg: "avg", unit: "%" },
     { key: "soc", alias: "Grid Outages", agg: "avg", unit: "" },
-    
   ],
 
   dg: [
@@ -71,12 +80,11 @@ const statusInfoMap: Record<string, any[]> = {
     { key: "Energy_charged_this_year", alias: "BESS Hz", agg: "avg", unit: "kWh" },
     { key: "Energy_discharged_this_year", alias: "Line Voltage V", agg: "avg", unit: "kWh" },
     { key: "BCU_2_Rack_current", alias: "Line Current A", agg: "avg", unit: "kWh" },
-    
   ],
 };
 
 type CardItem = {
-  key: string;   // alias from backend
+  key: string;
   value: number | null;
   unit: string;
 };
@@ -95,7 +103,6 @@ const PlantCard = () => {
   const [data, setData] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  /* API call – layout SAME, data dynamic */
   useEffect(() => {
     const fetchPlantCard = async () => {
       setLoading(true);
@@ -109,7 +116,7 @@ const PlantCard = () => {
 
       try {
         const res = await fetch(
-          "http://75.119.146.115:5179/api/plant_card/",
+          `${API_BASE}/api/plant_card/`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -119,7 +126,7 @@ const PlantCard = () => {
 
         const json = await res.json();
         setData(json?.data?.[payload.resolution] ?? []);
-      } catch (e) {
+      } catch {
         setData([]);
       } finally {
         setLoading(false);
@@ -129,8 +136,7 @@ const PlantCard = () => {
     fetchPlantCard();
   }, [currentStatus, currentResolution]);
 
-  /* Map backend response by alias for stable order */
-  const dataMap = Object.fromEntries(data.map(d => [d.key, d]));
+  const dataMap = Object.fromEntries(data.map((d) => [d.key, d]));
 
   return (
     <Box
@@ -144,9 +150,7 @@ const PlantCard = () => {
       zIndex={1}
     >
       <VStack width="100%" height="100%">
-        {/* HEADER */}
         <HStack width="100%" justifyContent="space-between" mb={4}>
-          {/* STATUS DROPDOWN */}
           <Menu placement="bottom-start">
             <MenuButton
               as={Button}
@@ -162,7 +166,7 @@ const PlantCard = () => {
             </MenuButton>
 
             <MenuList bg={menuBg} zIndex={2000}>
-              {Object.keys(statusInfoMap).map(s => (
+              {Object.keys(statusInfoMap).map((s) => (
                 <MenuItem key={s} onClick={() => setCurrentStatus(s)}>
                   {s.toUpperCase()}
                 </MenuItem>
@@ -170,7 +174,6 @@ const PlantCard = () => {
             </MenuList>
           </Menu>
 
-          {/* RESOLUTION DROPDOWN */}
           <Menu placement="bottom-start">
             <MenuButton
               as={Button}
@@ -185,7 +188,7 @@ const PlantCard = () => {
             </MenuButton>
 
             <MenuList bg={menuBg} zIndex={2000}>
-              {Object.keys(resolutionMap).map(r => (
+              {Object.keys(resolutionMap).map((r) => (
                 <MenuItem key={r} onClick={() => setCurrentResolution(r)}>
                   {r.toUpperCase()}
                 </MenuItem>
@@ -194,12 +197,11 @@ const PlantCard = () => {
           </Menu>
         </HStack>
 
-        {/* CONTENT – LAYOUT SAME */}
         <VStack width="100%" spacing={2}>
           {loading && <Text color={secondaryColor}>Loading...</Text>}
 
           {!loading &&
-            statusInfoMap[currentStatus].map(item => {
+            statusInfoMap[currentStatus].map((item) => {
               const row = dataMap[item.alias];
               return (
                 <HStack

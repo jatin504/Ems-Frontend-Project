@@ -1,6 +1,12 @@
 import axios from "axios";
 
-const BASE_URL = "http://75.119.146.115:5179";
+/* ================= API BASE ================= */
+
+const BASE_URL =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") ||
+  "";
+
+/* ================= AXIOS INSTANCE ================= */
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -9,10 +15,12 @@ const api = axios.create({
   },
 });
 
+/* ================= API ================= */
+
 export const getWMSStatus = async (payload: {
   pattern: string;
   column: string;
 }) => {
   const res = await api.post("/api/online_devices", payload);
-  return res.data; // { response, data }
+  return res.data;
 };

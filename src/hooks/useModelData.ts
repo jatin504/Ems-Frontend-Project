@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const DEFAULT_BASE =
-  (import.meta as any).env?.VITE_API_BASE?.toString() || "http://75.119.146.115:5179";
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
-export function useModelData(baseUrl: string = DEFAULT_BASE) {
+export function useModelData(baseUrl: string = API_BASE) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function useModelData(baseUrl: string = DEFAULT_BASE) {
   return { data, loading, error };
 }
 
-export function useModelDataById(deviceId: string, baseUrl: string = DEFAULT_BASE) {
+export function useModelDataById(deviceId: string, baseUrl: string = API_BASE) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -21,6 +21,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { MdElectricBolt, MdLinkOff } from "react-icons/md";
 import { TbCircuitDiodeZener } from "react-icons/tb";
 import { FiMaximize, FiMinimize } from "react-icons/fi";
+const BASE_URL = import.meta.env.VITE_API_BASE;
 
 /* ================= TYPES ================= */
 
@@ -148,7 +149,7 @@ export default function PlantViewTable() {
 
   useEffect(() => {
     fetch(
-      "http://75.119.146.115:5179/api/lastest-direct-data/multiple-latest-devices",
+  `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

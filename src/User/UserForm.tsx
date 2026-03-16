@@ -18,6 +18,8 @@ import type { User } from "./User";
 const strongPasswordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
 export default function UserForm({
   onSubmit,
@@ -89,9 +91,10 @@ export default function UserForm({
     }
 
     try {
-      const res = await fetch("http://75.119.146.115:5179/api/users", {
+      const res = await fetch(`${API_BASE}/api/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+
         body: JSON.stringify({
           username: `${firstName.toLowerCase()}_${lastName.toLowerCase()}`,
           email,

@@ -483,7 +483,7 @@ const CustomDashboardView = () => {
         ".react-grid-item": {
           display: "flex",
           flexDirection: "column",
-          overflow: "hidden",
+          overflow: "visible",
         },
       }}
     >
@@ -587,7 +587,7 @@ const CustomDashboardView = () => {
                   </HStack>
                 )}
 
-                <ChakraBox flex="1" overflow="hidden" p={2}>
+                <ChakraBox flex="1" overflow="visible" p={2}>
                   {widget.type === "graph" ? (
                     <div style={{ pointerEvents: 'auto', height: '100%' }}>
                       <GraphWidgetRenderer
@@ -596,7 +596,7 @@ const CustomDashboardView = () => {
                         data={
                           data?.[widget.dataSource?.returnDataName] || {}
                         }
-                        loading={loading}
+                        fetchForWidget={fetchForWidget}
                       />
                     </div>
                   // ) : widget.type === "latest_card" ? (
@@ -612,7 +612,6 @@ const CustomDashboardView = () => {
                       data={
                         data?.[widget.dataSource?.returnDataName] || {}
                       }
-                      loading={loading}
                     />
                   ) : widget.type === "table" ? (
                     <TableWidgetRenderer
@@ -620,7 +619,6 @@ const CustomDashboardView = () => {
                       data={
                         data?.[widget.dataSource?.returnDataName] || []
                       }
-                      loading={loading}
                     />
                   ) : widget.type === "advance_table" ? (
                     <AdvanceTableWidgetRenderer

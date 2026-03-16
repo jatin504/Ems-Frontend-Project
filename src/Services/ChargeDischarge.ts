@@ -1,11 +1,19 @@
 import axios from "axios";
 
-const BASE_URL = "http://75.119.146.115:5179";
+/* ================= API BASE ================= */
+
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") ||
+  "";
+
+/* ================= AXIOS INSTANCE ================= */
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
 });
+
+/* ================= API ================= */
 
 export const getChargeDischargeTrack = async () => {
   const res = await api.get("/api/bess_control/charge_discharge_track");

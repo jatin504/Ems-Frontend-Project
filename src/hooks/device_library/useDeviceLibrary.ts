@@ -7,10 +7,9 @@ export type DeviceLibraryResponse = {
   };
 };
 
-const DEFAULT_BASE =
-  (import.meta as any).env?.VITE_API_BASE?.toString() || "http://75.119.146.115:5179";
+const BASE_URL = import.meta.env.VITE_API_BASE;
 
-export function useDeviceLibrary(baseUrl: string = DEFAULT_BASE) {
+export function useDeviceLibrary(baseUrl: string = BASE_URL) {
   const [library, setLibrary] = useState<DeviceLibraryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);

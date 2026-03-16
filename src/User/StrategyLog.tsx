@@ -30,6 +30,9 @@ import {
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 export default function StrategyLog() {
 
   const [logs, setLogs] = useState<any[]>([]);
@@ -41,7 +44,7 @@ export default function StrategyLog() {
 
   const buildUrl = () => {
 
-    let url = `http://75.119.146.115:5179/api/strategy/logs?limit=200`;
+    let url = `${API_BASE}/api/strategy/logs?limit=200`;
 
     if (search) url += `&search=${search}`;
 

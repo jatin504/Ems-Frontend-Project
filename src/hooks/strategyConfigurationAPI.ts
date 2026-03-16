@@ -1,15 +1,11 @@
 // ---- API BASE URL ----
-export const API_BASE =
-  (typeof import.meta !== "undefined" &&
-    (import.meta as any).env &&
-    (import.meta as any).env.VITE_EMS_API_URL) ||
-  "http://75.119.146.115:5179";
+export const API_BASE = import.meta.env.VITE_API_BASE;
 
 function getToken(): string {
   return sessionStorage.getItem("token") || "";
 }
 
-// ---- Mapping helpers 
+// ---- Mapping helpers
 export const mapForecastCodeToUi = (
   code?: string
 ): "none" | "ai" | "manual" | "external" => {
@@ -88,8 +84,7 @@ export async function fetchStrategyConfiguration() {
   return resp.json();
 }
 
-
-// password REQUIRED now
+// ---- POST API ----
 export async function saveStrategyConfiguration(
   payload: any,
   password: string

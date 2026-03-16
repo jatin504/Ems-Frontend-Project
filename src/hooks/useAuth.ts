@@ -1,9 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const API_BASE =
-  (import.meta as any).env?.VITE_API_URL ??
-  "http://75.119.146.115:5179/api";
-
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export function getToken(): string {
   return sessionStorage.getItem("token") || "";
@@ -38,21 +35,19 @@ async function forceLogout(): Promise<void> {
   const username = getUsername();
 
   try {
-    
     await fetch(`${API_BASE}/logout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${getToken()}`,
+        Authorization: `Bearer ${getToken()}`,
       },
       body: JSON.stringify({ username }),
       keepalive: true,
     });
 
-   
-    await new Promise(res => setTimeout(res, 300));
-  } catch (err) {
-    // ignore error
+    await new Promise((res) => setTimeout(res, 300));
+  } catch {
+    // ignore
   }
 
   clearAuth();
@@ -62,8 +57,10 @@ async function forceLogout(): Promise<void> {
   }, 100);
 }
 
-
-export async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
+export async function authFetch(
+  path: string,
+  init: RequestInit = {}
+): Promise<Response> {
   const t = getToken();
   const headers = new Headers(init.headers || {});
 
@@ -75,10 +72,13 @@ export async function authFetch(path: string, init: RequestInit = {}): Promise<R
     headers.set("Authorization", `Bearer ${t}`);
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers,
-  });
+  const res = await fetch(
+    `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`,
+    {
+      ...init,
+      headers,
+    }
+  );
 
   if (res.status === 401) {
     await forceLogout();
@@ -103,6 +103,7 @@ export default function useAuth() {
     if (!expMs) return;
 
     const msLeft = expMs - Date.now();
+
     if (msLeft <= 0) {
       forceLogout();
       return;
@@ -115,6 +116,7 @@ export default function useAuth() {
 
   useEffect(() => {
     scheduleAutoLogout();
+
     return () => {
       if (autoLogoutTimerRef.current) {
         window.clearTimeout(autoLogoutTimerRef.current);

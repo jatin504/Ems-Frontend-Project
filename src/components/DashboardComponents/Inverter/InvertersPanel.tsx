@@ -17,8 +17,8 @@ import InverterModal from "./InverterModal";
 import SpineGraph from "../../Graphs/RevampCharts/SplineGraph";
 import useTimeseriesData from "../../../hooks/useTimeseriesData";
 import { useTimeHandle } from "../../../Services/TimeWindowSetting";
-import MPPTPowerGraph from "./MPPTPowerGraph";
-import StringPowerGraph from "./StringPowerGraph";
+import MPPTPowerGraph from "./MPPTpowerGraph";
+import StringPowerGraph from "./Stringpowergraph";
 import { MaterialReactTable, type MRT_ColumnDef } from "material-react-table";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { useMediaQuery } from "@chakra-ui/react";
@@ -54,7 +54,7 @@ export default function InvertersPanel() {
   const [isShortScreen] = useMediaQuery("(max-width: 900px)");
   const bodyBg = useColorModeValue("gray.50", "gray.900");
   const tableMode = useColorModeValue("light", "dark");
-
+ const BASE_URL = import.meta.env.VITE_API_BASE;
   const theme = useMemo(
     () =>
       createTheme({
@@ -146,7 +146,7 @@ export default function InvertersPanel() {
 
   useEffect(() => {
     fetch(
-      "http://75.119.146.115:5179/api/lastest-direct-data/multiple-latest-devices",
+      `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -447,3 +447,6 @@ export default function InvertersPanel() {
     </>
   );
 }
+
+// base url from env
+

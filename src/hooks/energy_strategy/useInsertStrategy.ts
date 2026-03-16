@@ -1,12 +1,14 @@
 import { useToast } from "@chakra-ui/react";
 import axios from "axios";
 
+const BASE_URL = import.meta.env.VITE_API_BASE;
+
 export function useInsertStrategy() {
   const toast = useToast();
 
   const insertStrategy = async (form: any, priority: string) => {
     try {
-      const response = await axios.post("http://75.119.146.115:5179/strategy/add", {
+      const response = await axios.post(`${BASE_URL}/strategy/add`, {
         start_ts: form.from,
         end_ts: form.to,
         type: form.command,
@@ -25,7 +27,7 @@ export function useInsertStrategy() {
         status: "success",
         duration: 3000,
         isClosable: true,
-        position: "top-left"
+        position: "top-left",
       });
 
       return response.data.id;
@@ -39,7 +41,7 @@ export function useInsertStrategy() {
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "top-left"
+        position: "top-left",
       });
 
       return null;

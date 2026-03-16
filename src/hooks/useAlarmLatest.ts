@@ -1,11 +1,10 @@
-// src/hooks/useAlarmLatest.ts
 import { useEffect, useState, useMemo } from "react";
 
 export type RowStatus = "Latest Alarm" | "Acknowledged";
 
 export type AlarmBase = {
   device: string;
-  time: string; 
+  time: string;
   type: string;
   severity: string;
   status: RowStatus;
@@ -13,8 +12,8 @@ export type AlarmBase = {
 };
 
 export type AlarmRow = AlarmBase & {
-  deviceId: string;       
-  rawTimeStamp: string;    
+  deviceId: string;
+  rawTimeStamp: string;
   state: string;
   comment: string;
   inputValue: string;
@@ -22,17 +21,17 @@ export type AlarmRow = AlarmBase & {
   clrDisabled: boolean;
 };
 
-/* ===== API ROW ===== */
 export type AlarmApiRow = {
   device_id: string;
   tag_name: string;
   severity: string;
-  time_stamp: string;      // ISO timestamp
+  time_stamp: string;
   ack_timestamp?: string;
   comment?: string;
 };
 
-const API_BASE = "http://75.119.146.115:5179";
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export function useAlarmLatest(initialPageSize: number = 10) {
@@ -42,9 +41,7 @@ export function useAlarmLatest(initialPageSize: number = 10) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
 
-  /* =================================================
-     FETCH LATEST
-     ================================================= */
+  /* ================= FETCH LATEST ================= */
   useEffect(() => {
     const fetchLatest = async () => {
       try {
@@ -61,9 +58,9 @@ export function useAlarmLatest(initialPageSize: number = 10) {
             const invNum = match ? match[1] : "";
             const device = invNum ? `Inverter_${invNum}` : item.device_id;
 
-            // UI formatted time
             let activationTime = "";
             const d = new Date(item.time_stamp);
+
             if (!isNaN(d.getTime())) {
               const pad = (n: number) => n.toString().padStart(2, "0");
               activationTime = `${pad(d.getUTCDate())}/${pad(
@@ -75,8 +72,8 @@ export function useAlarmLatest(initialPageSize: number = 10) {
 
             return {
               device,
-              deviceId: item.device_id,     //  keep raw
-              rawTimeStamp: item.time_stamp, //  keep raw
+              deviceId: item.device_id,
+              rawTimeStamp: item.time_stamp,
               time: activationTime,
               type: item.tag_name,
               severity: item.severity,
@@ -100,9 +97,7 @@ export function useAlarmLatest(initialPageSize: number = 10) {
     fetchLatest();
   }, []);
 
-  /* =================================================
-     COUNTS
-     ================================================= */
+  /* ================= COUNTS ================= */
   const alarmCount = rows.length;
 
   const warningCount = useMemo(
@@ -110,9 +105,7 @@ export function useAlarmLatest(initialPageSize: number = 10) {
     [rows]
   );
 
-  /* =================================================
-     PAGINATION
-     ================================================= */
+  /* ================= PAGINATION ================= */
   const totalRows = rows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -131,11 +124,10 @@ export function useAlarmLatest(initialPageSize: number = 10) {
   const goToNext = () => setCurrentPage((p) => (p < totalPages ? p + 1 : p));
   const goToLast = () => setCurrentPage(totalPages);
 
-  /* =================================================
-     COMMENTS + DB UPDATE
-     ================================================= */
+  /* ================= COMMENTS + UPDATE ================= */
   const handleCommentChange = (indexInPage: number, value: string) => {
     const globalIndex = startIndex + indexInPage;
+
     setRows((prev) => {
       const copy = [...prev];
       if (!copy[globalIndex]) return prev;
@@ -144,17 +136,16 @@ export function useAlarmLatest(initialPageSize: number = 10) {
     });
   };
 
-  const updateAlarm = async (
-    row: AlarmRow,
-    action: "ack" | "clr"
-  ) => {
+  const updateAlarm = async (row: AlarmRow, action: "ack" | "clr") => {
     await fetch(`${API_BASE}/api/alarms/update`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         device_id: row.deviceId,
         tag_name: row.state,
-        time_stamp: row.rawTimeStamp, //  RAW timestamp
+        time_stamp: row.rawTimeStamp,
         action,
         comment: row.inputValue,
       }),
@@ -169,10 +160,8 @@ export function useAlarmLatest(initialPageSize: number = 10) {
     const row = rows[globalIndex];
     if (!row) return;
 
-    // BACKEND UPDATE
     await updateAlarm(row, action);
 
-    // UI UPDATE (optimistic, old behaviour same)
     if (action === "ack") {
       setRows((prev) => {
         const copy = [...prev];
@@ -198,9 +187,6 @@ export function useAlarmLatest(initialPageSize: number = 10) {
   const getRowBg = (status: RowStatus) =>
     status === "Acknowledged" ? "yellow.300" : "red.400";
 
-  /* =================================================
-     RETURN
-     ================================================= */
   return {
     rows,
     pageRows,

@@ -23,9 +23,10 @@ type DSMBlock = {
 const HistoryTable: React.FC = () => {
 
  const [rows, setRows] = useState<DSMBlock[]>([])
- const baseURL = (import.meta as any).env?.VITE_API_BASE?.toString() || "http://75.119.146.115:5179"; 
+ const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || ""; 
  useEffect(() => {
-   fetch(`${baseURL}/api/dsm/block_summary?plant_id=plant_1&date=2026-03-05`)
+   fetch(`${API_BASE}/api/dsm/block_summary?plant_id=plant_1&date=2026-03-05`)
      .then(res => res.json())
      .then(data => {
        setRows(data.data)

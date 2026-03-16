@@ -21,6 +21,9 @@ import { useLatestPCSData } from '../hooks/pcs/useLatestPCSData';
 import { useSSE } from '../hooks/sse/useSSE';
 // import { useLatestPCSData } from '../hooks/pcs/useLatestPCSData';
 
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+
 type PCSData = {
   table_name: string;
   active_power_kw: number;
@@ -167,16 +170,16 @@ const keys = [
     const [dataMap, setDataMap] = useState<Record<string, any>>({});
   
   useSSE({
-          url: `http://75.119.146.115:5179/stream?topics=${[
+          url: `${API_BASE}/stream?topics=${[
             "plant_1_block_1_inverter_inverter_1",
             "plant_1_block_1_inverter_inverter_2",
             "plant_1_block_2_inverter_inverter_3",
             "plant_1_block_2_inverter_inverter_4"
           ].join(",")}`,
-          onMessage: ({ topic, message }) => {
+          onMessage: ({ topic, message }: { topic: string; message: any }) => {
             setDataMap((prev) => ({ ...prev, [topic]: message }));
           },
-          onError: (err) => console.error("SSE error:", err),
+          onError: (err: unknown) => console.error("SSE error:", err),
         });
 
         // console.log(new Date().toLocaleString(), dataMap)

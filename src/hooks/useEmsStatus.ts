@@ -18,6 +18,8 @@ interface EmsStatusResponse {
   };
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 export const useEmsStatus = (pollInterval = 5000) => {
   const [flags, setFlags] = useState<EmsFlags | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export const useEmsStatus = (pollInterval = 5000) => {
       setLoading(true);
 
       const res = await fetch(
-        "http://75.119.146.115:5179/api/lastest-direct-data/ems-status"
+        `${API_BASE}/api/lastest-direct-data/ems-status`
       );
 
       if (!res.ok) {
@@ -54,6 +56,7 @@ export const useEmsStatus = (pollInterval = 5000) => {
     fetchStatus();
 
     const interval = setInterval(fetchStatus, pollInterval);
+
     return () => clearInterval(interval);
   }, [pollInterval]);
 

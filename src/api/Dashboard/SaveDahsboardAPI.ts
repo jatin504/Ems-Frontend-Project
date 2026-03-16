@@ -1,15 +1,24 @@
-import axios from 'axios';
+import axios from "axios";
 
-const SaveDashboardAPI  = async (dashboardConfig : any) => {
-    const BASE_URL = (import.meta as any).env?.VITE_API_BASE?.toString() || "http://75.119.146.115:5179";
+/* ================= API BASE ================= */
 
-    try {
-        const response = await axios.post(`${BASE_URL}/dashboard/save`, dashboardConfig);
-        return response.data;
-    } catch (error) {
-        console.error(error)
-        throw error;
-    }
-}
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") ||
+  "";
+
+/* ================= API ================= */
+
+const SaveDashboardAPI = async (dashboardConfig: any) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE}/dashboard/save`,
+      dashboardConfig
+    );
+    return response.data;
+  } catch (error) {
+    console.error("SaveDashboardAPI error:", error);
+    throw error;
+  }
+};
 
 export default SaveDashboardAPI;
