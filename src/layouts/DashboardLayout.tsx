@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Breadcrumb,
@@ -71,12 +71,39 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     // eslint-disable-next-line
   }, []);
 
+  // Resizing Logic
+  const [scale, setScale] = useState(1);
+  const initialDPR = useRef(window.devicePixelRatio);
+
+  useEffect(() => {
+    const updateScale = () => {
+      // If devicePixelRatio changed, assume it's zooming, so don't update scale
+      if (window.devicePixelRatio !== initialDPR.current) return;
+
+      const baseWidth = 1920;
+      const baseHeight = 1080;
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
+
+      const widthScale = currentWidth / baseWidth;
+      const heightScale = currentHeight / baseHeight;
+      const scaleFactor = Math.max(widthScale, heightScale);
+
+      setScale(scaleFactor); // You may choose widthScale if you prefer
+    };
+
+    updateScale(); // Run once on mount
+    window.addEventListener("resize", updateScale);
+
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   return (
     <Box
       w="100%"
       bg={useColorModeValue("#F4F6F6", "#0E1111")}
       overflowX="hidden"
-      sx={{ zoom: 0.80 }}
+      sx={{ zoom: scale }}
     >
       {/* Breadcrumb */}
       <Container
