@@ -106,12 +106,12 @@ const VoltAmpsCurve = () => {
           /* ===== DUAL AXIS (SAFE) ===== */
           yAxis: [
             {
-              title: { text: "Voltage (V)" },
+              
               labels: { style: { color: textColor } },
               gridLineColor: gridColor,
             },
             {
-              title: { text: "Current (A)" },
+              
               labels: { style: { color: textColor } },
               opposite: true,
               gridLineColor: gridColor,

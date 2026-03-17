@@ -28,7 +28,7 @@ export default function useUsers() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.get("/users");
+      const data = await api.get("/api/users");
       setUsers(((data || []) as BackendUser[]).map(normalize));
       setLoading(false);
       return data;
@@ -42,7 +42,7 @@ export default function useUsers() {
   const createUser = useCallback(async (payload: any) => {
     setLoading(true);
     try {
-      const res = await api.post("/users", payload);
+      const res = await api.post("/api/users", payload);
       const u = normalize(res || payload);
       setUsers((p) => [...p, u]);
       setLoading(false);
@@ -57,7 +57,7 @@ export default function useUsers() {
   const updateUser = useCallback(async (id: number, payload: any) => {
     setLoading(true);
     try {
-      const res = await api.put(`/users/${id}`, payload);
+      const res = await api.put(`/api/users/${id}`, payload);
       await fetchUsers();
       setLoading(false);
       return res;
@@ -71,7 +71,7 @@ export default function useUsers() {
   const deleteUser = useCallback(async (id: number) => {
     setLoading(true);
     try {
-      await api.del(`/users/${id}`);
+      await api.del(`/api/users/${id}`);
       setUsers((p) => p.filter((u) => u.id !== id));
       setLoading(false);
       return true;
@@ -85,7 +85,7 @@ export default function useUsers() {
   const blockUser = useCallback(async (id: number, is_blocked: boolean) => {
     setLoading(true);
     try {
-      const res = await api.patch(`/users/${id}/block`, { is_blocked: !is_blocked });
+      const res = await api.patch(`/api/users/${id}/block`, { is_blocked: !is_blocked });
       await fetchUsers();
       setLoading(false);
       return res;

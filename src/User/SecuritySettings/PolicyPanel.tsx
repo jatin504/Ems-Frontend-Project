@@ -89,7 +89,7 @@ export default function PolicyPanel() {
     setNotFound(false);
     setPolicy(null);
     try {
-      const res = await authFetch(`/policy?role=${r}`);
+      const res = await authFetch(`/api/policy?role=${r}`);
       if (res.status === 404) { setNotFound(true); return; }
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json() as Policy;
@@ -141,7 +141,7 @@ export default function PolicyPanel() {
         lock_after_attempts: policy.lock_after_attempts,
       };
 
-      const res = await authFetch(`/policy`, {
+      const res = await authFetch(`/api/policy`, {
         method: "PUT",
         body: JSON.stringify(body)
       });

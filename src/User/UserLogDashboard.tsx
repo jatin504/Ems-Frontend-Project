@@ -93,7 +93,7 @@ if (to) params.set("to", to);
       params.set("page", String(page));
       params.set("limit", String(limit));
 
-      const res = await authFetch(`/audit/logs?${params.toString()}`);
+      const res = await authFetch(`/api/audit/logs?${params.toString()}`);
       if (!res.ok) throw new Error("Request failed");
       const data = await res.json();
       

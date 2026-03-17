@@ -33,7 +33,7 @@ export default function usePermissions() {
     setError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/permissions`, {
+      const res = await fetch(`${API_BASE}/api/permissions`, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
@@ -67,7 +67,7 @@ export default function usePermissions() {
       setError(null);
 
       try {
-        const res = await fetch(`${API_BASE}/permissions`, {
+        const res = await fetch(`${API_BASE}/api/permissions`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",

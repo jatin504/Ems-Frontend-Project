@@ -120,6 +120,38 @@ const GraphWidgetRenderer: React.FC<{ config: any; data: any; fetchForWidget: (w
             boxShadow="md"
             display="flex"
             flexDirection="column"
+            sx={{
+                ".chakra-popover__popper": {
+                    left: "unset !important",
+                    right: "0px !important",
+                    transform: "translate3d(0px, 0px, 0px) !important"
+                },
+                ".chakra-popover__content": {
+                    transform: "scale(0.75)",
+                    transformOrigin: "top right",
+                    fontSize: "11px",
+                    minWidth: "260px",
+                    maxWidth: "260px",
+                    marginTop: "68px"
+                },
+                ".chakra-popover__header": {
+                    fontSize: "12px"
+                },
+                ".chakra-popover__body": {
+                    fontSize: "11px"
+                },
+                ".chakra-form__label": {
+                    fontSize: "11px"
+                },
+                ".chakra-input, .chakra-select": {
+                    height: "28px",
+                    fontSize: "11px"
+                },
+                ".chakra-popover__footer button": {
+                    height: "28px",
+                    fontSize: "11px"
+                }
+            }}
         >
             <GraphLayout
                 title={config?.title}

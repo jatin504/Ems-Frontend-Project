@@ -325,14 +325,14 @@ const VoltAmpsCurve = () => {
         props={{
           chart:{zoomType:"xy"},
           yAxis:{
-            title:{text:"Voltage (V)",style:{color:textColor}},
+            // title:{text:"Voltage (V)",style:{color:textColor}},
             tickAmount:6,
             labels:{style:{color:textColor}},
             gridLineColor:gridColor
           },
           xAxis:{
             type:"linear",
-            title:{text:"Current (A)",style:{color:textColor}},
+            // title:{text:"Current (A)",style:{color:textColor}},
             labels:{style:{color:subTextColor}}
           }
         }}
