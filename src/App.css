@@ -77,3 +77,13 @@ body {
 .hide-stroke .highcharts-axis-line{
   stroke-width: 0;
 }
+
+/*  Fault Graph → Hide Show/Hide buttons */
+.fault-graph-wrapper button {
+  display: none !important;
+}
+
+/*  Extra safe selector (Highcharts wrapper case) */
+.fault-graph-wrapper div > button {
+  display: none !important;
+}

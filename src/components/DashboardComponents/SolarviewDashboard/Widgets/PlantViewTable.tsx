@@ -144,19 +144,32 @@ export default function PlantViewTable() {
   /* ================= API ================= */
 
   useEffect(() => {
-    fetch(
-  `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          device_id_patterns: ["_bank_bank_"],
-        }),
+    const fetchData = async () => {
+      try {
+        const response = await fetch(
+          `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              device_id_patterns: ["_bank_bank_"],
+            }),
+          }
+        );
+        const j = await response.json();
+        if (j.success) setDataMap(j.data);
+      } catch (error) {
+        console.error(error);
       }
-    )
-      .then((r) => r.json())
-      .then((j) => j.success && setDataMap(j.data))
-      .catch(console.error);
+    };
+
+    // Fetch immediately
+    fetchData();
+
+    // Set up interval for every 60 seconds
+    const id = setInterval(fetchData, 60000);
+
+    return () => clearInterval(id);
   }, []);
 
   /* ================= STATUS ICON ================= */

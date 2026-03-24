@@ -1,7 +1,7 @@
 import { Routes, Route, useSearchParams, useLocation } from "react-router-dom";
 import { Box, useColorModeValue } from "@chakra-ui/react";
 
-import Dashboard from "./Dashboard/Index";
+import HomeDashboard from "./Dashboard/HomeDashboard";
 import BatteryBank1Dashboard from "./components/BatteryBank1Dashboard";
 import BatteryBank2Dashboard from "./components/BatteryBank2Dashboard";
 import StringDashboard from "./components/StringDashboard";
@@ -65,17 +65,21 @@ function App() {
         {location.pathname !== "/login" && <MarqueeNewsHeadline />}
 
         <Box bg={useColorModeValue("#F4F6F6", "#0E1111")}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
 
-            <Route path="/batterybank" element={<BatteryBank1Dashboard />} />
+  <Routes>
+
+    <Route
+  path="/"
+  element={
+    <PrivateRoute>
+      <DashboardLayout breadcrumbs={[]}>
+        <HomeDashboard />
+      </DashboardLayout>
+    </PrivateRoute>
+  }
+/>
+
+    <Route path="/batterybank" element={<BatteryBank1Dashboard />} />
             <Route path="/battery-bank-2" element={<BatteryBank2Dashboard />} />
             <Route path="/string" element={<StringDashboard />} />
             <Route path="/battery-bank-2/string/:id" element={<StringDashboard />} />
@@ -134,7 +138,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Config" },
                   ]}
                 >
@@ -147,7 +151,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Config List" },
                   ]}
                 >
@@ -173,7 +177,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Plant Config" },
                   ]}
                 >
@@ -236,7 +240,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Plant View" },
                   ]}
                 >
@@ -250,7 +254,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Plant View", href: "/plantview" },
                     { label: "Battery Bank" },
                   ]}
@@ -265,7 +269,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Plant View", href: "/plantview" },
                     { label: "Battery Bank", href: "/batterybankk" },
                     { label: "Rack" },
@@ -281,7 +285,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Control", href: "/besscontroll" },
                     { label: "BESS" },
                   ]}
@@ -296,7 +300,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "DSM" },
                   ]}
                 >
@@ -315,7 +319,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/transformer" },
+                    { label: "Home", href: "/" },
                     { label: "Transformers" },
                   ]}
                 >
@@ -328,7 +332,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/transformer" },
+                    { label: "Home", href: "/" },
                     { label: "Transformers", href: "/devices/transformer" },
                     { label: "Transformer Details" },
                   ]}
@@ -343,7 +347,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/inv" },
+                    { label: "Home", href: "/" },
                     { label: "Inverter" },
                   ]}
                 >
@@ -356,7 +360,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/pcs" },
+                    { label: "Home", href: "/" },
                     { label: "PCS" },
                   ]}
                 >
@@ -369,7 +373,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/meter" },
+                    { label: "Home", href: "/" },
                     { label: "Meter" },
                   ]}
                 >
@@ -382,7 +386,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/wms" },
+                    { label: "Home", href: "/" },
                     { label: "WMS" },
                   ]}
                 >
@@ -395,7 +399,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/switch-gear" },
+                    { label: "Home", href: "/" },
                     { label: "Switch Gear" },
                   ]}
                 >
@@ -425,7 +429,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Control", href: "/solardashboard" },
                     { label: "Solar" },
                   ]}

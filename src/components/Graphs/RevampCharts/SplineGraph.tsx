@@ -153,12 +153,14 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
 
           if (this.points) {
             this.points.forEach((point) => {
+              const isSelected =
+                point.series.state === 'hover' ||
+                (selectedSeries !== null && point.series.index === selectedSeries);
+
               s += `<span style="color:${point.color}">●</span> ${point.series.name}: <b>${point.y.toFixed(2)}</b>`;
 
-              // Optionally highlight selected series (if needed)
-              if (selectedSeries !== null && point.series.index === selectedSeries) {
-                s +=
-                  ' <span style="color:#38a169;font-weight:600">(Selected)</span>';
+              if (isSelected) {
+                s += ' <span style="color:#38a169;font-weight:600">(Selected)</span>';
               }
 
               s += '<br/>';
@@ -274,6 +276,27 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
       }));
     }, [apiData, selectedSeries]);
 
+    useEffect(() => {
+      const chart = chartRef.current?.chart;
+      if (!chart) return;
+
+      chart.series.forEach((s: any, i: number) => {
+        if (selectedSeries === null) {
+          s.update({ opacity: 1, zIndex: 1 }, false);
+          s.setState('', true);
+        } else {
+          s.update({ opacity: selectedSeries === i ? 1 : 0.2, zIndex: selectedSeries === i ? 10 : 1 }, false);
+          if (selectedSeries === i) {
+            s.setState('hover', true);
+          } else {
+            s.setState('', true);
+          }
+        }
+      });
+
+      chart.redraw();
+    }, [selectedSeries]);
+
     // 🔹 Show / Hide handlers
     const handleHideAll = () => {
       const chart = chartRef.current && chartRef.current.chart;
@@ -341,6 +364,14 @@ const SplineGraph = React.forwardRef<HighchartsReact.RefObject, SplineGraphProps
 
             // ⭐ cursor chart se bahar gaya to highlight reset
             chart.container.addEventListener('mouseleave', () => {
+              chart.pointer.reset();
+              chart.series.forEach((s: any) => {
+                s.setState('', true);
+                s.update({ opacity: 1, zIndex: 1 }, false);
+              });
+              chart.tooltip?.hide(0);
+              chart.redraw();
+
               setSelectedSeries(null);
             });
 

@@ -119,7 +119,7 @@ export default function LoginForm() {
           duration: 3000,
         });
 
-        navigate("/plantview");
+        navigate("/");
       } else {
         toast({
           title: "Login failed",
