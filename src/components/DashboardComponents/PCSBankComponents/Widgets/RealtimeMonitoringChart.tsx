@@ -44,11 +44,21 @@ const RealtimeMonitoringChart: React.FC<RealtimeMonitoringChartProps> = ({ bankI
     timeWindowRef.current = timeWindowMonitoring;
   }, [timeWindowMonitoring]);
 
-  /* ⭐ DATE STATE */
+  /*  DATE STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dateNavEnabled, setDateNavEnabled] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
-  /* ⭐ TIMEWINDOW SYNC */
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
+
+  /*  TIMEWINDOW SYNC */
   useEffect(() => {
 
     const tw = timeWindowMonitoring.timeRange;
@@ -215,7 +225,7 @@ const RealtimeMonitoringChart: React.FC<RealtimeMonitoringChartProps> = ({ bankI
         <Box display="flex" alignItems="center" w="100%">
           <Box fontWeight="600">Real Time Monitoring</Box>
 
-          <Box ml="170px"
+          <Box ml={isFullScreen ? "700px" : "250px"}
             opacity={dateNavEnabled ? 1 : 0.4}
             pointerEvents={dateNavEnabled ? "auto" : "none"}
             display="flex"

@@ -34,8 +34,18 @@ const MeterWidget = () => {
     timeWindowRef.current = timeWindow;
   }, [timeWindow]);
 
-  /* ⭐ DATE STATE */
+  /*  DATE STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   useEffect(() => {
     const tw = timeWindow.timeRange;
@@ -204,7 +214,7 @@ const MeterWidget = () => {
           <Box fontWeight="600">Meter Data</Box>
 
           <Box
-            ml="130px"
+            ml={isFullScreen ? "900px" : "130px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

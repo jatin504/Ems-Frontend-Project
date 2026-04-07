@@ -51,6 +51,16 @@ const MeterPowerGraph: React.FC<{ selectedMeter: string }> = ({
     useState<ExportFunctions | null>(null);
 
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   /* ================= API CALL ================= */
   useEffect(() => {
@@ -192,7 +202,7 @@ const MeterPowerGraph: React.FC<{ selectedMeter: string }> = ({
           <Box fontWeight="600">Power</Box>
 
           <Box
-            ml="158px"
+            ml={isFullScreen ? "900px" : "158px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

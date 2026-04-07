@@ -26,10 +26,11 @@ import { useLocation } from "react-router-dom";
 import UserList from "./UserList";
 import UserForm from "./UserForm";
 import useUsers from "../hooks/useUsers";
+import usePermissions from "../hooks/usePermissions";
 import type { User } from "./User";
 
 /* --------------------- Inline dark RoleSelect (no separate file) --------------------- */
-const ROLE_OPTIONS = ["admin", "operator", "engineer", "supervisor", "viewer"] as const;
+const ROLE_OPTIONS = ["Admin", "Operator", "Engineer", "Supervisor", "Manager", "Guest"] as const;
 const pretty = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 function RoleSelect({
@@ -86,6 +87,13 @@ const splitFirstLast = (raw: string | undefined) => {
 
 export default function UsersPage() {
   const { users, fetchUsers, createUser, deleteUser, blockUser, updateUser } = useUsers();
+  const { permissions } = usePermissions();
+
+  const currentRole = (sessionStorage.getItem("role") || "").toLowerCase();
+
+  const canCreateUser =
+    permissions.find((p) => p.role_name === currentRole)?.can_create_user || false;
+
   const [showForm, setShowForm] = useState(false);
 
   // edit state
@@ -97,6 +105,9 @@ export default function UsersPage() {
     phone: "",              // added phone in edit form state
     role: "viewer",
   });
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [actionPassword, setActionPassword] = useState("");
 
   const location = useLocation();
   const toast = useToast();
@@ -110,18 +121,8 @@ export default function UsersPage() {
   }, []);
 
   const handleFormSubmit = async (newUser: User) => {
-    try {
-      const payload = {
-        username: `${(newUser.firstName || "").toLowerCase()}_${(newUser.lastName || "").toLowerCase()}`.replace(/\s+/g, "_"),
-        email: newUser.email,
-        role: newUser.role,
-        phone: newUser.phone,
-      };
-      await createUser(payload);
-      setShowForm(false);
-    } catch (err: any) {
-      console.error("Create user failed", err);
-    }
+    setShowForm(false);
+    await fetchUsers();
   };
 
   const handleDelete = async (id: number) => {
@@ -149,7 +150,7 @@ export default function UsersPage() {
       lastName: u.lastName || "",
       email: u.email || "",
       phone: u.phone || "",            // prefill phone
-      role: (u.role || "viewer").toLowerCase(),
+      role: u.role || "Viewer",
     });
   };
 
@@ -174,6 +175,39 @@ export default function UsersPage() {
     }
   };
 
+  const handleVerifyPassword = async () => {
+    try {
+      const res = await fetch("http://75.119.146.115:5179/api/verify-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          password: actionPassword,
+          control_type: "CREATE_USER",
+          module: "USER_MANAGEMENT",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Verification failed");
+      }
+
+      setShowPasswordModal(false);
+      setShowForm(true); // ✅ open form after success
+
+    } catch (err: any) {
+      toast({
+        title: "Wrong Password",
+        description: err.message,
+        status: "error",
+      });
+    }
+  };
+
   const bgOuter = useColorModeValue("gray.100", "gray.900");
   const textClr = useColorModeValue("gray.900", "white");
   const modalBg = useColorModeValue("white", "gray.800");
@@ -183,12 +217,12 @@ export default function UsersPage() {
     <Box bg={bgOuter} color={textClr} minH="100vh" p={6}>
       <Heading mb={4}>Users Management</Heading>
 
-      {!showForm && (
+      {!showForm && canCreateUser && (
         <Button
           leftIcon={<span style={{ fontSize: "1.2em" }}>+</span>}
           colorScheme="blue"
           mb={4}
-          onClick={() => setShowForm(true)}
+          onClick={() => setShowPasswordModal(true)}
         >
           Create User
         </Button>
@@ -197,8 +231,46 @@ export default function UsersPage() {
       {showForm ? (
         <UserForm onSubmit={handleFormSubmit} onCancel={() => setShowForm(false)} />
       ) : (
-        <UserList users={users} onStartEdit={startEdit} onBlock={handleBlock} onDelete={handleDelete} />
+        <UserList
+          users={users.map((u) => {
+            const { first, last } = splitFirstLast(u.firstName || "");
+
+            return {
+              ...u,
+              firstName: first,
+              lastName: last,
+            };
+          })}
+          onStartEdit={startEdit}
+          onBlock={handleBlock}
+          onDelete={handleDelete}
+        />
       )}
+
+      {/* Password Modal */}
+      <Modal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Enter Password</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Input
+              type="password"
+              placeholder="Enter your password"
+              value={actionPassword}
+              onChange={(e) => setActionPassword(e.target.value)}
+            />
+          </ModalBody>
+          <ModalFooter>
+            <Button mr={3} onClick={() => setShowPasswordModal(false)}>
+              Cancel
+            </Button>
+            <Button colorScheme="blue" onClick={handleVerifyPassword}>
+              Verify
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal isOpen={!!editing} onClose={() => setEditing(null)}>

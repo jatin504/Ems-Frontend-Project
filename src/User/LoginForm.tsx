@@ -200,10 +200,48 @@ export default function LoginForm() {
           </InputGroup>
         </FormControl>
 
-        <HStack>
+        <HStack justify="space-between">
           <Checkbox defaultChecked colorScheme="green">
             Remember me
           </Checkbox>
+          <Text
+            as="button"
+            fontSize="sm"
+            color="blue.500"
+            _hover={{ textDecoration: "underline" }}
+            onClick={async () => {
+              if (!identifier) {
+                toast({
+                  title: "Enter email or username first",
+                  status: "warning",
+                });
+                return;
+              }
+              try {
+                const res = await fetch(`${API_BASE}/api/forgot-password`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ identifier }),
+                });
+                const data = await res.json();
+                toast({
+                  title: "Request processed",
+                  description: data.message,
+                  status: res.ok ? "success" : "error",
+                });
+              } catch (err) {
+                toast({
+                  title: "Error",
+                  description: "Something went wrong",
+                  status: "error",
+                });
+              }
+            }}
+          >
+            Forgot password?
+          </Text>
         </HStack>
 
         <Button

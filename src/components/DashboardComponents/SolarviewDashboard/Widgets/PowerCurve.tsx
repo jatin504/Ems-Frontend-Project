@@ -63,6 +63,16 @@ const PowerCurve = () => {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dateNavEnabled, setDateNavEnabled] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -207,7 +217,8 @@ const PowerCurve = () => {
 
           <Box fontWeight="600">Power Curve</Box>
 
-          <Box ml="28"
+          <Box ml={isFullScreen ? "900" : "28"}
+            mr={isFullScreen ? "900" : "28"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100","gray.700")}
@@ -252,7 +263,7 @@ const PowerCurve = () => {
             events: {
               mouseOut() {
                 // hover stuck fix (hard reset)
-                this.series.forEach((s: any) => {
+                (this as any).series.forEach((s: any) => {
                   s.setState("", true);
                 });
               },
@@ -290,7 +301,7 @@ const PowerCurve = () => {
             labels: {
               style: { color: textColor },
               formatter() {
-                return this.value.toFixed(2);
+                return (this as any).value.toFixed(2);
               },
             },
             gridLineColor: gridColor,

@@ -36,12 +36,15 @@ import {
   TabPanels,
   Tab,
   TabPanel,
+  Switch,
+  Tooltip,
 } from "@chakra-ui/react";
 import { AddIcon, DeleteIcon, EditIcon, ViewIcon } from "@chakra-ui/icons";
 import SimulateBessOptimizeAPI from "../../../../api/BessControlAPI";
 
 
 import MaxCyclesPerDayModal from "./MaxCyclesPerDayModal";
+import CloudConfigModal from "./CloudConfigModal";
 import RTMAdjustmentDashboard from "../../../../Dashboard/RTMAdjustmentDashboard";
 import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
 import usePermissions from "../../../../hooks/usePermissions";
@@ -125,6 +128,7 @@ export default function TariffConfigurationModal({
   }, [isOpen, strategy]);
 
   // BESS params
+  const [cloudModule, setCloudModule] = React.useState(false);
   const [maxCharge, setMaxCharge] = React.useState("500");
   const [maxDischarge, setMaxDischarge] = React.useState("500");
   const [minSOC, setMinSOC] = React.useState("10"); // %
@@ -137,8 +141,27 @@ export default function TariffConfigurationModal({
 
   // Max Cycles per day edit modal state
   const [isMaxCyclesModalOpen, setIsMaxCyclesModalOpen] = React.useState(false);
+  const [isCloudConfigModalOpen, setIsCloudConfigModalOpen] = React.useState(false);
   const [isRTMModalOpen, setIsRTMModalOpen] = React.useState(false);
   const [isTradingModalOpen, setIsTradingModalOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchCloud = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE;
+        const res = await fetch(`${API_BASE}/api/v1/getCloudDetails`);
+        const json = await res.json();
+
+        if (json.success) {
+          setCloudModule(json.data.cloud_module);
+        }
+      } catch (err) {
+        console.error("Cloud fetch error:", err);
+      }
+    };
+
+    fetchCloud();
+  }, []);
 
   // NOTE: PeakShavingMeterModal removed; selectedMeter unused
   // STEP 1: Add timelineData and simulationLoading state
@@ -1014,6 +1037,43 @@ export default function TariffConfigurationModal({
                     </>
                   </Grid>
                 </Box>
+
+                <Box px={2} py={1}>
+                  <HStack justify="space-between" align="center">
+
+                    {/* LEFT SIDE: Title */}
+                    <HStack spacing={2}>
+                      <Tooltip label="Adaptive Solar Response System" placement="top">
+                        <Text fontSize="xs">
+                          ASRS
+                        </Text>
+                      </Tooltip>
+                    </HStack>
+
+                    {/* RIGHT SIDE: Toggle + Edit */}
+                    <HStack spacing={0.5}>
+                      <Switch
+                        size="sm"
+                        isChecked={cloudModule}
+                        colorScheme="blue"
+                        isDisabled={true}
+                      />
+                      <IconButton
+                        aria-label="Edit Cloud Config"
+                        size="xs"
+                        icon={<EditIcon />}
+                        variant="ghost"
+                        isDisabled={!cloudModule}
+                        _hover={{ bg: "gray.100" }}
+                        onClick={() => {
+                          if (!cloudModule) return;
+                          setIsCloudConfigModalOpen(true);
+                        }}
+                      />
+                    </HStack>
+                  </HStack>
+                </Box>
+
               </VStack>
             </GridItem>
 
@@ -2231,6 +2291,14 @@ export default function TariffConfigurationModal({
           onClose={() => setIsMaxCyclesModalOpen(false)}
           value={bessMaxCyclesPerDay}
           onSave={handleMaxCyclesSave}
+        />
+
+        {/* NEW: Cloud Config Modal */}
+        <CloudConfigModal
+          isOpen={isCloudConfigModalOpen}
+          onClose={() => setIsCloudConfigModalOpen(false)}
+          cloudModule={cloudModule}
+          onSave={(val) => setCloudModule(val)}
         />
 
         {/* NEW: Trading Visualization Modal */}

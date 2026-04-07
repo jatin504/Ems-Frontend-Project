@@ -51,8 +51,18 @@ const PCSPowerGraph: React.FC = () => {
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
-  /* ⭐ DATE STATE */
+  /*  DATE STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -238,7 +248,7 @@ const PCSPowerGraph: React.FC = () => {
             </Select>
           </Box>
 
-          <Box ml="88px"
+          <Box ml={isFullScreen ? "900px" : "88px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

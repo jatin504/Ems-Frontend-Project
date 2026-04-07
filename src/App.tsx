@@ -6,6 +6,7 @@ import BatteryBank1Dashboard from "./components/BatteryBank1Dashboard";
 import BatteryBank2Dashboard from "./components/BatteryBank2Dashboard";
 import StringDashboard from "./components/StringDashboard";
 import BessControl from "./Dashboard/BessControl";
+import NewDashboard from "./Dashboard/NewDashboard";
 import ReportDashboard from "./Dashboard/ReportDashboard";
 import ReportTemplateDashboard from "./Dashboard/ReportTemplateDashboard";
 import SLDDashboard from "./Dashboard/SLDDashboard";
@@ -78,6 +79,15 @@ function App() {
     </PrivateRoute>
   }
 />
+
+<Route
+      path="/newdashboard"
+      element={
+        <PrivateRoute>
+          <NewDashboard />
+        </PrivateRoute>
+      }
+    />
 
     <Route path="/batterybank" element={<BatteryBank1Dashboard />} />
             <Route path="/battery-bank-2" element={<BatteryBank2Dashboard />} />

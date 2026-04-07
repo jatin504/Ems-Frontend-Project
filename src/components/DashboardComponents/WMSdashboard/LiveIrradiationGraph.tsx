@@ -41,6 +41,16 @@ const LiveIrradiationGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }
   const { data, fetchData } = useTimeseriesData();
 
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -213,7 +223,7 @@ const LiveIrradiationGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }
           <Box fontWeight="600">Live Irradiation</Box>
 
           <Box
-            ml="278px"
+            ml={isFullScreen ? "900px" : "278px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

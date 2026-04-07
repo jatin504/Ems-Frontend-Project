@@ -81,8 +81,18 @@ const MPPTPowerGraph: React.FC<MPPTPowerGraphProps> = ({ height = 350 }) => {
   const [exportFunctions, setExportFunctions] = useState<ExportFunctions | null>(null);
   const { data, fetchData } = useTimeseriesData();
 
-  //  ⭐ Step-1 — DATE STATE add karo (Select state ke niche)
+  //   Step-1 — DATE STATE add karo (Select state ke niche)
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   // Use the same datasource as InverterPowerGraph
   const buildDataSource = () => ({
@@ -110,7 +120,7 @@ const MPPTPowerGraph: React.FC<MPPTPowerGraphProps> = ({ height = 350 }) => {
 
   useEffect(() => {
     const { interval, intervalType } = timeWindow.timeRange;
-    const refreshMs = intervalToMs(interval, intervalType);
+    const refreshMs = intervalToMs(interval || 1, intervalType || "minute");
     const intervalId = setInterval(() => {
       fetchData(buildDataSource() as any);
     }, refreshMs);
@@ -145,7 +155,7 @@ const MPPTPowerGraph: React.FC<MPPTPowerGraphProps> = ({ height = 350 }) => {
     }
   }, [deviceOptions, selectedDevice]);
 
-  //  ⭐ Step-2 — formattedDate + isToday add karo (useMemo)
+  //   Step-2 — formattedDate + isToday add karo (useMemo)
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
     const m = String(currentDate.getMonth() + 1).padStart(2, "0");
@@ -190,7 +200,7 @@ const MPPTPowerGraph: React.FC<MPPTPowerGraphProps> = ({ height = 350 }) => {
     }];
   }, [data, selectedDevice]);
 
-  //  ⭐ Step-3 — Absolute handler
+  //   Step-3 — Absolute handler
   const applyAbsoluteDay = (date: Date) => {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
@@ -209,7 +219,7 @@ const MPPTPowerGraph: React.FC<MPPTPowerGraphProps> = ({ height = 350 }) => {
     });
   };
 
-  //  ⭐ Step-4 — Prev / Next
+  //   Step-4 — Prev / Next
   const goPrevDay = () => {
     setCurrentDate(prev => {
       const d = new Date(prev);
@@ -277,8 +287,8 @@ const MPPTPowerGraph: React.FC<MPPTPowerGraphProps> = ({ height = 350 }) => {
             ))}
           </Select>
 
-          {/* ⭐ PUSH RIGHT */}
-          <Box ml="278px"
+          {/*  PUSH RIGHT */}
+          <Box ml={isFullScreen ? "900px" : "278px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100","gray.700")}
@@ -306,7 +316,7 @@ const MPPTPowerGraph: React.FC<MPPTPowerGraphProps> = ({ height = 350 }) => {
         </Box>
       }
       width={["100%"]}
-      height={height}
+      height={typeof height === 'number' ? `${height}px` : height}
 
       timeWindow
       onTimeWindowChange={handleTimeWindowChange}

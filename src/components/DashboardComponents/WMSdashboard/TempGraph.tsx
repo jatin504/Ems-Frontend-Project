@@ -40,10 +40,20 @@ const TempGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }) => {
   //  EXPORT FUNCTIONS STATE (ONLY ADDITION)
   const [exportFns, setExportFns] = useState<ExportFunctions | null>(null);
 
-  //  ⭐ Step-1 — DATE STATE
+  //   Step-1 — DATE STATE
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
-  //  ⭐ Step-2 — formattedDate + isToday
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
+
+  //   Step-2 — formattedDate + isToday
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
     const m = String(currentDate.getMonth() + 1).padStart(2, "0");
@@ -60,7 +70,7 @@ const TempGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }) => {
     );
   }, [currentDate]);
 
-  //  ⭐ Step-3 — Absolute handler
+  //   Step-3 — Absolute handler
   const applyAbsoluteDay = (date: Date) => {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
@@ -79,7 +89,7 @@ const TempGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }) => {
     });
   };
 
-  //  ⭐ Step-4 — Prev / Next
+  //   Step-4 — Prev / Next
   const goPrevDay = () => {
     setCurrentDate((prev) => {
       const d = new Date(prev);
@@ -168,7 +178,7 @@ const TempGraph: React.FC<{ selectedWMS: string }> = ({ selectedWMS }) => {
           <Box fontWeight="600">Temperature</Box>
 
           <Box
-            ml="298px"
+            ml={isFullScreen ? "900px" : "298px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

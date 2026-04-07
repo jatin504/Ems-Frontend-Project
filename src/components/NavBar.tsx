@@ -182,7 +182,6 @@ const Navbar = () => {
     { name: "Plant View", path: "/plantview" },
   ];
   const linksAfterSLD = [
-    { name: "DSM", path: "/dsm" },
     { name: "Solar View", path: "/solarview" },
   ];
 
@@ -280,6 +279,7 @@ const Navbar = () => {
     location.pathname.startsWith("/report") ||
     location.pathname.startsWith("/template");
   const isCustomActive  = location.pathname.startsWith("/custom/dashboard");
+  const isDSMActive     = location.pathname.startsWith("/dsm");
 
   // hide nav on login
   const hideNav = location.pathname.toLowerCase().startsWith("/login");
@@ -564,6 +564,32 @@ const Navbar = () => {
                       </MenuItem>
                     ))
                   )}
+                </MenuList>
+              </Portal>
+            </Menu>
+
+            {/* PASS - Last Menu */}
+            <Menu placement="bottom-start" isLazy>
+              <MenuButton
+                as={Button}
+                variant="ghost"
+                size="sm"
+                px={3}
+                py={2}
+                fontWeight="medium"
+                onClick={setFromEvent}
+                data-active={isDSMActive ? "true" : undefined}
+              >
+                PASS
+              </MenuButton>
+              <Portal>
+                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
+                  <MenuItem as={RouterLink} to="/newdashboard" fontSize="sm">Dashboard</MenuItem>
+                  <MenuItem as={RouterLink} to="/dsm" fontSize="sm">DSM</MenuItem>
+                  <MenuItem as={RouterLink} to="/energy-accounting" fontSize="sm">Energy Accounting</MenuItem>
+                  <MenuItem as={RouterLink} to="/billing">Billing</MenuItem>
+                  <MenuItem as={RouterLink} to="/reports">Reports</MenuItem>
+                  <MenuItem as={RouterLink} to="/settings">Setting</MenuItem>
                 </MenuList>
               </Portal>
             </Menu>

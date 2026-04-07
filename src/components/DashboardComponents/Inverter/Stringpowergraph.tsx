@@ -78,8 +78,18 @@ const StringPowerGraph: React.FC<StringPowerGraphProps> = ({ height = 350 }) => 
 
   const [selectedDevice, setSelectedDevice] = useState<string>("ALL");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const [exportFunctions, setExportFunctions] = useState<ExportFunctions | null>(null);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
   const { data, fetchData } = useTimeseriesData();
 
   // Use the same datasource as InverterPowerGraph
@@ -124,7 +134,7 @@ const StringPowerGraph: React.FC<StringPowerGraphProps> = ({ height = 350 }) => 
 
   useEffect(() => {
     const { interval, intervalType } = timeWindow.timeRange;
-    const refreshMs = intervalToMs(interval, intervalType);
+    const refreshMs = intervalToMs(interval || 1, intervalType || "minute");
     const intervalId = setInterval(() => {
       fetchData(buildDataSource() as any);
     }, refreshMs);
@@ -272,9 +282,9 @@ const StringPowerGraph: React.FC<StringPowerGraphProps> = ({ height = 350 }) => 
             ))}
           </Select>
 
-          {/* ⭐ DATE NAVIGATOR */}
+          {/*  DATE NAVIGATOR */}
           <Box
-            ml="278px"
+            ml={isFullScreen ? "900px" : "278px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}
@@ -302,7 +312,7 @@ const StringPowerGraph: React.FC<StringPowerGraphProps> = ({ height = 350 }) => 
         </Box>
       }
       width={["100%"]}
-      height={height}
+      height={typeof height === 'number' ? `${height}px` : height}
       timeWindow
       onTimeWindowChange={handleTimeWindowChange}
       onReset={handleReset}

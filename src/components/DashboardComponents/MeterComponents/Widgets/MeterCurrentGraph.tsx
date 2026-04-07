@@ -50,6 +50,16 @@ const MeterCurrentGraph: React.FC<{ selectedMeter: string }> = ({
     useState<ExportFunctions | null>(null);
 
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -191,7 +201,7 @@ const MeterCurrentGraph: React.FC<{ selectedMeter: string }> = ({
           <Box fontWeight="600">Current</Box>
 
           <Box
-            ml="158px"
+            ml={isFullScreen ? "900px" : "158px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

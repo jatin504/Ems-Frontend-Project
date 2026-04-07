@@ -61,7 +61,7 @@ const CustomizeDashboard = () => {
         containerPadding={[0, 0]}
         onLayoutChange={(currentLayout, allLayouts) => {
           console.log("Layout changed:", allLayouts);
-          // 👉 Save layout to state, localStorage, or API
+          //  Save layout to state, localStorage, or API
           // saveLayoutToBackend(allLayouts.lg);
         }}
         style={{ background: "transparent" }}

@@ -66,6 +66,7 @@ export default function PermissionsPanel() {
       title: "User Management",
       icon: EditIcon,
       permissions: [
+        { key: "can_create_user", label: "Create User", icon: EditIcon }, // ✅ ADD
         { key: "can_edit_user", label: "Edit User", icon: EditIcon },
         { key: "can_delete_user", label: "Delete User", icon: DeleteIcon },
         { key: "can_settings_user", label: "Settings User", icon: SettingsIcon },
@@ -96,6 +97,7 @@ export default function PermissionsPanel() {
   function updatePermission(
     roleName: string,
     key:
+      | "can_create_user"   // ✅ ADD
       | "can_edit_user"
       | "can_delete_user"
       | "can_settings_user"

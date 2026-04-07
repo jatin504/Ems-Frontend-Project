@@ -56,10 +56,10 @@ const AreaspineGraph = React.forwardRef<
       type: 'areaspline',
       lineWidth: 2,
       marker: {
-        enabled: true,
+        enabled: false,
         radius: 4,
         lineWidth: 2,
-        lineColor: '#FFFFFF',
+        // lineColor: '#FFFFFF',
         symbol: 'circle',
       },
       states: {

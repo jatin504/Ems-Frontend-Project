@@ -44,10 +44,20 @@ const MeterVoltageGraph: React.FC<{ selectedMeter: string }> = ({
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
-  /* ⭐ DATE STATE */
+  /*  DATE STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
-  /* ⭐ FORMATTED DATE */
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
+
+  /*  FORMATTED DATE */
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
     const m = String(currentDate.getMonth() + 1).padStart(2, "0");
@@ -64,7 +74,7 @@ const MeterVoltageGraph: React.FC<{ selectedMeter: string }> = ({
     );
   }, [currentDate]);
 
-  /* ⭐ API CALL */
+  /*  API CALL */
   useEffect(() => {
     if (!selectedMeter) return;
 
@@ -85,7 +95,7 @@ const MeterVoltageGraph: React.FC<{ selectedMeter: string }> = ({
     } as any);
   }, [timeWindow, selectedMeter]);
 
-  /* ⭐ SERIES */
+  /*  SERIES */
   const seriesForChart = useMemo(() => {
     const widgetData = data as WidgetData | null;
     if (!widgetData || !selectedMeter) return [];
@@ -109,7 +119,7 @@ const MeterVoltageGraph: React.FC<{ selectedMeter: string }> = ({
     ];
   }, [data, selectedMeter]);
 
-  /* ⭐ ABSOLUTE DAY */
+  /*  ABSOLUTE DAY */
   const applyAbsoluteDay = (date: Date) => {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
@@ -180,7 +190,7 @@ const MeterVoltageGraph: React.FC<{ selectedMeter: string }> = ({
           <Box fontWeight="600">Voltage</Box>
 
           <Box
-            ml="150px"
+            ml={isFullScreen ? "900px" : "150px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

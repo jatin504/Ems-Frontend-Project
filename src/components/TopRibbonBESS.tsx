@@ -1,10 +1,11 @@
 import React, { useEffect, useState, type ReactNode, useRef } from "react";
 import { getWMSStatus } from "../Services/dashboard";
 import { useEmsStatus } from "../hooks/useEmsStatus";
+import NotificationBell from "./NotificationBell";
 import {
   Box, HStack, VStack, Text, Tooltip, Icon, Flex, IconButton, Avatar,
   Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, useDisclosure,
-  Divider, Modal, ModalOverlay, ModalContent, ModalBody, ModalCloseButton,
+  Divider,
   Image, Grid, GridItem, Heading, Stack, useColorMode, useColorModeValue,
   Menu, MenuButton, MenuList, MenuItem, MenuGroup, Button, Portal
 } from "@chakra-ui/react";
@@ -222,14 +223,7 @@ const RightCornerControls = ({
           <IconButton aria-label="Light mode" icon={<FiSun />} size="xs" onClick={() => (isLight ? null : toggleColorMode())} bg={isLight ? activeBg : "transparent"} color={iconClr} _hover={{ bg: isLight ? activeBg : "transparent" }} borderRadius="14px" />
           <IconButton aria-label="Dark mode" icon={<FiMoon />} size="xs" onClick={() => (isLight ? toggleColorMode() : null)} bg={!isLight ? activeBg : "transparent"} color={iconClr} _hover={{ bg: !isLight ? activeBg : "transparent" }} borderRadius="14px" />
         </HStack>
-        <Tooltip label="Active Events / Alarms" hasArrow>
-          <Box position="relative">
-            <IconButton aria-label="Events / Alarms" icon={<FiBell />} size="sm" variant="ghost" />
-            {!!eventCount && (
-              <Box bg="red.500" borderRadius="full" position="absolute" top="0" right="0" w="8px" h="8px" border="2px solid" borderColor={useColorModeValue("white", "gray.800")} />
-            )}
-          </Box>
-        </Tooltip>
+        <NotificationBell />
         <Tooltip label={plantInfo} hasArrow>
           <IconButton aria-label="Plant Info" icon={<FiInfo />} size="sm" variant="ghost" />
         </Tooltip>

@@ -39,8 +39,18 @@ const TemperatureGraph: React.FC = () => {
     }
   );
 
-  /* ⭐ DATE NAV STATE */
+  /*  DATE NAV STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -154,7 +164,7 @@ const TemperatureGraph: React.FC = () => {
           <Box fontWeight="600">Source</Box>
 
           <Box
-            ml="128px"
+            ml={isFullScreen ? "900px" : "128px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100","gray.700")}

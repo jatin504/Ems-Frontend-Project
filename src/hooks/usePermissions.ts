@@ -10,6 +10,7 @@ export interface RolePermission {
   role_name: string;
 
   // USER
+  can_create_user: boolean;   
   can_edit_user: boolean;
   can_delete_user: boolean;
   can_settings_user: boolean;

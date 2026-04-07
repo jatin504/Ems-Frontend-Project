@@ -217,7 +217,7 @@ const PowerCurve = ({
       width={["578px"]}
       height="300px"
       fullScreen
-      timeWindow
+      timeWindow={false}
       onTimeWindowChange={handleTimeWindowChange}
       onReset={handleReset}
       onExport={exportFunctions}

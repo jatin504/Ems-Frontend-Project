@@ -63,6 +63,16 @@ const PowerCurve = () => {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dateNavEnabled, setDateNavEnabled] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -207,7 +217,7 @@ const PowerCurve = () => {
 
           <Box fontWeight="600">Power Curve</Box>
 
-          <Box ml="28"
+          <Box ml={isFullScreen ? "900" : "28"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100","gray.700")}

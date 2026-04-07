@@ -68,7 +68,7 @@ export default function PCSAlertsTable({ data = [] }: { data?: AlertRow[] }) {
         borderColor={borderColor}
         rounded="sm"
         flex="1"
-        overflow="auto"           // 👈 ek hi scroll (X + Y)
+        overflow="auto"           //  ek hi scroll (X + Y)
       >
         <Table
           variant="simple"

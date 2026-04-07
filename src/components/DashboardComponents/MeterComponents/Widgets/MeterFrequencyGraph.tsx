@@ -55,8 +55,9 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
       }
     );
 
-  /* ⭐ DATE STATE */
+  /*  DATE STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -101,7 +102,7 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
     } as any);
   }, [timeWindow, selectedMeter]);
 
-  /* ⭐ ABSOLUTE */
+  /*  ABSOLUTE */
   const applyAbsoluteDay = (date: Date) => {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
@@ -153,10 +154,12 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
     });
   };
 
-  /* ⭐ HEIGHT FIX */
+  /*  HEIGHT FIX */
   useEffect(() => {
     const updateHeight = () => {
-      if (document.fullscreenElement) {
+      const isFs = !!document.fullscreenElement;
+      setIsFullScreen(isFs);
+      if (isFs) {
         setGraphHeight(window.innerHeight - 260);
       } else {
         setGraphHeight(240);
@@ -239,7 +242,7 @@ const MeterFrequencyGraph: React.FC<{ selectedMeter: string }> = ({
           <Box fontWeight="600">Frequency vs PF</Box>
 
           <Box
-            ml="130px"
+            ml={isFullScreen ? "900px" : "130px"}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}

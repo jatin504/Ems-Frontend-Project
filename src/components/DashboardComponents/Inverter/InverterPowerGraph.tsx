@@ -73,10 +73,20 @@ const InverterPowerGraph: React.FC = () => {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dateNavEnabled, setDateNavEnabled] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
 
   const { data, fetchData } = useTimeseriesData();
 
-  /* ⭐⭐⭐ TIMEWINDOW → NAVIGATOR SYNC */
+  /*  TIMEWINDOW → NAVIGATOR SYNC */
   useEffect(() => {
 
     const tw = timeWindow.timeRange;
@@ -207,7 +217,7 @@ const InverterPowerGraph: React.FC = () => {
 
   useEffect(()=>{
     const {interval,intervalType}=timeWindow.timeRange;
-    const refreshMs = intervalToMs(interval,intervalType);
+    const refreshMs = intervalToMs(interval || 1,intervalType);
 
     const id = setInterval(()=>{
       fetchData(buildDataSource() as any);
@@ -294,9 +304,9 @@ const InverterPowerGraph: React.FC = () => {
             </Select>
           </Box>
 
-          {/* ⭐ DATE NAVIGATOR */}
+          {/*  DATE NAVIGATOR */}
           <Box
-            ml="28"
+            ml={isFullScreen ? "900" : "28"}
             opacity={dateNavEnabled ? 1 : 0.4}
             pointerEvents={dateNavEnabled ? "auto" : "none"}
             display="flex"

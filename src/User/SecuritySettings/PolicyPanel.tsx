@@ -158,7 +158,7 @@ export default function PolicyPanel() {
       }
       //  IMPORTANT FIX — if forbidden or any fail → reload DB value immediately
       if (!res.ok) {
-        await loadPolicy(role);   // 👈 yahi main fix hai
+        await loadPolicy(role);   //  yahi main fix hai
         const e = await res.json().catch(() => ({}));
         throw new Error(e?.error || `${res.status}`);
       }
