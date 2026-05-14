@@ -84,6 +84,15 @@ export default function ConfigDashboard() {
           >
             Config List
           </Button>
+
+          <Button
+            size="sm"
+            colorScheme="teal"
+            variant={"outline"}
+            onClick={() => navigate("/ppc")}
+          >
+            PPC
+          </Button>
         </HStack>
       </Flex>
 
@@ -124,6 +133,8 @@ export default function ConfigDashboard() {
           navigate("/config/plant");
         }}
       />
+
+      {/* PPC is handled at /ppc route (separate dashboard) */}
     </Box>
   );
 }

@@ -37,12 +37,12 @@ const GridStackBarGraph: React.FC = () => {
   const gridFetch = {
     dataSource: {
       devices: {
-        ids: ["plant_1_pcs_2_bank_bank_20"],
+        ids: ["plant_1_pcs_2_bank_bank_2"],
         patterns: [],
       },
       keys: [
-        { key: "bcu_2_energy_charged_this_year", alias: "Consumption" },
-        { key: "bcu_2_energy_discharged_today", alias: "Feed" },
+        { key: "energy_charged_today", alias: "Consumption" },
+  { key: "energy_discharged_today", alias: "Feed" },
       ],
       aggregation: timeWindow.aggregation,
       timeRange: timeWindow.timeRange,

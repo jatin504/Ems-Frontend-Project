@@ -42,7 +42,7 @@ const Tile: React.FC<{
   };
 }> = ({ title, value, sub, bg, flexGrow = 1, valueBox }) => {
   const titleFs = useBreakpointValue({ base: "10px", md: "11px" });
-  const valFs = useBreakpointValue({ base: "13px", md: "14px" });
+  const valFs = useBreakpointValue({ base: "10px", md: "11px" });
   const padX = useBreakpointValue({ base: "10px", md: "12px" });
   const padY = useBreakpointValue({ base: "6px", md: "8px" });
   const h = useBreakpointValue({ base: "50px", md: "54px" });
@@ -153,7 +153,7 @@ const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
   const soh = bank.soh ?? 90; // fallback to 90 if not present
 
   // fixed value box spec for Strings & Module Temps
-  const fixedValueBox = { width: 133, height: 21, gapPx: 10, angleDeg: 0, opacity: 1 };
+  const fixedValueBox = { width: 120, height: 21, gapPx: 4, angleDeg: 0, opacity: 1 };
   const navigate = useNavigate();
   return (
     <Box

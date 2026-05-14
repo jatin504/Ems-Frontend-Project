@@ -31,31 +31,31 @@ const SolarGraph: React.FC = () => {
     dataSource: {
       devices: {
         patterns: [],
-        ids: ["plant_1_pcs_2_bank_bank_11"],
+        ids: ["plant_1_plant_device"],
       },
       keys: [
-        {
-          key: "bcu_1_energy_discharged_today",
-          alias: "Aux",
-          keyType: "individual",
-          color: "#6DA2FF",
-        },
-        {
-          key: "bcu_1_energy_charged_today",
-          alias: "Daily Energy (kWh)",
-          keyType: "individual",
-          color: "#6EE7B7",
-        },
-        {
-          key: "bcu_2_energy_charged_this_year",
-          alias: "Gen. Loss (kWh)",
-          keyType: "individual",
-          color: "#e76ed9ff",
-        },
-      ],
+  {
+    key: "inv_total_power",
+    alias: "Aux",
+    keyType: "individual",
+    color: "#6DA2FF",
+  },
+  {
+    key: "inv_total_daily_ac_energy",
+    alias: "Daily Energy (kWh)",
+    keyType: "individual",
+    color: "#6EE7B7",
+  },
+  {
+    key: "total_inv_pr",
+    alias: "Gen. Loss (kWh)",
+    keyType: "individual",
+    color: "#e76ed9ff",
+  },
+],
       aggregation: timeWindowCUF.aggregation,
       timeRange: timeWindowCUF.timeRange,
-      orderBy: timeWindowCUF.orderBy,
+      orderBy: 'ASC',
     },
   };
 

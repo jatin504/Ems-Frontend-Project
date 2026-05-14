@@ -40,6 +40,15 @@ export const useCloudConfig = () => {
     confirmed_cloud: 1.0,
   });
 
+  const [stageInfo, setStageInfo] = useState({
+    current_stage: "",
+    previous_stage: "",
+    stage_start_time: "",
+    setpoint_kw: 0,
+    user_approved: null,
+    delta_irradiance_percent: 0,
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +75,18 @@ export const useCloudConfig = () => {
         stronger_signal: 0.5,
         confirmation_building: 0.8,
         confirmed_cloud: 1.0,
+      });
+
+      const stage = data.cloud_detection_details ?? {};
+      const userDecision = stage.user_decision ?? {};
+
+      setStageInfo({
+        current_stage: stage.current_stage ?? "",
+        previous_stage: stage.previous_stage ?? "",
+        stage_start_time: stage.stage_start_time ?? "",
+        setpoint_kw: userDecision.setpoint_kw ?? 0,
+        user_approved: userDecision.user_approved ?? true,
+        delta_irradiance_percent: stage.delta_irradiance_percent ?? 0,
       });
 
       const windowsData = data.windows_avg_rate_per_minute;
@@ -116,6 +137,8 @@ export const useCloudConfig = () => {
     setWindows,
     confidence,
     setConfidence,
+    stageInfo,
+    setStageInfo,
     isLoading,
     error,
     fetchData,

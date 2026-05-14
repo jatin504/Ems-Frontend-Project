@@ -35,25 +35,25 @@ const PRBarGraph: React.FC = () => {
       },
       keys: [
         {
-          key: "bcu_1_energy_discharged_today",
+          key: "inv_total_power",
           alias: "Aux",
           keyType: "individual",
           color: "#6DA2FF",
         },
         {
-          key: "bcu_1_energy_charged_today",
+          key: "inv_total_daily_ac_energy",
           alias: "Daily Energy (kWh)",
           keyType: "individual",
           color: "#6EE7B7",
         },
         {
-          key: "bcu_2_energy_charged_this_year",
+          key: "total_inv_pr",
           alias: "Gen. Loss (kWh)",
           keyType: "individual",
           color: "#e76ed9ff",
         },
         {
-          key: "dcdc1_battery_side_current",
+          key: "power_factor",
           alias: "Import kWh",
           keyType: "individual",
           color: "#FFA500",

@@ -226,18 +226,53 @@ const StringsTable: React.FC<{ bankNum?: number }> = ({ bankNum = 1 }) => {
 
       // Helper to get value for a key - extract from nested structure
       const getVal = (keyName: string) => {
-        const val = d?.[keyName]?.value ?? d?.[keyName];
-        if (typeof val !== "number") return val ?? "--";
-        return `${val.toFixed(2)}`;
+        const raw = d?.[keyName];
+
+        // backend sends full object
+        // {
+        //   value,
+        //   alias,
+        //   register,
+        //   srno,
+        //   ...
+        // }
+
+        let val = raw as any;
+
+        // extract actual value from object
+        if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
+          val = (raw as any).value;
+        }
+
+        if (val === undefined || val === null) {
+          return "--";
+        }
+
+        if (typeof val === "number") {
+          return val.toFixed(2);
+        }
+
+        return String(val);
       };
 
       return {
         name,
         enabled: true,
         connected: true,
-        soh: getVal("BCU_1_SOH") || getVal("soh") || getVal("BCU_1_SOH") || "--",
-        soc: getVal("BCU_1_SOC") || getVal("soc") || getVal("BCU_1_SOC") || "--",
-        soe: getVal("BCU_1_SOE") || getVal("soe") || getVal("BCU_1_SOE") || "--",
+        soh:
+          getVal("BCU_1_SOH") !== "--"
+            ? getVal("BCU_1_SOH")
+            : getVal("soh"),
+
+        soc:
+          getVal("BCU_1_SOC") !== "--"
+            ? getVal("BCU_1_SOC")
+            : getVal("soc"),
+
+        soe:
+          getVal("BCU_1_SOE") !== "--"
+            ? getVal("BCU_1_SOE")
+            : getVal("soe"),
       };
     });
     

@@ -56,7 +56,7 @@ const InverterYieldGraph: React.FC = () => {
       },
       keys: [
         {
-          key: "total_energy_charged",
+          key: "energy_charged_today",
           alias: ENERGY_ALIAS,
           keyType: "common",
           type: "spline",

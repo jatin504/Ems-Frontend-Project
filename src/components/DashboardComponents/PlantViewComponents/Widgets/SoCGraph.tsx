@@ -41,10 +41,22 @@ const SoCGraph: React.FC = () => {
     dataSource: {
       devices: { patterns: ["_bank_bank_"], ids: [] },
       keys: [
-        { key: "soc", alias: "CUF AC", keyType: "number" },
-        { key: "power_factor", alias: "CUF DC", keyType: "number" },
-        { key: "bcu_1_energy_charged_this_year", alias: "PR", keyType: "number" },
-      ],
+  {
+    key: "energy_charged_today",
+    alias: "CUF AC",
+    keyType: "number",
+  },
+  {
+    key: "energy_discharged_today",
+    alias: "CUF DC",
+    keyType: "number",
+  },
+  {
+    key: "soc",
+    alias: "PR",
+    keyType: "number",
+  },
+],
       aggregation: timeWindow.aggregation,
       timeRange: timeWindow.timeRange,
       orderBy: timeWindow.orderBy,

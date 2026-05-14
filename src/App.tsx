@@ -1,19 +1,23 @@
 import { Routes, Route, useSearchParams, useLocation } from "react-router-dom";
 import { Box, useColorModeValue } from "@chakra-ui/react";
-
 import HomeDashboard from "./Dashboard/HomeDashboard";
 import BatteryBank1Dashboard from "./components/BatteryBank1Dashboard";
 import BatteryBank2Dashboard from "./components/BatteryBank2Dashboard";
 import StringDashboard from "./components/StringDashboard";
+import GensetDashboard from "./Dashboard/GensetDashboard";
+import GridDashboard from "./Dashboard/GridControlDashboard";
+import PPCDashboard from "./Dashboard/PPCDashboard";
 import BessControl from "./Dashboard/BessControl";
 import NewDashboard from "./Dashboard/NewDashboard";
 import ReportDashboard from "./Dashboard/ReportDashboard";
+import TradingDashboard from "./Dashboard/TradingDashboard";
 import ReportTemplateDashboard from "./Dashboard/ReportTemplateDashboard";
 import SLDDashboard from "./Dashboard/SLDDashboard";
 import Navbar from "./components/NavBar";
 import AlarmLatest from "./Dashboard/Alarm_Latest";
 import DashboardLog from "./User/DashboardLog";
 import AlarmHistory from "./Dashboard/Alarm_History";
+import NotificationToast from "./components/NotificationToast";
 // import AlarmEvents from "./Dashboard/Alarm_Events";
 import ConfigDashboard from "./Dashboard/ConfigDashboard";
 import ConfigList from "./components/ConfigList";
@@ -50,6 +54,7 @@ import PlantConfigDashboard from "./components/DeviceConfig/PlantConfig";
 import MarqueeNewsHeadline from "./components/MarqueeNewsHeadline";
 import NetworkDashboard from "./Dashboard/networkDashboard"; // Corrected import path
 import SolarView from "./Dashboard/SolarView";
+import BillingDashboard from "./Dashboard/BillingDashboard";
 
 /* Report routes are mapped below directly to DashboardLayout */
 
@@ -64,6 +69,7 @@ function App() {
 
         {/*  Hide marquee on login page only */}
         {location.pathname !== "/login" && <MarqueeNewsHeadline />}
+        {location.pathname !== "/login" && <NotificationToast />}
 
         <Box bg={useColorModeValue("#F4F6F6", "#0E1111")}>
 
@@ -240,6 +246,20 @@ function App() {
                 </DashboardLayout>
               }
             />
+            {/* Billing */}
+            <Route
+              path="/billing"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Billing" },
+                  ]}
+                >
+                  <BillingDashboard />
+                </DashboardLayout>
+              }
+            />
 
             {/* Custom Dashboard */}
             <Route path="/custom/dashboard/:id" element={<CustomDashboardView />} />
@@ -286,6 +306,19 @@ function App() {
                   ]}
                 >
                   <RackDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/ppc"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "PPC" },
+                  ]}
+                >
+                  <PPCDashboard />
                 </DashboardLayout>
               }
             />
@@ -351,7 +384,20 @@ function App() {
                 </DashboardLayout>
               }
             />
-
+            <Route
+              path="/tradingdashboard"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Control", href: "/tradingdashboard" },
+                    { label: "Trading" },
+                  ]}
+                >
+                  <TradingDashboard />
+                </DashboardLayout>
+              }
+            />
             <Route
               path="/devices/inv"
               element={
@@ -431,6 +477,34 @@ function App() {
                 </DashboardLayout>
               }
             />
+            <Route
+              path="/genset"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Genset Control" },
+                  ]}
+                >
+                  <GensetDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/grid"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Grid Control" },
+                  ]}
+                >
+                  <GridDashboard />
+                </DashboardLayout>
+              }
+            />
+
+
             {/* Network Dashboard Route */}
             <Route path="/network-dashboard" element={<NetworkDashboard />} />
            

@@ -35,34 +35,47 @@ const CUFBarGraph: React.FC = () => {
 
   /* SOC (ALL BANKS - SPLINE */
   const socFetch = {
-    dataSource: {
-      devices: { patterns: ["_bank_bank_"], ids: [] },
-      keys: [{ key: "power_factor", alias: "SoC (%)", keyType: "common" }],
-      aggregation: timeWindow.aggregation,
-      timeRange: timeWindow.timeRange,
-      orderBy: 'ASC'//timeWindow.orderBy,
+  dataSource: {
+    devices: {
+      patterns: [],
+      ids: Array.from({ length: 17 }, (_, i) => [
+        `plant_1_pcs_1_bank_bank_${i + 1}`,
+        `plant_1_pcs_2_bank_bank_${i + 1}`,
+      ]).flat(),
     },
-  };
+
+    keys: [
+      {
+        key: "soc",
+        alias: "SoC (%)",
+        keyType: "common",
+      },
+    ],
+
+    aggregation: timeWindow.aggregation,
+    timeRange: timeWindow.timeRange,
+    orderBy: "ASC",
+  },
+};
 
   const { data: socData, fetchData: fetchSoc } = useTimeseriesData();
 
   /* CHARGE / DISCHARGE (BARS) */
   const powerFetch = {
-    dataSource: {
-      devices: {
-        ids: ["plant_1_pcs_2_bank_bank_2"],
-        patterns: [],
-      },
-      keys: [
-        { key: "soc", alias: "Charge" },
-        { key: "power_factor", alias: "Discharge" },
-      ],
-      aggregation: timeWindow.aggregation,
-      timeRange: timeWindow.timeRange,
-      orderBy: timeWindow.orderBy,
+  dataSource: {
+    devices: {
+      ids: ["plant_1_pcs_2_bank_bank_2"],
+      patterns: [],
     },
-  };
-
+    keys: [
+      { key: "energy_charged_today", alias: "Charge" },
+      { key: "energy_discharged_today", alias: "Discharge" },
+    ],
+    aggregation: timeWindow.aggregation,
+    timeRange: timeWindow.timeRange,
+    orderBy: timeWindow.orderBy,
+  },
+};
   const { data: powerData, fetchData: fetchPower } = useTimeseriesData();
 
   /* FETCH */

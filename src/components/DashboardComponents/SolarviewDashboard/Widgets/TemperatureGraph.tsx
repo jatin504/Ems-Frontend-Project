@@ -47,8 +47,12 @@ const TemperatureGraph: React.FC = () => {
       },
       keys: [
         {
-          key: "soc",
-          alias: "Temperature 3 (°C)",
+          key: isPCS
+            ? "battery_cabin_temperature_3"
+            : "active_power",
+          alias: isPCS
+            ? "Temperature 3 (°C)"
+            : "Active Power",
           keyType: "common",
           type: "spline",
           color: "#10B981",

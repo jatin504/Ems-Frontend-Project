@@ -28,7 +28,11 @@ export const useNotifications = () => {
   const [toDate, setToDate] = useState("");
   const [unacknowledgedCount, setUnacknowledgedCount] = useState(0);
 
-  const fetchNotifications = async () => {
+  // ✅ ADDED sorting state
+  const [sortBy, setSortBy] = useState("event_time");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const fetchNotifications = async (extraParams?: any) => {   // ✅ UPDATED
     try {
       const query = new URLSearchParams({
         page: String(page),
@@ -36,6 +40,10 @@ export const useNotifications = () => {
         search,
         fromDate,
         toDate,
+
+        // ✅ ADDED sorting params
+        sortBy: extraParams?.sortBy || sortBy,
+        sortOrder: extraParams?.sortOrder || sortOrder,
       });
 
       const res = await fetch(`${import.meta.env.VITE_API_BASE}/api/notification/list?${query}`);
@@ -66,6 +74,11 @@ export const useNotifications = () => {
       }));
 
       setNotifications(normalized);
+
+      // ✅ ADDED (retain sorting state)
+      if (extraParams?.sortBy) setSortBy(extraParams.sortBy);
+      if (extraParams?.sortOrder) setSortOrder(extraParams.sortOrder);
+
     } catch (err) {
       console.error("Notification fetch error", err);
       setNotifications([]);
@@ -105,7 +118,12 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    // ✅ UPDATED: default sorting apply
+    fetchNotifications({
+      sortBy: "event_time",
+      sortOrder: "desc"
+    });
+
     fetchUnackCount();
     fetchUnackCount();
   }, [page, pageSize]);

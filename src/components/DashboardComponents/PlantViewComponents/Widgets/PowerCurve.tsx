@@ -145,7 +145,7 @@ const PowerCurve = () => {
     dataSource: {
       devices: {
         patterns: [],
-        ids: ["plant_1_pcs_2_bank_bank_11"],
+        ids: ["plant_1_pcs_1_bank_bank_1"],
       },
       keys: [
         {

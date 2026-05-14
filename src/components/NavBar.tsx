@@ -490,9 +490,33 @@ const Navbar = () => {
                   <MenuItem onClick={() => navigate("/switch-gear")}>Switch Gear</MenuItem> */}
                   {/* --- Add this Solar option --- */}
                   <MenuItem onClick={() => navigate("/solardashboard")}>Solar</MenuItem>
+                  <MenuItem onClick={() => navigate("/tradingdashboard")}>Trading</MenuItem>
+                  <MenuItem onClick={() => navigate("/genset")}>Genset Control</MenuItem>
+                  <MenuItem onClick={() => navigate("/grid")}>Grid Control</MenuItem>
                 </MenuList>
               </Portal>
             </Menu>
+
+            {/* PPC - new menu with submenu items */}
+            {/* <Menu placement="bottom-start" isLazy>
+              <MenuButton
+                as={Button}
+                variant="ghost"
+                size="sm"
+                px={3}
+                py={2}
+                fontWeight="medium"
+                onClick={setFromEvent}
+              >
+                PPC
+              </MenuButton>
+              <Portal>
+                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr} minW="160px">
+                  <MenuItem onClick={() => navigate("/genset")}>Genset Control</MenuItem>
+                  <MenuItem onClick={() => navigate("/grid")}>Grid Control</MenuItem>
+                </MenuList>
+              </Portal>
+            </Menu> */}
 
             {/* Alarms */}
             <Menu placement="bottom-start" isLazy>
@@ -538,6 +562,26 @@ const Navbar = () => {
                 </MenuList>
               </Portal>
             </Menu>
+            <HStack
+  px={3}
+  py={2}
+  rounded="md"
+  spacing={1}
+  fontWeight="medium"
+  color={linkColor}
+  _hover={{ textDecoration: "none", bg: hoverBg, color: linkColor }}
+  onClick={() => {
+    const token = sessionStorage.getItem("token");
+    const userName = sessionStorage.getItem("userName");
+
+    window.open(
+  `http://75.119.146.115:5500/Trend?token=${token}&userName=${userName}`,
+  "_blank"
+);
+  }}
+>
+  <Text fontSize="sm">Trends</Text>
+</HStack>
 
             {/* Custom */}
             <Menu placement="bottom-start" isLazy>
@@ -564,6 +608,19 @@ const Navbar = () => {
                       </MenuItem>
                     ))
                   )}
+                  {/* <MenuItem
+                    onClick={() => {
+                      const token = sessionStorage.getItem("token");
+                      const userName = sessionStorage.getItem("userName");
+
+                      window.open(
+  `http://127.0.0.1:5500/Trend%20Application/trend.html?token=${token}&userName=${userName}`,
+  "_blank"
+);
+                    }}
+                  >
+                    Trends
+                  </MenuItem> */}
                 </MenuList>
               </Portal>
             </Menu>

@@ -1,3 +1,5 @@
+// FILE: NotificationBell.tsx
+
 import { useState } from "react";
 import {
   Box, Tooltip, IconButton, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
@@ -8,6 +10,10 @@ import { useNotifications } from "../hooks/useNotifications";
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
+
+  // ✅ ADDED sorting state
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
   const {
     notifications,
     page,
@@ -70,11 +76,30 @@ export default function NotificationBell() {
               <input value={fromDate} onChange={(e) => setFromDate(e.target.value)} type="date" style={{ height: "38px", border: "1px solid #ccc", borderRadius: "8px", padding: "0 10px" }} />
               <input value={toDate} onChange={(e) => setToDate(e.target.value)} type="date" style={{ height: "38px", border: "1px solid #ccc", borderRadius: "8px", padding: "0 10px" }} />
 
-              <button onClick={() => { setPage(1); fetchNotifications(); }} style={{ background: "#3182ce", color: "white", border: "none", borderRadius: "8px", padding: "0 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600" }}>
+              {/* ✅ UPDATED */}
+              <button onClick={() => {
+                setPage(1);
+                fetchNotifications({
+                  sortBy: "event_time",
+                  sortOrder: sortOrder
+                });
+              }} style={{ background: "#3182ce", color: "white", border: "none", borderRadius: "8px", padding: "0 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600" }}>
                 Search
               </button>
 
-              <button onClick={() => { setSearch(""); setFromDate(""); setToDate(""); setPage(1); setTimeout(() => { fetchNotifications(); }, 0); }} style={{ background: "#a0aec0", color: "white", border: "none", borderRadius: "8px", padding: "0 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600" }}>
+              {/* ✅ UPDATED */}
+              <button onClick={() => {
+                setSearch("");
+                setFromDate("");
+                setToDate("");
+                setPage(1);
+                setTimeout(() => {
+                  fetchNotifications({
+                    sortBy: "event_time",
+                    sortOrder: sortOrder
+                  });
+                }, 0);
+              }} style={{ background: "#a0aec0", color: "white", border: "none", borderRadius: "8px", padding: "0 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600" }}>
                 Reset
               </button>
             </Box>
@@ -83,7 +108,26 @@ export default function NotificationBell() {
               <Table size="sm" variant="simple" minW="1200px">
                 <Thead bg="#f5f7fa" position="sticky" top={0} zIndex={2}>
                   <Tr textAlign="center">
-                    <Th textAlign="center">EVENT TIME</Th>
+
+                    {/* ✅ UPDATED HEADER */}
+                    <Th
+                      textAlign="center"
+                      cursor="pointer"
+                      onClick={() => {
+                        const newOrder = sortOrder === "asc" ? "desc" : "asc";
+                        setSortOrder(newOrder);
+                        setPage(1);
+                        setTimeout(() => {
+                          fetchNotifications({
+                            sortBy: "event_time",
+                            sortOrder: newOrder
+                          });
+                        }, 0);
+                      }}
+                    >
+                      EVENT TIME {sortOrder === "asc" ? "▲" : "▼"}
+                    </Th>
+
                     <Th textAlign="center">TITLE</Th>
                     <Th textAlign="center">TYPE</Th>
                     <Th textAlign="center">SEVERITY</Th>
@@ -169,7 +213,7 @@ export default function NotificationBell() {
               </Table>
             </Box>
 
-            {/* ONLY ADDED THIS BLOCK */}
+            {/* ✅ ONLY ADDED THIS BLOCK */}
             <Box mt={4} display="flex" justifyContent="space-between" alignItems="center">
               <Box>
                 Rows per page:
@@ -193,44 +237,44 @@ export default function NotificationBell() {
               </Box>
 
               <Box mt={4} display="flex" justifyContent="center" alignItems="center" gap={4}>
+  
+  <button
+    disabled={page === 1}
+    onClick={() => setPage(page - 1)}
+    style={{
+      width: "28px",
+      height: "28px",
+      borderRadius: "6px",
+      border: "1px solid #e2e8f0",
+      background: page === 1 ? "#edf2f7" : "#f7fafc",
+      cursor: page === 1 ? "not-allowed" : "pointer",
+      fontSize: "14px"
+    }}
+  >
+    ◀
+  </button>
 
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "6px",
-                    border: "1px solid #e2e8f0",
-                    background: page === 1 ? "#edf2f7" : "#f7fafc",
-                    cursor: page === 1 ? "not-allowed" : "pointer",
-                    fontSize: "14px"
-                  }}
-                >
-                  ◀
-                </button>
+  <Box fontSize="14px" fontWeight="500">
+    Page {total === 0 ? 0 : page} of {Math.max(1, Math.ceil(total / pageSize))}
+  </Box>
 
-                <Box fontSize="14px" fontWeight="500">
-                  Page {total === 0 ? 0 : page} of {Math.max(1, Math.ceil(total / pageSize))}
-                </Box>
+  <button
+    disabled={page * pageSize >= total}
+    onClick={() => setPage(page + 1)}
+    style={{
+      width: "28px",
+      height: "28px",
+      borderRadius: "6px",
+      border: "1px solid #e2e8f0",
+      background: page * pageSize >= total ? "#edf2f7" : "#f7fafc",
+      cursor: page * pageSize >= total ? "not-allowed" : "pointer",
+      fontSize: "14px"
+    }}
+  >
+    ▶
+  </button>
 
-                <button
-                  disabled={page * pageSize >= total}
-                  onClick={() => setPage(page + 1)}
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "6px",
-                    border: "1px solid #e2e8f0",
-                    background: page * pageSize >= total ? "#edf2f7" : "#f7fafc",
-                    cursor: page * pageSize >= total ? "not-allowed" : "pointer",
-                    fontSize: "14px"
-                  }}
-                >
-                  ▶
-                </button>
-
-              </Box>
+</Box>
             </Box>
 
           </ModalBody>
