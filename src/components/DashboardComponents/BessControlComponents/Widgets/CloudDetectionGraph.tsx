@@ -142,7 +142,7 @@ const CloudDetectionGraph = () => {
   const { apiData } = useCloudDetectionData(currentDate);
   const { windows, fetchData: fetchCloudConfig } = useCloudConfig();
 
-  console.log("windows FINAL:", windows);
+  // console.log("windows FINAL:", windows);
 
   useEffect(() => {
     fetchData(fetchingToServerObj.dataSource);

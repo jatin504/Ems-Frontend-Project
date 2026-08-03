@@ -4,6 +4,7 @@ import SplineGraph from "../../../Graphs/RevampCharts/SplineGraph";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 import { useColorModeValue, Box } from "@chakra-ui/react";
+import useDateFormatterMargin from "../../../DateFormatter";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
 
 const hour = 60 * 60 * 1000;
@@ -45,6 +46,7 @@ const PowerCurve = () => {
     config: timeWindowPowerCurve,
     handleTimeWindowChange,
     handleReset,
+    manualChanges
   } = useTimeHandle(
     12,
     "hour",
@@ -55,7 +57,7 @@ const PowerCurve = () => {
       timeRange: {
         type: "last",
         relativeType: "currentDaySoFar",
-        interval: 12,
+        interval: 18,
         intervalType: "hour",
       },
     }
@@ -63,16 +65,6 @@ const PowerCurve = () => {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dateNavEnabled, setDateNavEnabled] = useState(true);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-
-  useEffect(() => {
-    const handleFs = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFs);
-    return () => document.removeEventListener("fullscreenchange", handleFs);
-  }, []);
 
   const formattedDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -145,18 +137,18 @@ const PowerCurve = () => {
     dataSource: {
       devices: {
         patterns: [],
-        ids: ["plant_1_pcs_2_bank_bank_11"],
+        ids: ["plant_1_plant_device"],
       },
       keys: [
         {
-          key: "active_power",
+          key: "inv_total_power",
           alias: "Power (kW)",
-          keyType: "common",
+          keyType: "individual",
         },
         {
-          key: "soc",
+          key: "poa",
           alias: "POA (W/m²)",
-          keyType: "common",
+          keyType: "individual",
         },
       ],
       aggregation: timeWindowPowerCurve.aggregation,
@@ -210,15 +202,21 @@ const PowerCurve = () => {
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
+  const dateFormatterMargin = useDateFormatterMargin({
+    fullScreenMargin: "900",
+    normalMargin: "28",
+  });
+
+  const offset = new Date().getTimezoneOffset() * 60000;
+
   return (
     <GraphLayout
       title={
         <Box display="flex" alignItems="center" w="100%">
 
-          <Box fontWeight="600">Power Curve</Box>
+          <Box fontWeight="600">PV Output vs POA</Box>
 
-          <Box ml={isFullScreen ? "900" : "28"}
-            mr={isFullScreen ? "900" : "28"}
+          <Box ml={dateFormatterMargin}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100","gray.700")}
@@ -261,9 +259,9 @@ const PowerCurve = () => {
         props={{
           chart: {
             events: {
-              mouseOut() {
+              mouseOut: function (this: any) {
                 // hover stuck fix (hard reset)
-                (this as any).series.forEach((s: any) => {
+                this.series.forEach((s: any) => {
                   s.setState("", true);
                 });
               },
@@ -300,7 +298,7 @@ const PowerCurve = () => {
             title: { text: null },
             labels: {
               style: { color: textColor },
-              formatter() {
+              formatter(this: any) {
                 return (this as any).value.toFixed(2);
               },
             },
@@ -315,6 +313,9 @@ const PowerCurve = () => {
             gridLineColor: gridColor,
             gridLineDashStyle: "ShortDot",
             gridLineWidth: 1,
+            tickInterval:60*60*2*1000,
+            min: !manualChanges ? undefined : new Date(new Date().setHours(4,0,0,0) - offset).getTime(),
+            max: !manualChanges ? undefined : new Date(new Date().setHours(20,0,0,0) - offset).getTime()
           },
 
           tooltip: {

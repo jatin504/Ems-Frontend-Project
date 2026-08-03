@@ -36,14 +36,16 @@ const arraysEqual = (a: string[], b: string[]) => {
 /* ================= INTERVAL MAP ================= */
 
 const intervalSuffixMap: Record<string, string> = {
-  "5min": "_5_min",
+  "1min": "",
   "15min": "_15_min",
   "30min": "_30_min",
   "1hr": "_1_hour",
-  "1hour": "_1_hour",
-  "2hr": "_2_hour",
-  "2hour": "_2_hour",
   "1day": "_1_day",
+
+  // NEW
+  "1week": "_1_week",
+  "1month": "_1_month",
+  "1year": "_1_year",
 };
 
 const resolveDeviceId = (baseDeviceId: string, interval: string) => {
@@ -126,7 +128,10 @@ const useReports = () => {
   const generateReport = () => {
     const resolvedDeviceIds = selectedDeviceIds.map((id) =>
       resolveDeviceId(
-        id.replace(/(_\d+_(min|hour|day))$/, ""),
+        id.replace(
+          /(_15_min|_30_min|_1_hour|_1_day|_1_week|_1_month|_1_year)$/i,
+          ""
+        ),
         selectedInterval
       )
     );
@@ -162,7 +167,10 @@ const useReports = () => {
 
       const resolvedDeviceIds = cfgDeviceIds.map((id) =>
         resolveDeviceId(
-          String(id).replace(/(_\d+_(min|hour|day))$/, ""),
+          String(id).replace(
+            /(_15_min|_30_min|_1_hour|_1_day|_1_week|_1_month|_1_year)$/i,
+            ""
+          ),
           config?.selectedInterval ??
             config?.interval ??
             selectedInterval

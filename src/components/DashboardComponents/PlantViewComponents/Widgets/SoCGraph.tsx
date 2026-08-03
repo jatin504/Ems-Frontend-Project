@@ -39,7 +39,7 @@ const SoCGraph: React.FC = () => {
   // Fetch CUF AC, CUF DC, PR
   const cufFetch = {
     dataSource: {
-      devices: { patterns: ["_bank_bank_"], ids: [] },
+      devices: { patterns: [], ids: ["plant_1_pcs_2_bank_bank_1"] },
       keys: [
   {
     key: "energy_charged_today",
@@ -59,7 +59,7 @@ const SoCGraph: React.FC = () => {
 ],
       aggregation: timeWindow.aggregation,
       timeRange: timeWindow.timeRange,
-      orderBy: timeWindow.orderBy,
+      orderBy: "ASC",
     },
   };
 

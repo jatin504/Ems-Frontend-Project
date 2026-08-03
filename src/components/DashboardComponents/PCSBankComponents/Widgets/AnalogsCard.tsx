@@ -1,5 +1,10 @@
 import React from "react";
 import { Box, Flex, Text, Heading, useColorModeValue } from "@chakra-ui/react";
+import useTimeseriesData from "../../../../hooks/useTimeseriesData";
+
+type Props = {
+  bankId?: string;
+};
 
 const VOLT = "#06b6d4";
 const CURR = "#a855f7";
@@ -77,42 +82,156 @@ const AnalogBlock: React.FC<{
   );
 };
 
-const AnalogsCard: React.FC = () => {
+const AnalogsCard: React.FC<Props> = ({
+  bankId,
+}) => {
   const cardBg = useColorModeValue("#ffffff", "#161B1B");
   const cardBorder = useColorModeValue("#e5e7eb", "#1c2635");
   const headingColor = useColorModeValue("#000000", "gray.300");
 
+  const { data, fetchData } =
+    useTimeseriesData();
+
+  React.useEffect(() => {
+    if (!bankId) return;
+
+    const match =
+      bankId.match(/pcs_(\d+)_bank_(\d+)/);
+
+    if (!match) return;
+
+    const pcsNo = match[1];
+    const bankNo = match[2];
+
+    fetchData({
+      devices: {
+        ids: [
+          `plant_1_pcs_${pcsNo}_bank_bank_${bankNo}`,
+        ],
+        patterns: [],
+      },
+
+      keys: [
+        {
+          key: "max_cell_voltage",
+          alias: "max_voltage",
+          keyType: "common",
+        },
+        {
+          key: "min_cell_voltage",
+          alias: "min_voltage",
+          keyType: "common",
+        },
+        {
+          key: "avg_cell_voltage",
+          alias: "avg_voltage",
+          keyType: "common",
+        },
+
+        {
+          key: "max_cell_temperature",
+          alias: "max_temp",
+          keyType: "common",
+        },
+        {
+          key: "min_cell_temperature",
+          alias: "min_temp",
+          keyType: "common",
+        },
+        {
+          key: "avg_cell_temperature",
+          alias: "avg_temp",
+          keyType: "common",
+        },
+      ],
+
+      aggregation: {
+        func: "none",
+        interval: 1,
+        intervalType: "minute",
+      },
+
+      timeRange: {
+        type: "last",
+        interval: 1,
+        intervalType: "minute",
+      },
+
+      orderBy: "ASC",
+    } as any);
+  }, [bankId]);
+
+  const values = React.useMemo(() => {
+    const deviceId =
+      Object.keys(data || {})[0];
+
+    if (!deviceId) return null;
+
+    const d = (data as any)[deviceId];
+
+    const getLast = (key: string) => {
+      const arr = d?.[key] || [];
+
+      return arr.length
+        ? arr[arr.length - 1]?.value
+        : 0;
+    };
+
+    return {
+      maxVoltage: getLast("max_voltage"),
+      minVoltage: getLast("min_voltage"),
+      avgVoltage: getLast("avg_voltage"),
+
+      maxTemp: getLast("max_temp"),
+      minTemp: getLast("min_temp"),
+      avgTemp: getLast("avg_temp"),
+    };
+  }, [data]);
+
   // Add as many blocks as you want — scroll will appear automatically
-  const BLOCKS = [
-    {
-      id: "String ID 6",
-      maxV: "606.40 V",
-      minV: "606.40 V",
-      avgV: "606.40 V",
-      maxC: "0.00 A",
-      minC: "0.00 A",
-      avgC: "0.00 A",
-    },
-    {
-      id: "String ID 7",
-      maxV: "606.40 V",
-      minV: "606.40 V",
-      avgV: "606.40 V",
-      maxC: "0.00 A",
-      minC: "0.00 A",
-      avgC: "0.00 A",
-    },
-    // add more to see vertical scroll:
-    // {
-    //   id: "String ID 8",
-    //   maxV: "606.40 V",
-    //   minV: "606.40 V",
-    //   avgV: "606.40 V",
-    //   maxC: "0.00 A",
-    //   minC: "0.00 A",
-    //   avgC: "0.00 A",
-    // },
-  ];
+  const BLOCKS = values
+    ? [
+        {
+          id: "Voltage",
+
+          maxV: `${Number(
+            values.maxVoltage
+          ).toFixed(2)} V`,
+
+          minV: `${Number(
+            values.minVoltage
+          ).toFixed(2)} V`,
+
+          avgV: `${Number(
+            values.avgVoltage
+          ).toFixed(2)} V`,
+
+          maxC: "-",
+          minC: "-",
+          avgC: "-",
+        },
+
+        {
+          id: "Temperature",
+
+          maxV: `${Number(
+            values.maxTemp
+          ).toFixed(2)} °C`,
+
+          minV: `${Number(
+            values.minTemp
+          ).toFixed(2)} °C`,
+
+          avgV: `${Number(
+            values.avgTemp
+          ).toFixed(2)} °C`,
+
+          maxC: "-",
+          minC: "-",
+          avgC: "-",
+        },
+      ]
+    : [];
 
   return (
     <Box w="376px" h="304px" flex="0 0 auto" overflow="hidden">

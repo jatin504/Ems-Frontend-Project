@@ -1,6 +1,8 @@
 import React from "react";
 import { Box, Grid, Text, Flex, Heading, useColorModeValue } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { useDevices } from "../../../../hooks/useDevices";
+import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 
 /** Circular badge with the exact icon look */
 const LinkBadge: React.FC<{ ok: boolean }> = ({ ok }) => {
@@ -85,7 +87,8 @@ const SmallBox: React.FC<{
   amps: number;
   voltage: number;
   temperature: number;
-}> = ({ label, status, amps, voltage, temperature }) => {
+  rackId: string;
+}> = ({ label, status, amps, voltage, temperature, rackId }) => {
   const tileBg = useColorModeValue("#f1f5f9", "#242929");
   const tileBorder = useColorModeValue("#e2e8f0", "#263346");
   const innerBg = useColorModeValue("#e9eef3", "#363A3A");
@@ -102,7 +105,9 @@ const SmallBox: React.FC<{
           fontSize="sm"
           color={labelColor}
           cursor="pointer"
-          onClick={() => navigate("/batteryrackk", { state: { currentBank: "pcs_2_bank_1_rack_1" } })}
+          onClick={() =>
+            navigate("/batteryrackk", { state: { currentBank: rackId } })
+          }
         >
           {label}
         </Text>
@@ -121,24 +126,30 @@ const SmallBox: React.FC<{
         flexDirection="row"
         gap="10px"
       >
-        <Box textAlign="center">
-          <Text fontSize="xs" color="gray.500">Amps</Text>
-          <Flex align="baseline" gap="2px" justify="center">
-            <Text fontSize="md" fontWeight="bold">{status === "Connected" ? amps : "--"}</Text>
-            <Text fontSize="xs" color="gray.600">A</Text>
-          </Flex>
-        </Box>
+          <Box textAlign="center">
+            <Text fontSize="xs" color="gray.500">Amps</Text>
+            <Flex align="baseline" gap="2px" justify="center">
+              <Text fontSize="xs" fontWeight="bold">
+                {status === "Connected" ? amps.toFixed(2) : "--"}
+              </Text>
+              <Text fontSize="xs" color="gray.600">A</Text>
+            </Flex>
+          </Box>
         <Box textAlign="center">
           <Text fontSize="xs" color="gray.500">Voltage</Text>
           <Flex align="baseline" gap="2px" justify="center">
-            <Text fontSize="md" fontWeight="bold">{status === "Connected" ? voltage : "--"}</Text>
+            <Text fontSize="xs" fontWeight="bold">
+              {status === "Connected" ? voltage.toFixed(2) : "--"}
+            </Text>
             <Text fontSize="xs" color="gray.600">V</Text>
           </Flex>
         </Box>
         <Box textAlign="center">
           <Text fontSize="xs" color="gray.500">Temperature</Text>
           <Flex align="baseline" gap="2px" justify="center">
-            <Text fontSize="md" fontWeight="bold">{status === "Connected" ? temperature : "--"}</Text>
+            <Text fontSize="xs" fontWeight="bold">
+              {status === "Connected" ? temperature.toFixed(2) : "--"}
+            </Text>
             <Text fontSize="xs" color="gray.600">°C</Text>
           </Flex>
         </Box>
@@ -147,20 +158,107 @@ const SmallBox: React.FC<{
   );
 };
 
-const StringConnectedLayout: React.FC = () => {
+type Props = {
+  bankId?: string;
+};
+
+const StringConnectedLayout: React.FC<Props> = ({ bankId }) => {
   const cardBg = useColorModeValue("#ffffff", "#161B1B");
   const cardBorder = useColorModeValue("#e5e7eb", "#1c2635");
   const headingColor = useColorModeValue("#0f172a", "gray.300");
 
-  const CARDS = [
-    { label: "BK1. S01", status: "Connected", amps: 12.4, voltage: 680, temperature: 32 },
-    { label: "BK1. S02", status: "Connected", amps: 11.8, voltage: 678, temperature: 31 },
-    { label: "BK1. S03", status: "Disconnected", amps: 9.8, voltage: 670, temperature: 29 },
-    { label: "BK1. S04", status: "Connected", amps: 13.2, voltage: 682, temperature: 33 },
-    { label: "BK1. S05", status: "Connected", amps: 10.6, voltage: 675, temperature: 30 },
-    { label: "BK1. S06", status: "Disconnected", amps: 8.7, voltage: 665, temperature: 28 },
-    { label: "BK1. S07", status: "Connected", amps: 11.2, voltage: 679, temperature: 32 },
-  ];
+  const { devices } = useDevices();
+
+  const { data, fetchData } = useTimeseriesData();
+
+  const rackDevices = React.useMemo(() => {
+    if (!devices || !bankId) return [];
+
+    const match =
+      bankId.match(/pcs_(\d+)_bank_(\d+)/);
+
+    if (!match) return [];
+
+    const pcsNo = match[1];
+    const bankNo = match[2];
+
+    const bankPrefix =
+      `plant_1_pcs_${pcsNo}_bank_bank_${bankNo}_rack_rack_`;
+
+    return devices.filter((d: any) =>
+      d.device_id?.startsWith(bankPrefix)
+    );
+  }, [devices, bankId]);
+
+  React.useEffect(() => {
+    if (!rackDevices.length) return;
+
+    fetchData({
+      devices: {
+        ids: rackDevices.map((d: any) => d.device_id),
+        patterns: [],
+      },
+
+      keys: [
+        {
+          key: "voltage",
+          alias: "voltage",
+          keyType: "common",
+        },
+        {
+          key: "current",
+          alias: "current",
+          keyType: "common",
+        },
+        {
+          key: "avg_cell_temperature",
+          alias: "temperature",
+          keyType: "common",
+        },
+      ],
+
+      aggregation: {
+        func: "none",
+        interval: 1,
+        intervalType: "minute",
+      },
+
+      timeRange: {
+        type: "last",
+        interval: 1,
+        intervalType: "minute",
+      },
+
+      orderBy: "ASC",
+    } as any);
+  }, [rackDevices]);
+
+  const cards = React.useMemo(() => {
+    return rackDevices.map((rack: any, index: number) => {
+      const rackTs = (data as any)?.[rack.device_id] || {};
+
+      const voltage =
+        rackTs?.voltage?.[rackTs.voltage.length - 1]?.value ?? 0;
+
+      const current =
+        rackTs?.current?.[rackTs.current.length - 1]?.value ?? 0;
+
+      const temperature =
+        rackTs?.temperature?.[rackTs.temperature.length - 1]?.value ?? 0;
+
+      return {
+        label: `BK${index + 1}. S${String(index + 1).padStart(2, "0")}`,
+
+        status: Number(voltage) > 0 ? "Connected" : "Disconnected",
+
+        voltage,
+        amps: current,
+        temperature,
+
+        rackId: rack.device_id,
+      };
+    });
+  }, [rackDevices, data]);
 
   return (
     <Box w="454px" h="304px">
@@ -171,14 +269,15 @@ const StringConnectedLayout: React.FC = () => {
 
         <Box flex="1" overflowY="auto">
           <Grid templateColumns="203px 203px" autoRows="108px" gap="10px">
-            {CARDS.map((c) => (
+            {cards.map((c) => (
               <SmallBox
-                key={c.label}
+                key={c.rackId}
                 label={c.label}
-                status={c.status}
+                status={c.status as any}
                 amps={c.amps}
                 voltage={c.voltage}
                 temperature={c.temperature}
+                rackId={c.rackId}
               />
             ))}
           </Grid>

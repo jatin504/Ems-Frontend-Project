@@ -4,6 +4,7 @@ import SplineGraph from "../../../Graphs/RevampCharts/SplineGraph";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 import { useColorModeValue, Box } from "@chakra-ui/react";
+import useDateFormatterMargin from "../../../DateFormatter";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
 
 const MeterWidget = () => {
@@ -15,15 +16,15 @@ const MeterWidget = () => {
   } = useTimeHandle(
     12,
     "hour",
-    "avg",
-    [1, "hour"],
+    "none",
+    [1, "minute"],
     60000,
     {
       timeRange: {
-        type: "last",
+        type: "relative",
         relativeType: "currentDaySoFar",
-        interval: 12,
-        intervalType: "hour",
+        interval: 1,
+        intervalType: "minute",
       },
     }
   );
@@ -36,22 +37,12 @@ const MeterWidget = () => {
 
   /*  DATE STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isFullScreen, setIsFullScreen] = useState(false);
-
-  useEffect(() => {
-    const handleFs = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFs);
-    return () => document.removeEventListener("fullscreenchange", handleFs);
-  }, []);
 
   useEffect(() => {
     const tw = timeWindow.timeRange;
 
     if (tw.type === "absolute") {
-      setCurrentDate(new Date(tw.startTs));
+      setCurrentDate(new Date(tw.startTs ?? Date.now()));
     }
 
     if (tw.type === "relative") {
@@ -93,7 +84,7 @@ const MeterWidget = () => {
     end.setHours(23, 59, 59, 999);
 
     handleTimeWindowChange({
-      aggregation: timeWindowRef.current.aggregation,
+       aggregation: timeWindow.aggregation,
       orderBy: "ASC",
       timeRange: {
         type: "absolute",
@@ -145,51 +136,94 @@ const MeterWidget = () => {
 
   };
 
-  const fetchingToServerObj = {
-    dataSource: {
-      devices: {
-        patterns: [],
-        ids: ["plant_1_pcs_2_bank_bank_11"],
-      },
-      keys: [
-        { key: "active_power", alias: "Power", keyType: "common" },
-        { key: "reactive_power", alias: "Reactive Power", keyType: "common" },
-        { key: "fan_speed_11", alias: "Frequency", keyType: "common" },
-        { key: "phase_a_voltage", alias: "Voltage", keyType: "common" },
-        { key: "dc_bus_current", alias: "Current", keyType: "common" },
-      ],
-      aggregation: timeWindow.aggregation,
-      timeRange: timeWindow.timeRange,
-      orderBy: timeWindow.orderBy,
-    },
-  };
+  // removed memoized fetching payload; we'll construct request in the effect below
 
   const { data, fetchData } = useTimeseriesData();
 
   useEffect(() => {
-    fetchData(fetchingToServerObj.dataSource);
+    const loadData = () => {
+      fetchData({
+        devices: {
+          patterns: [],
+          ids: ["plant_1_ht_outgoing_meter_1"],
+        },
+        keys: [
+          {
+            key: "total_active_power",
+            alias: "Power (kW)",
+            keyType: "common",
+            type: "spline",
+          },
+          {
+            key: "total_reactive_power",
+            alias: "Power (kVAR)",
+            keyType: "common",
+            type: "spline",
+          },
+          {
+            key: "total_apparent_power",
+            alias: "Power (KVA)",
+            keyType: "common",
+            type: "spline",
+          },
+        ],
+        aggregation: timeWindow.aggregation,
+        timeRange: timeWindow.timeRange,
+        orderBy: "ASC",
+      } as any);
+    };
+
+    loadData();
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [timeWindow]);
 
   const seriesForChart = useMemo(() => {
 
-    if (!data) return [];
+    if (!data || typeof data !== "object") return [];
 
     const s: any[] = [];
 
     Object.values(data).forEach((deviceObj: any) => {
+
+      if (!deviceObj) return;
+
       Object.entries(deviceObj).forEach(([metric, pts]: any) => {
+
         if (Array.isArray(pts)) {
+
           s.push({
             type: "spline",
             name: metric,
-            data: pts.map((p: any) => [p.ts, p.value]),
-            marker: { enabled: true },
+
+            data: pts
+              .filter(
+                (p: any) =>
+                  p &&
+                  p.ts &&
+                  p.value !== null &&
+                  p.value !== undefined &&
+                  !isNaN(Number(p.value))
+              )
+              .map((p: any) => [Number(p.ts), Number(p.value)])
+              .sort((a: any, b: any) => a[0] - b[0]),
+
+            marker: {
+              enabled: false,
+            },
           });
+
         }
+
       });
+
     });
 
-    return s;
+    return s.length ? s : [{}];
 
   }, [data]);
 
@@ -207,6 +241,11 @@ const MeterWidget = () => {
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
+  const dateFormatterMargin = useDateFormatterMargin({
+    fullScreenMargin: "900",
+    normalMargin: "130px",
+  });
+
   return (
     <GraphLayout
       title={
@@ -214,7 +253,7 @@ const MeterWidget = () => {
           <Box fontWeight="600">Meter Data</Box>
 
           <Box
-            ml={isFullScreen ? "900px" : "130px"}
+            ml={dateFormatterMargin}
             display="flex"
             alignItems="center"
             bg={useColorModeValue("gray.100", "gray.700")}
@@ -263,6 +302,18 @@ const MeterWidget = () => {
             labels: { style: { color: subTextColor } },
             lineColor: axisLineColor,
             gridLineColor: gridColor,
+          },
+          plotOptions: {
+            series: {
+              connectNulls: false,
+              turboThreshold: 5000,
+            },
+            spline: {
+              lineWidth: 2,
+              marker: {
+                enabled: false,
+              },
+            },
           },
           tooltip: { shared: true },
           legend: { align: "center", verticalAlign: "bottom" },

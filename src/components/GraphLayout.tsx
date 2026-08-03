@@ -95,10 +95,10 @@ const GraphLayout : React.FC<GraphType> = ({children, title, height, id}) => {
           zIndex={10}
         />
         <MenuList bg="gray.900" color="black">
-          <MenuItem onClick={() => console.log('Download PNG clicked')}>
+          <MenuItem onClick={() => ('Download PNG clicked')}>
             Download PNG
           </MenuItem>
-          <MenuItem onClick={() => console.log('Download CSV clicked')}>
+          <MenuItem onClick={() =>('Download CSV clicked')}>
             Download CSV
           </MenuItem>
         </MenuList>

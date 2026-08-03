@@ -172,7 +172,11 @@ const createBand = (
 };
 
 /* ---------------- COMPONENT ---------------- */
-const PCSSoCGraph: React.FC = () => {
+interface PCSSoCGraphProps {
+  hideWrapper?: boolean;
+}
+
+const PCSSoCGraph: React.FC<PCSSoCGraphProps> = ({ hideWrapper }) => {
   const [selectedDevice, setSelectedDevice] = useState<string>("ALL");
   const [deviceOptions, setDeviceOptions] = useState<{ id: string; label: string }[]>([]);
 
@@ -283,6 +287,80 @@ series.push({
     return series;
   }, [filteredData]);
 
+  if (hideWrapper) {
+    return (
+      <SpineGraph
+        apiData={seriesForChart}
+        height={265}
+        onExportReady={setExportFunctions}
+        props={{
+          /*CHART FIX (important for 100%) */
+          chart: {
+            spacingRight: 40,
+            marginRight: 40,
+          },
+
+          yAxis: {
+            tickAmount: 6,
+            // title: { text: "Values" },
+            labels: { style: { color: textColor } },
+            gridLineColor: gridColor,
+          },
+
+          xAxis: {
+            type: "datetime",
+            plotBands,
+            crosshair: {
+              color: "rgba(255,255,255,0.15)",
+              width: 1,
+            },
+            labels: { style: { color: subTextColor } },
+            lineColor: "transparent",
+            gridLineColor: "transparent",
+            gridLineDashStyle: "ShortDot",
+            gridLineWidth: 0,
+
+            /* RIGHT CUT FIX */
+            endOnTick: false,
+            startOnTick: false,
+            minPadding: 0.02,
+            maxPadding: 0.1,
+            showLastLabel: true,
+          },
+
+          legend: {
+            enabled: true,
+            align: "center",
+            verticalAlign: "bottom",
+            layout: "horizontal",
+            itemStyle: { color: textColor },
+          },
+          tooltip: {
+            shared: true,
+            backgroundColor: useColorModeValue(
+              "#fff",
+              "rgba(24,24,27,0.95)"
+            ),
+            style: { color: textColor },
+            xDateFormat: "%d %b %Y %H:%M",
+            formatter: function (this: any) {
+              let tooltip = `<b>${new Date(this.x).toLocaleString()}</b><br/>`;
+              this.points.forEach((point: any) => {
+                let suffix = "";
+                const seriesName = point.series.name;
+                if (seriesName.includes("SoC")) suffix = " %";
+                else if (seriesName.includes("Voltage")) suffix = " V";
+                else if (seriesName.includes("Current")) suffix = " A";
+                tooltip += `${seriesName}: <b>${point.y}${suffix}</b><br/>`;
+              });
+              return tooltip;
+            },
+          },
+        }}
+      />
+    );
+  }
+
   return (
     <GraphLayout
       title={
@@ -323,7 +401,7 @@ series.push({
     >
       <SpineGraph
         apiData={seriesForChart}
-        height={260}
+        height={240}
         onExportReady={setExportFunctions}
         props={{
           /*CHART FIX (important for 100%) */
@@ -347,10 +425,10 @@ series.push({
               width: 1,
             },
             labels: { style: { color: subTextColor } },
-            lineColor: axisLineColor,
-            gridLineColor: gridColor,
+            lineColor: "transparent",
+            gridLineColor: "transparent",
             gridLineDashStyle: "ShortDot",
-            gridLineWidth: 1,
+            gridLineWidth: 0,
 
             /* RIGHT CUT FIX */
             endOnTick: false,

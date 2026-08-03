@@ -131,7 +131,25 @@ const StringsTable: React.FC<{ bankNum?: number }> = ({ bankNum = 1 }) => {
   const zebra = useColorModeValue("#f8fafc", "#FFFFFF0F");
 
   // Get timeWindow from hook
-  const timeWindow = useTimeHandle();
+  const {
+    config: timeWindow,
+    handleTimeWindowChange,
+    handleReset,
+  } = useTimeHandle(
+    12,
+    "hour",
+    "avg",
+    [1, "hour"],
+    60000,
+    {
+      timeRange: {
+        type: "last",
+        relativeType: "currentDaySoFar",
+        interval: 12,
+        intervalType: "hour",
+      },
+    }
+  );
 
   // Modal state for chart
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -162,13 +180,13 @@ const StringsTable: React.FC<{ bankNum?: number }> = ({ bankNum = 1 }) => {
         { key: "bcu_1_soc", alias: "SOC", keyType: "common" },
         { key: "bcu_1_soe", alias: "SOE", keyType: "common" },
       ],
-      aggregation: timeWindow.config.aggregation,
-      timeRange: timeWindow.config.timeRange,
-      orderBy: "ASC" as const,
+      aggregation: timeWindow.aggregation,
+      timeRange: timeWindow.timeRange,
+      orderBy: timeWindow.orderBy,
     };
 
     fetchTimeseriesData(dataSource);
-  }, [isOpen, selectedRawDeviceId, timeWindow.config.aggregation, timeWindow.config.timeRange]);
+  }, [isOpen, selectedRawDeviceId, timeWindow.aggregation, timeWindow.timeRange, timeWindow.orderBy]);
 
   // API data fetching from multiple-latest-devices
   const [dataMap, setDataMap] = React.useState<Record<string, any>>({});
@@ -200,8 +218,10 @@ const StringsTable: React.FC<{ bankNum?: number }> = ({ bankNum = 1 }) => {
       return;
     }
 
-    // Find all string device IDs in data
-    const stringIds = Object.keys(widgetData);
+    // Find all string device IDs in data, excluding rack-level IDs
+    const stringIds = Object.keys(widgetData).filter(
+      (deviceId) => !/rack_rack_/i.test(deviceId)
+    );
     const idMap: Record<string, string> = {};
     
     const mapped: Row[] = stringIds.map((deviceId) => {

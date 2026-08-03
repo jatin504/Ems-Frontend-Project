@@ -14,21 +14,40 @@ import {
    ========================= */
 export const Led = ({
   label,
-  on = true,
+  color = "gray",
 }: {
   label: string;
-  on?: boolean;
+  color?: "green" | "red" | "gray";
 }) => {
+
+  const bg =
+    color === "green"
+      ? "#3CB371"
+      : color === "red"
+      ? "#FF4D4F"
+      : "#D1D5DB";
+
+  const border =
+    color === "green"
+      ? "#2F855A"
+      : color === "red"
+      ? "#C53030"
+      : "#A0AEC0";
+
   return (
     <HStack spacing={3} align="center">
       <Box
         width="42px"
         height="14px"
-        bg={on ? "#3CB371" : "#D1D5DB"}
+        bg={bg}
         borderRadius="3px"
-        border="1px solid #2F855A"
+        border={`1px solid ${border}`}
       />
-      <Text fontSize="12px" lineHeight="1">
+
+      <Text
+        fontSize="12px"
+        lineHeight="1"
+      >
         {label}
       </Text>
     </HStack>
@@ -61,7 +80,7 @@ export const Section = ({
       display="flex"
       flexDirection="column"
     >
-      {/* TITLE (UNCHANGED) */}
+      {/* TITLE  */}
       <Text
         fontSize="12px"
         fontWeight="bold"
@@ -73,7 +92,7 @@ export const Section = ({
         {title}
       </Text>
 
-      {/* CONTENT (UNCHANGED) */}
+      {/* CONTENT  */}
       <Flex flex="1" align="center" justify="center">
         <VStack align="start" spacing={1}>
           {children}

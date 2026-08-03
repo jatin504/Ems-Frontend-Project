@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Heading,
@@ -6,7 +6,6 @@ import {
   Tbody,
   Tr,
   Td,
-  Text,
   useColorModeValue,
   IconButton,
   Modal,
@@ -18,6 +17,8 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { BsThreeDots } from "react-icons/bs";
+import useTimeseriesData from "../../../../hooks/useTimeseriesData";
+import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import SplineGraph from "../../../../components/Graphs/RevampCharts/SplineGraph";
 import GraphLayout from "../../../../components/Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 
@@ -29,56 +30,200 @@ type ModuleRow = {
   volt: string;
 };
 
-const rows: ModuleRow[] = Array.from({ length: 12 }).map((_, i) => ({
-  id: `S02.M${String(i + 1).padStart(2, "0")}`,
-  maxTemp: `${(28 + Math.random() * 2.5).toFixed(2)} °C  Max.`,
-  maxVolt: `${(3.75 + Math.random() * 0.15).toFixed(2)} V  Max.`,
-  current: `${(15 + Math.random() * 25).toFixed(2)} Current`,
-  volt: `${(400 + Math.random() * 50).toFixed(2)} Volt`,
-}));
-
 export default function ModulesTable() {
+  const [rows, setRows] = useState<ModuleRow[]>([]);
+  const [deviceIdMap, setDeviceIdMap] = useState<Record<string, string>>({});
+  const [selectedRawDeviceId, setSelectedRawDeviceId] = useState<string>("");
+
   const cardBg = useColorModeValue("#ffffff", "#161B1B");
   const cardBorder = useColorModeValue("#e5e7eb", "#1c2635");
   const headingColor = useColorModeValue("#0f172a", "gray.300");
   const textColor = useColorModeValue("#0f172a", "gray.300");
   const zebra = useColorModeValue("#f8fafc", "#FFFFFF0F");
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { data: tableTimeseriesData, fetchData: fetchTableData } = useTimeseriesData();
+  const { data: chartTimeseriesData, fetchData: fetchChartData } = useTimeseriesData();
+  const { config: timeWindow } = useTimeHandle(
+    12,
+    "hour",
+    "avg",
+    [1, "hour"],
+    60000,
+    {
+      timeRange: {
+        type: "last",
+        relativeType: "currentDaySoFar",
+        interval: 12,
+        intervalType: "hour",
+      },
+    }
+  );
+
+    const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedModuleId, setSelectedModuleId] = useState<string>("");
 
-  const openChartModal = (moduleId: string) => {
-    setSelectedModuleId(moduleId);
+  const openChartModal = (displayId: string, rawDeviceId?: string) => {
+    setSelectedModuleId(displayId);
+    setSelectedRawDeviceId(rawDeviceId || "");
+    console.log("Selected Device:", rawDeviceId);
     onOpen();
   };
 
-  // Generate dummy chart data
-  const getChartSeriesData = () => {
-    const now = Date.now();
-    const data: any[] = [];
+  useEffect(() => {
+    fetchTableData({
+      devices: {
+        patterns: ["rack_rack_"],
+        ids: [],
+      },
+      keys: [
+        {
+          key: "voltage",
+          alias: "Volt",
+          keyType: "common",
+        },
+        {
+          key: "current",
+          alias: "Current",
+          keyType: "common",
+        },
+        {
+          key: "max_cell_temperature",
+          alias: "max_temp",
+          keyType: "common",
+        },
+        {
+          key: "max_cell_voltage",
+          alias: "max_volt",
+          keyType: "common",
+        },
+      ],
+      aggregation: {
+        func: "none",
+        interval: 1,
+        intervalType: "minute",
+      },
+      timeRange: {
+        type: "last",
+        interval: 1,
+        intervalType: "minute",
+      },
+      orderBy: "ASC",
+    } as any);
+  }, []);
 
-    // Generate 24 hours of dummy data
-    for (let i = 0; i < 24; i++) {
-      const timestamp = now - (23 - i) * 3600000;
-      data.push({
-        timestamp,
-        currentValue: 15 + Math.random() * 25,
-        voltValue: 400 + Math.random() * 50,
-      });
+  useEffect(() => {
+    if (!tableTimeseriesData || typeof tableTimeseriesData !== "object") {
+      setRows([]);
+      setDeviceIdMap({});
+      return;
     }
 
-    return [
-      {
-        name: "Current",
-        data: data.map((d) => [d.timestamp, d.currentValue]),
-        color: "#3182ce",
+    const idMap: Record<string, string> = {};
+    const mapped: ModuleRow[] = Object.entries(tableTimeseriesData).map(
+      ([deviceId, deviceObj]) => {
+        let name = deviceId;
+        const rackMatch = deviceId.match(/rack_rack_(\d+)/i);
+        if (rackMatch) {
+          name = `Rack-${rackMatch[1]}`;
+        }
+
+        idMap[name] = deviceId;
+
+        const getLast = (keyName: string) => {
+          const points = deviceObj?.[keyName] || [];
+          if (!Array.isArray(points) || points.length === 0) return "--";
+          const last = points[points.length - 1];
+          return last?.value !== undefined && last?.value !== null
+            ? typeof last.value === "number"
+              ? last.value.toFixed(2)
+              : String(last.value)
+            : "--";
+        };
+
+        const formatValue = (value: string, unit: string) =>
+          value === "--" ? value : `${value} ${unit}`;
+
+        return {
+          id: name,
+          maxTemp: formatValue(getLast("max_temp"), "°C Max."),
+          maxVolt: formatValue(getLast("max_volt"), "V Max."),
+          current: formatValue(getLast("Current"), "A"),
+          volt: formatValue(getLast("Volt"), "V"),
+        };
+      }
+    );
+
+    setDeviceIdMap(idMap);
+    setRows(mapped);
+  }, [tableTimeseriesData]);
+
+  useEffect(() => {
+    if (!isOpen || !selectedRawDeviceId) return;
+
+    const dataSource = {
+      devices: {
+        patterns: [],
+        ids: [selectedRawDeviceId],
       },
-      {
-        name: "Volt",
-        data: data.map((d) => [d.timestamp, d.voltValue]),
-        color: "#ed8936",
-      },
-    ];
+      keys: [
+        { key: "current", alias: "Current", keyType: "common" },
+        { key: "voltage", alias: "Volt", keyType: "common" },
+      ],
+      aggregation: timeWindow.aggregation,
+      timeRange: timeWindow.timeRange,
+      orderBy: timeWindow.orderBy,
+    } as any;
+
+    fetchChartData(dataSource);
+  }, [isOpen, selectedRawDeviceId, timeWindow.aggregation, timeWindow.timeRange, timeWindow.orderBy]);
+
+  useEffect(() => {
+    console.log(chartTimeseriesData);
+  }, [chartTimeseriesData]);
+
+  const getChartSeriesData = () => {
+    if (!chartTimeseriesData || typeof chartTimeseriesData !== "object") return [];
+
+    const allSeries: any[] = [];
+
+    Object.entries(chartTimeseriesData).forEach(([deviceKey, deviceObj]) => {
+      if (typeof deviceObj === "object" && deviceObj !== null) {
+        const currentData = deviceObj["Current"];
+        const voltData = deviceObj["Volt"];
+
+        if (currentData !== undefined && currentData !== null) {
+          const dataPoints = Array.isArray(currentData)
+            ? currentData.map((p: any) => [p.ts, p.value])
+            : typeof currentData === "object" && "value" in currentData
+            ? [[Date.now(), currentData.value]]
+            : [];
+          if (dataPoints.length > 0) {
+            allSeries.push({
+              name: "Current",
+              data: dataPoints,
+              color: "#3182ce",
+            });
+          }
+        }
+
+        if (voltData !== undefined && voltData !== null) {
+          const dataPoints = Array.isArray(voltData)
+            ? voltData.map((p: any) => [p.ts, p.value])
+            : typeof voltData === "object" && "value" in voltData
+            ? [[Date.now(), voltData.value]]
+            : [];
+          if (dataPoints.length > 0) {
+            allSeries.push({
+              name: "Volt",
+              data: dataPoints,
+              color: "#ed8936",
+            });
+          }
+        }
+      }
+    });
+
+    return allSeries;
   };
 
   return (
@@ -134,7 +279,7 @@ export default function ModulesTable() {
                     icon={<BsThreeDots />}
                     size="sm"
                     variant="ghost"
-                    onClick={() => openChartModal(m.id)}
+                    onClick={() => openChartModal(m.id, deviceIdMap[m.id])}
                   />
                 </Td>
               </Tr>
@@ -144,28 +289,28 @@ export default function ModulesTable() {
       </Box>
 
       {/* Modal for viewing chart */}
-      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-        <ModalOverlay />
-        <ModalContent bg={cardBg} maxW="90vw" _hover={{ bg: cardBg }}>
-          <ModalHeader color={textColor} _hover={{ color: textColor }}>
-            Parameters Chart - {selectedModuleId}
+      <Modal isOpen={isOpen} onClose={onClose} size="md">
+        <ModalOverlay backdropFilter="blur(4px)" bg="rgba(0,0,0,0.3)" />
+        <ModalContent bg={cardBg} maxW="700px" boxShadow="lg" _hover={{ bg: cardBg }}>
+          <ModalHeader color={textColor} fontSize="sm" fontWeight="600" pb={1} _hover={{ color: textColor }}>
+            {selectedModuleId}
           </ModalHeader>
-          <ModalCloseButton color={textColor} _hover={{ color: textColor }} />
-          <ModalBody pb={6}>
+          <ModalCloseButton color={textColor} size="sm" _hover={{ color: textColor }} />
+          <ModalBody pb={2} px={2}>
             <GraphLayout
-              title={`Chart - ${selectedModuleId}`}
-              width="100%"
-              height="600px"
+              title=""
+              width={["100%"]}
+              height="360px"
               bg={cardBg}
-              fullScreen={true}
-              downloadOption={true}
+              fullScreen={false}
+              downloadOption={false}
               timeWindow={false}
             >
               <SplineGraph
                 apiData={getChartSeriesData()}
-                height={450}
+                height={320}
                 bg={cardBg}
-                legendHeight={60}
+                legendHeight={40}
                 props={{
                   legend: {
                     align: 'center',
@@ -173,8 +318,8 @@ export default function ModulesTable() {
                     floating: false,
                     layout: 'horizontal',
                     useHTML: true,
-                    itemStyle: { fontSize: '13px', fontWeight: '500' },
-                    symbolPadding: 8,
+                    itemStyle: { fontSize: '11px', fontWeight: '500' },
+                    symbolPadding: 6,
                     x: 0,
                     y: 0,
                   },
@@ -182,7 +327,7 @@ export default function ModulesTable() {
                     series: {
                       marker: {
                         enabled: true,
-                        radius: 4,
+                        radius: 3,
                         lineWidth: 0,
                         fillOpacity: 1,
                       },
@@ -191,7 +336,7 @@ export default function ModulesTable() {
                           enabled: true,
                           marker: {
                             enabled: true,
-                            radius: 4,
+                            radius: 3,
                             lineWidth: 0,
                             fillOpacity: 1,
                           },

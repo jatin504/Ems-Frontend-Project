@@ -122,29 +122,38 @@ const TemperatureGraph: React.FC = () => {
   const isPCS = tabIndex === 0;
 
   const fetchingToServerObj = {
-    dataSource: {
-      devices: {
-        patterns: isPCS ? ["_bank_bank_"] : ["_bank_bank_"],
-        ids: [],
+  dataSource: {
+    devices: isPCS
+      ? {
+          patterns: ["_bank_bank_"],
+          ids: [],
+        }
+      : {
+          ids: [],
+          patterns: ["_inverter_inverter_"],
+        },
+
+    keys: [
+      {
+        key: isPCS
+          ? "active_power"
+          : "active_power",
+
+        alias: isPCS
+          ? "active_power"
+          : "active_power",
+
+        keyType: "timeseries",
+        chartType: "line",
+        color: "#10B981",
       },
-      keys: [
-  {
-    key: isPCS
-      ? "battery_cabin_temperature_3"
-      : "active_power",
-    alias: isPCS
-      ? "Temperature 3 (°C)"
-      : "Active Power",
-    keyType: "common",
-    type: "spline",
-    color: "#10B981",
+    ],
+
+    aggregation: timeWindowTemp.aggregation,
+    timeRange: timeWindowTemp.timeRange,
+    orderBy: timeWindowTemp.orderBy,
   },
-],
-      aggregation: timeWindowTemp.aggregation,
-      timeRange: timeWindowTemp.timeRange,
-      orderBy: timeWindowTemp.orderBy,
-    },
-  };
+};
 
   const { data, fetchData } = useTimeseriesData();
 
@@ -159,6 +168,33 @@ const TemperatureGraph: React.FC = () => {
 
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
+
+  const seriesForChart = useMemo(() => {
+  if (!data) return [];
+
+  const palette = [
+    "#10B981",
+    "#3B82F6",
+    "#F59E0B",
+    "#EF4444",
+    "#8B5CF6",
+    "#06B6D4",
+    "#84CC16",
+    "#F43F5E",
+    "#6366F1",
+    "#14B8A6",
+  ];
+
+  return transformToHighchartsTimeSeries(
+    data,
+    fetchingToServerObj.dataSource.keys
+  ).map((series: any, index: number) => ({
+    ...series,
+    type: "line",              // <-- add this
+    name: `${series.name}-${index}`, // <-- unique name
+    color: palette[index % palette.length],
+  }));
+}, [data]);
 
   return (
     <GraphLayout
@@ -219,30 +255,16 @@ const TemperatureGraph: React.FC = () => {
         <TabPanels flex="1" overflow="hidden">
           <TabPanel height="100%" p={0}>
             <SpineGraph
-              apiData={
-                data
-                  ? transformToHighchartsTimeSeries(
-                      data,
-                      fetchingToServerObj.dataSource.keys
-                    )
-                  : [{}]
-              }
-              height="45%"
+              apiData={seriesForChart}
+              height="260"
               onExportReady={setExportFunctions}
             />
           </TabPanel>
 
           <TabPanel height="100%" p={0}>
             <SpineGraph
-              apiData={
-                data
-                  ? transformToHighchartsTimeSeries(
-                      data,
-                      fetchingToServerObj.dataSource.keys
-                    )
-                  : [{}]
-              }
-              height="45%"
+              apiData={seriesForChart}
+              height="260px"
               onExportReady={setExportFunctions}
             />
           </TabPanel>

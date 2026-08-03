@@ -3,6 +3,13 @@ import React, { useMemo } from "react";
 import {
   Box, Heading, VStack, Text, Flex, Button, Select, useToast,
   Table, Thead, Tbody, Tr, Th, Td, Input, Radio, RadioGroup, Stack, Checkbox,
+  Tooltip,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverBody,
+  PopoverArrow,
+  IconButton,
   useColorModeValue,
   Breadcrumb,
   BreadcrumbItem,
@@ -13,10 +20,11 @@ import ReactSelect, { components as reactSelectComponents } from "react-select";
 import useReports from "../hooks/useReports";
 import useReportTemplate from "../hooks/useReportTemplate";
 import useReportsApi from "../hooks/useReportsApi";
+import { ExportReportToExcel } from "../hooks/ExportReportToExcel";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronRightIcon } from "@chakra-ui/icons";
+import { ChevronRightIcon, ViewIcon } from "@chakra-ui/icons";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 6;
 
 const LIVE_OPTIONS = [
   { value: "last_1_hour", label: "Last 1 hour" },
@@ -64,10 +72,12 @@ export default function ReportDashboard() {
   const [email, setEmail] = React.useState(editTemplate?.email ?? "");
   const [scheduleTime, setScheduleTime] = React.useState(editTemplate?.scheduleTime ?? "");
   const [scheduleLive, setScheduleLive] = React.useState(editTemplate?.scheduleLive ?? "");
-  // ⭐ NEW (5 minute scheduler support)
+  //  NEW (5 minute scheduler support)
   const [scheduleMinute, setScheduleMinute] = React.useState(
     editTemplate?.scheduleMinute ?? "0"
   );
+
+  
 
 
   React.useEffect(() => {
@@ -188,32 +198,32 @@ export default function ReportDashboard() {
         navigate("/report/template");
         return;
       }
-        try {
-          const shouldSchedule =
-            payload.scheduleTime !== "" &&
-            payload.scheduleTime !== null &&
-            payload.scheduleLive !== "" &&
-            payload.scheduleLive !== null &&
-            Number(payload.scheduleLive) > 0;
+      try {
+        const shouldSchedule =
+          payload.scheduleTime !== "" &&
+          payload.scheduleTime !== null &&
+          payload.scheduleLive !== "" &&
+          payload.scheduleLive !== null &&
+          Number(payload.scheduleLive) > 0;
 
-          await saveOrSchedule(payload, schedule, shouldSchedule);
-          toast({
-            title: "Template saved!",
-            description: `Report "${reportName}" saved for ${schedule}${schedule === "email" ? ` (${email})` : ""}.`,
-            status: "success", duration: 3000, isClosable: true,
-          });
-          try {
-            navigate("/report/template");
-          } catch (e) {
-            // ignore navigation errors in non-router environments
-          }
-        } catch (err: any) {
-          toast({
-            title: "Error saving template",
-            description: err?.message || "Unknown error",
-            status: "error", duration: 3000, isClosable: true,
-          });
+        await saveOrSchedule(payload, schedule, shouldSchedule);
+        toast({
+          title: "Template saved!",
+          description: `Report "${reportName}" saved for ${schedule}${schedule === "email" ? ` (${email})` : ""}.`,
+          status: "success", duration: 3000, isClosable: true,
+        });
+        try {
+          navigate("/report/template");
+        } catch (e) {
+          // ignore navigation errors in non-router environments
         }
+      } catch (err: any) {
+        toast({
+          title: "Error saving template",
+          description: err?.message || "Unknown error",
+          status: "error", duration: 3000, isClosable: true,
+        });
+      }
     } catch (err: any) {
       toast({
         title: "Network error",
@@ -287,6 +297,8 @@ export default function ReportDashboard() {
                   <option value="weekly" style={{ color: "black" }}>Week</option>
                   <option value="monthly" style={{ color: "black" }}>Month</option>
                   <option value="quarterly" style={{ color: "black" }}>Quarter</option>
+                  <option value="yearly" style={{ color: "black" }}> Year  </option>
+
                 </Select>
               </VStack>
             )}
@@ -317,11 +329,41 @@ export default function ReportDashboard() {
 
             <VStack align="start" minW="200px" flex="1">
               <Text fontWeight="semibold">Interval</Text>
-              <Select value={selectedInterval} onChange={(e) => setSelectedInterval(e.target.value)} color={fg} bg={inputBg} borderColor={borderClr}>
-                <option value="1min" style={{ color: "black" }}>1 min</option>
-                <option value="15min" style={{ color: "black" }}>15 min</option>
-                <option value="1hr" style={{ color: "black" }}>1 hour</option>
-                <option value="1day" style={{ color: "black" }}>1 day</option>
+              <Select
+                value={selectedInterval}
+                onChange={(e) => setSelectedInterval(e.target.value)}
+                color={fg}
+                bg={inputBg}
+                borderColor={borderClr}
+              >
+                <option value="1min" style={{ color: "black" }}>
+                  1 min
+                </option>
+
+                <option value="15min" style={{ color: "black" }}>
+                  15 min
+                </option>
+
+                <option value="1hr" style={{ color: "black" }}>
+                  1 hour
+                </option>
+
+                <option value="1day" style={{ color: "black" }}>
+                  1 day
+                </option>
+
+                {/* NEW */}
+                <option value="1week" style={{ color: "black" }}>
+                  1 week
+                </option>
+
+                <option value="1month" style={{ color: "black" }}>
+                  1 month
+                </option>
+
+                <option value="1year" style={{ color: "black" }}>
+                  1 year
+                </option>
               </Select>
             </VStack>
           </Flex>
@@ -353,14 +395,43 @@ export default function ReportDashboard() {
 
             {/* Device ID */}
             <VStack align="start" minW="420px" flex="2" w="100%">
-              <Text fontWeight="semibold">Device ID</Text>
+              <HStack spacing={2}>
+                <Text fontWeight="semibold">Device ID</Text>
+
+                {selectedDeviceIds.length > 0 && (
+                  <Popover placement="right-start" gutter={48} strategy="fixed">
+                    <PopoverTrigger>
+                      <IconButton aria-label="view devices" size="sm" variant="ghost" icon={<ViewIcon />} />
+                    </PopoverTrigger>
+
+                    <PopoverContent w="450px" maxW="450px" ml={20}>
+                      <PopoverArrow />
+                      <PopoverBody maxH="300px" overflowY="auto">
+                        <Text fontWeight="bold" mb={2}>
+                          Selected Devices ({selectedDeviceIds.length})
+                        </Text>
+
+                        {selectedDeviceIds.map((item) => (
+                          <Text key={item} fontSize="sm" py={1}>• {item}</Text>
+                        ))}
+                      </PopoverBody>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </HStack>
+
               <Box w="420px">
-                <ReactSelect
+                  <ReactSelect
                   isMulti
                   isSearchable
+                  controlShouldRenderValue={false}
                   closeMenuOnSelect={false}
                   hideSelectedOptions={false}
-                  placeholder={selectedDeviceTypes.length === 0 ? "Select type first" : "Select device IDs"}
+                  placeholder={
+                    selectedDeviceIds.length > 0
+                      ? `${selectedDeviceIds.length} selected`
+                      : "Select device IDs"
+                  }
                   isDisabled={selectedDeviceTypes.length === 0}
                   value={
                     selectedDeviceIds.length === allDeviceIds.length && allDeviceIds.length > 0
@@ -401,34 +472,50 @@ export default function ReportDashboard() {
                         </HStack>
                       </reactSelectComponents.Option>
                     ),
-                    ValueContainer: (props) => {
-                      const count = selectedDeviceIds.length;
-                      return (
-                        <reactSelectComponents.ValueContainer {...props}>
-                          {props.children}
-                          {count > 1 && (
-                            <HStack pl={2} ml={2} spacing={2} align="center">
-                              <Text fontWeight="bold">{count} selected</Text>
-                            </HStack>
-                          )}
-                        </reactSelectComponents.ValueContainer>
-                      );
-                    },
                   }}
-                />
-              </Box>
+                  />
+                </Box>
             </VStack>
 
             {/* Parameter */}
             <VStack align="start" minW="420px" flex="2" w="100%">
-              <Text fontWeight="semibold">Parameter</Text>
+              <HStack spacing={2}>
+                <Text fontWeight="semibold">Parameter</Text>
+
+                {selectedParams.length > 0 && (
+                  <Popover placement="right-start" gutter={140} strategy="fixed">
+                    <PopoverTrigger>
+                      <IconButton aria-label="view parameters" size="sm" variant="ghost" icon={<ViewIcon />} />
+                    </PopoverTrigger>
+
+                    <PopoverContent w="350px" maxW="350px" ml={30}>
+                      <PopoverArrow />
+                      <PopoverBody maxH="300px" overflowY="auto">
+                        <Text fontWeight="bold" mb={2}>
+                          Selected Parameters ({selectedParams.length})
+                        </Text>
+
+                        {selectedParams.map((item) => (
+                          <Text key={item} fontSize="sm" py={1}>• {item}</Text>
+                        ))}
+                      </PopoverBody>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </HStack>
+
               <Box w="420px">
-                <ReactSelect
+                  <ReactSelect
                   isMulti
                   isSearchable
+                  controlShouldRenderValue={false}
                   closeMenuOnSelect={false}
                   hideSelectedOptions={false}
-                  placeholder="Select parameters"
+                  placeholder={
+                    selectedParams.length > 0
+                      ? `${selectedParams.length} selected`
+                      : "Select parameters"
+                  }
                   value={
                     selectedParams.length === allDeviceColumns.length && allDeviceColumns.length > 0
                       ? [{ label: "All", value: "__ALL_PARAMS__" }]
@@ -468,22 +555,9 @@ export default function ReportDashboard() {
                         </HStack>
                       </reactSelectComponents.Option>
                     ),
-                    ValueContainer: (props) => {
-                      const count = selectedParams.length;
-                      return (
-                        <reactSelectComponents.ValueContainer {...props}>
-                          {props.children}
-                          {count > 1 && (
-                            <HStack pl={2} ml={2} spacing={2} align="center">
-                              <Text fontWeight="bold">{count} selected</Text>
-                            </HStack>
-                          )}
-                        </reactSelectComponents.ValueContainer>
-                      );
-                    },
                   }}
-                />
-              </Box>
+                  />
+                </Box>
             </VStack>
           </Flex>
         </Box>
@@ -498,7 +572,7 @@ export default function ReportDashboard() {
 
             <VStack align="start" minW="200px" flex="1">
               <Text fontWeight="semibold">Schedule</Text>
-              <RadioGroup value={schedule} onChange={setSchedule}>
+              <RadioGroup value={schedule} onChange={(val: string) => setSchedule(val as "email" | "self")}>
                 <Stack direction="row">
                   <Radio value="self">Self</Radio>
                   <Radio value="email">Email</Radio>
@@ -546,13 +620,32 @@ export default function ReportDashboard() {
         </Flex>
 
         {/* Report Table */}
-        <Box w="80%" bg={tableBg} p={4} rounded="xl" mt={4} border="1px solid" borderColor={borderClr}>
-          <Flex justify="space-between" align="center" mb={4}>
+        <Box
+          w="80%"
+          bg={tableBg}
+          rounded="xl"
+          mt={4}
+          border="1px solid"
+          borderColor={borderClr}
+          overflow="hidden"
+        >
+          <Flex
+            justify="space-between"
+            align="center"
+            position="sticky"
+            top="0"
+            zIndex={100}
+            bg={tableBg}
+            px={4}
+            py={4}
+            borderBottom="1px solid"
+            borderColor={borderClr}
+          >
             <Heading size="md" color={fg}>Report Data</Heading>
             <Button
               colorScheme="blue"
               variant="solid"
-              onClick={() => {
+              onClick={async () => {
                 if (!reportData || reportData.length === 0) {
                   toast({
                     title: "No data to download.",
@@ -562,59 +655,98 @@ export default function ReportDashboard() {
                   });
                   return;
                 }
-                const headers = ["Timestamp", ...selectedParams.map(p => p.charAt(0).toUpperCase() + p.slice(1))];
-                // Collect all unique keys from all rows to ensure all columns are present
-                let allHeadersSet = new Set<string>();
-                reportData.forEach(row => Object.keys(row).forEach(k => allHeadersSet.add(k)));
-                let allHeaders = Array.from(allHeadersSet);
-                if (allHeaders.includes('timestamp')) {
-                  allHeaders = ['timestamp', ...allHeaders.filter(h => h !== 'timestamp')];
-                }
-                // Ensure every row has all columns (fill missing with empty string)
-                const rows = reportData.map((row: any) =>
-                  allHeaders.map(header => (header in row ? row[header] : ""))
-                );
-                const csvContent =
-                  [allHeaders, ...rows]
-                    .map(r => r.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(","))
-                    .join("\r\n");
-                const blob = new Blob([csvContent], { type: "text/csv" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${reportName || "report"}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+
+                const groupedData = {
+                  Report: reportData.map((row: any) => {
+
+                    const formattedRow: any = {};
+
+                    Object.keys(row).forEach((key) => {
+
+                      // skip unit columns
+                      if (key.endsWith("_unit")) return;
+
+                      if (key === "timestamp") {
+                        formattedRow["time_stamp"] = row[key];
+                      } else {
+
+                        const unit = row[`${key}_unit`] || "";
+
+                        formattedRow[key] =
+                          row[key] !== null &&
+                          row[key] !== undefined
+                            ? `${row[key]} ${unit}`.trim()
+                            : "";
+                      }
+                    });
+
+                    return formattedRow;
+                  }),
+                };
+
+                console.log("DOWNLOAD CLICKED");
+                await ExportReportToExcel({
+                  title: reportName || "Report",
+                  createdAt: new Date().toLocaleString(),
+                  data: groupedData,
+                });
               }}
               isDisabled={!reportData || reportData.length === 0}
             >
-              Download CSV
+              Download Excel
             </Button>
           </Flex>
           {reportData && reportData.length > 0 ? (
             <>
-              <Table variant="simple" colorScheme="gray">
-                <Thead>
-                  <Tr>
-                    <Th color={fg}>Timestamp</Th>
-                    {paginatedRows.length > 0 && Object.keys(paginatedRows[0]).map((param) => (
-                      param !== "timestamp" && <Th key={param} color={fg}>{param.charAt(0).toUpperCase() + param.slice(1)}</Th>
-                    ))}
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {paginatedRows.map((row: any, idx: number) => (
-                    <Tr key={idx}>
-                      <Td color={fg}>{row.timestamp}</Td>
-                      {Object.keys(row).map((param) => (
-                        param !== "timestamp" && <Td key={param} color={fg}>{row[param]}</Td>
+              <Box maxH="550px" overflowY="auto" overflowX="auto">
+                <Table
+                  variant="simple"
+                  colorScheme="gray"
+                  minW="max-content"
+                >
+                  <Thead>
+                    <Tr>
+                      <Th color={fg}>Timestamp</Th>
+                      {paginatedRows.length > 0 && Object.keys(paginatedRows[0]).map((param) => (
+                        param !== "timestamp" &&
+                        !param.endsWith("_unit") && (
+                          <Th key={param} color={fg}>
+                            {param
+                              .replace(/^plant_\d+_/, "")
+                              .replace(/_bank_bank_/g, "_bank_")
+                              .replace(/_rack_rack_/g, "_rack_")
+                              .replace(/inverter_inverter_/g, "inverter_")
+                              .replace(/pcs_pcs_/g, "pcs_")
+                              .replace(/_15_min/g, "")
+                              .replace(/_1_hour/g, "")
+                              .replace(/_1_day/g, "")
+                              .replace(/_1_week/g, "")
+                              .replace(/_1_month/g, "")
+                              .replace(/_1_year/g, "")
+                              .toUpperCase()}
+                          </Th>
+                        )
                       ))}
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
+                  </Thead>
+                  <Tbody>
+                    {paginatedRows.map((row: any, idx: number) => (
+                      <Tr key={idx}>
+                        <Td color={fg}>{row.timestamp}</Td>
+                        {Object.keys(row).map((param) => (
+                          param !== "timestamp" &&
+                          !param.endsWith("_unit") && (
+                            <Td key={param} color={fg}>
+                              {row[param]}
+                              {row[`${param}_unit`] ? ` ${row[`${param}_unit`]}` : ""}
+                            </Td>
+                          )
+                        ))}
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
 
               <Flex mt={4} justify="center" align="center" gap={4}>
                 <Button size="sm" onClick={() => setPage((p) => Math.max(p - 1, 0))} disabled={page === 0}>Prev</Button>
@@ -627,6 +759,7 @@ export default function ReportDashboard() {
           )}
         </Box>
       </Flex>
+    
     </Box>
   );
 }

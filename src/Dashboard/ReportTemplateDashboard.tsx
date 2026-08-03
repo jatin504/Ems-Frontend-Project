@@ -21,6 +21,7 @@ import {
 import { FiTrash2, FiDownload, FiEdit } from "react-icons/fi";
 import useReports from "../hooks/useReports";
 import useReportTemplate from "../hooks/useReportTemplate";
+import { ExportReportToExcel } from "../hooks/ExportReportToExcel";
 import { useNavigate } from "react-router-dom";
 import { ChevronRightIcon } from "@chakra-ui/icons";
 
@@ -51,7 +52,7 @@ export default function ReportTemplateDashboard() {
   const dangerHoverBg = useColorModeValue("red.50", "red.500");
   const dangerActiveBg = useColorModeValue("red.100", "red.600");
 
-  // --- download helpers ---
+  // download helpers (CSV -> replaced by Excel export)
   const downloadBlob = (data: string, filename: string, type = "application/json") => {
     const blob = new Blob([data], { type });
     const url = URL.createObjectURL(blob);
@@ -64,68 +65,96 @@ export default function ReportTemplateDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadCSV = (data: Record<string, any>[], filename: string): void => {
-    if (data.length === 0) {
-      console.warn("The provided data array is empty. Nothing will be downloaded.");
-      return;
-    }
-
-    // Extract headers from the keys of the first object.
-    const headers = Object.keys(data[0]);
-
-    // Create the header row for the CSV.
-    // The join(",") method turns the array of keys into a comma-separated string.
-    const headerRow = headers.join(",");
-
-    // Map over the data array to create a CSV row for each object.
-    const rows = data.map(obj => {
-      // For each object, map over the headers to get the values in the correct order.
-      // Replace null values with an empty string to avoid "null" in the CSV.
-      const values = headers.map(header => {
-        const value = obj[header];
-        // Handle potential null values by converting them to an empty string.
-        return (value === null || value === undefined) ? "" : value;
-      });
-      // Join the values to create a comma-separated string for the row.
-      return values.join(",");
-    });
-
-    // Combine the header row and all data rows with newline characters.
-    const csvString = [headerRow, ...rows].join("\n");
-
-    // Use the existing downloadBlob function to download the CSV string.
-    downloadBlob(csvString, filename, "text/csv");
-  };
-
   const { generateReportByConfig, reportData } = useReports();
 
-  const downloadTemplateJSON = (t: Template) => {
-    setDownloadReportName(`${t.reportName}.csv`);
-    const payload = {
-      reportName: t.reportName,
-      email: t.email ?? null,
-      scheduleTime: t.scheduleTime ?? null,
-      scheduleLive: t.scheduleLive ?? null,
-      configuration: (() => {
-        try {
-          return typeof t.configuration === "string"
-            ? JSON.parse(t.configuration)
-            : t.configuration ?? {};
-        } catch {
-          return t.configuration ?? {};
-        }
-      })(),
-    };
+  const downloadTemplateJSON = async (t: Template) => {
 
-    generateReportByConfig(payload.configuration);
+    try {
+
+      setDownloadReportName(t.reportName);
+
+      const payload = {
+        reportName: t.reportName,
+        email: t.email ?? null,
+        scheduleTime: t.scheduleTime ?? null,
+        scheduleLive: t.scheduleLive ?? null,
+        configuration: (() => {
+          try {
+            return typeof t.configuration === "string"
+              ? JSON.parse(t.configuration)
+              : t.configuration ?? {};
+          } catch {
+            return t.configuration ?? {};
+          }
+        })(),
+      };
+
+      // API CALL
+      await generateReportByConfig(payload.configuration);
+
+    } catch (err: any) {
+
+      toast({
+        title: "Download failed",
+        description: err?.message,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   React.useEffect(() => {
-    if (reportData) {
-      // console.log("TEMPLATES: ", reportData)
-      downloadCSV(reportData, downloadReportName);
-    }
+
+    const exportExcel = async () => {
+
+      if (!reportData || reportData.length === 0) {
+        return;
+      }
+
+      const groupedData = {
+        Report: reportData.map((row: any) => {
+
+          const formattedRow: any = {};
+
+          Object.keys(row).forEach((key) => {
+
+            // skip unit columns
+            if (key.endsWith("_unit")) return;
+
+            if (key === "timestamp") {
+
+              formattedRow["time_stamp"] = row[key];
+
+            } else {
+
+              const unit = row[`${key}_unit`] || "";
+
+              formattedRow[key] =
+                row[key] !== null &&
+                row[key] !== undefined
+                  ? `${row[key]} ${unit}`.trim()
+                  : "";
+            }
+          });
+
+          return formattedRow;
+        }),
+      };
+
+      await ExportReportToExcel({
+        title: downloadReportName,
+        createdAt: new Date().toLocaleString(),
+        data: groupedData,
+      });
+
+    };
+
+    exportExcel();
+
   }, [reportData]);
+
+  
 
   // --- fetch templates ---
   React.useEffect(() => {

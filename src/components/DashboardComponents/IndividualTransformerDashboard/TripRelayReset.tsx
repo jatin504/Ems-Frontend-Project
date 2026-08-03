@@ -1,13 +1,15 @@
 import { Box, Text, SimpleGrid, useColorModeValue } from "@chakra-ui/react";
 
-const GreenTag = ({ label }: { label: string }) => (
+const GreyTag = ({ label }: { label: string }) => (
   <Box
-    bg="#7CFC90"
-    border="1px solid #4CAF50"
+    bg="gray.500"
+    border="1px solid"
+    borderColor="gray.500"
     borderRadius="3px"
     textAlign="center"
     fontSize="12px"
     py="4px"
+    color="white"
   >
     {label}
   </Box>
@@ -15,25 +17,34 @@ const GreenTag = ({ label }: { label: string }) => (
 
 export default function TripRelayReset() {
   const primaryBg = useColorModeValue("primary.light", "primary.dark");
-  const primaryColor = useColorModeValue("primaryText.light", "primaryText.dark");
+
+  const primaryColor = useColorModeValue(
+    "primaryText.light",
+    "primaryText.dark"
+  );
 
   return (
     <Box
       bg={primaryBg}
-      rounded="12px"     
-      p="16px"           
+      rounded="12px"
+      p="16px"
       width="260px"
       height="120px"
     >
-      <Text fontSize="11px" fontWeight="bold" mb="6px" color={primaryColor}>
+      <Text
+        fontSize="11px"
+        fontWeight="bold"
+        mb="6px"
+        color={primaryColor}
+      >
         TRIP RELAY RESET
       </Text>
 
       <SimpleGrid columns={2} spacing="10px">
-        <GreenTag label="86A" />
-        <GreenTag label="86B" />
-        <GreenTag label="96" />
-        <GreenTag label="86UF1" />
+        <GreyTag label="86A" />
+        <GreyTag label="86B" />
+        <GreyTag label="96" />
+        <GreyTag label="86UF1" />
       </SimpleGrid>
     </Box>
   );

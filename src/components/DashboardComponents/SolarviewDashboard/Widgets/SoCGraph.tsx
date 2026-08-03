@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import ColumnGraph from "../../../Graphs/RevampCharts/ColumnGraph";
+import Highcharts from "highcharts";
 import { useColorModeValue } from "@chakra-ui/react";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
+import { buildCategoryChartData } from "../../../../Services/APIDataFormatter/buildCategoryChartData";
 
 
   // return [
@@ -38,14 +40,14 @@ const SoCGraph: React.FC = () => {
   // Fetch CUF AC, CUF DC
   const cufFetch = {
     dataSource: {
-      devices: { patterns: ["_bank_bank_"], ids: [] },
+      devices: { patterns: [], ids: ["plant_1_plant_device"] },
       keys: [
-        { key: "soc", alias: "CUF AC", keyType: "number" },
-        { key: "power_factor", alias: "CUF DC", keyType: "number" },
+        { key: "cuf_ac", alias: "CUF AC %", keyType: "number" },
+        { key: "cuf_dc", alias: "CUF DC %", keyType: "number" },
       ],
       aggregation: timeWindow.aggregation,
       timeRange: timeWindow.timeRange,
-      orderBy: timeWindow.orderBy,
+      orderBy: "ASC",
     },
   };
 
@@ -56,29 +58,21 @@ const SoCGraph: React.FC = () => {
   }, [timeWindow]);
 
   // Prepare series for stacked bar (CUF AC/DC)
-  const cufSeries = useMemo(() => {
-    if (!cufData) return [];
+  const chartData = useMemo(() => {
+    if (!cufData) return { categories: [], series: [] };
     const root = cufData.data ?? cufData;
     const dev = Object.keys(root)[0];
-    if (!dev) return [];
-    const d = root[dev] as unknown as Record<string, { ts: number; value: number }[]>;
-    const tsArr = (d["CUF AC"] || []).map((p: any) => p.ts);
-    const cufAc = (d["CUF AC"] || []).map((p: any) => p.value);
-    const cufDc = (d["CUF DC"] || []).map((p: any) => p.value);
-    return [
+    if (!dev) return { categories: [], series: [] };
+    return buildCategoryChartData(root[dev], [
       {
-        type: "column",
-        name: "CUF AC",
-        data: tsArr.map((ts: any, i: number) => [ts, cufAc[i]]),
+        alias: "CUF AC %",
         color: "#3B82F6",
       },
       {
-        type: "column",
-        name: "CUF DC",
-        data: tsArr.map((ts: any, i: number) => [ts, cufDc[i]]),
+        alias: "CUF DC %",
         color: "#F59E0B",
       },
-    ];
+    ]);
   }, [cufData]);
 
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
@@ -88,7 +82,7 @@ const SoCGraph: React.FC = () => {
 
   return (
     <GraphLayout
-      title="CUF"
+      title="Asset Utilization"
       width={["578px"]}
       height={"344px"}
       fullScreen
@@ -98,13 +92,30 @@ const SoCGraph: React.FC = () => {
       onExport={exportFunctions}
     >
       <ColumnGraph
-        apiData={cufSeries}
+        apiData={chartData.series}
+        category={chartData.categories}
         height={260}
         onExportReady={setExportFunctions}
         props={{
+          timestamps: chartData.timestamps,
+          plotOptions: {
+            column: {
+              dataLabels: { enabled: false },
+              borderWidth: 0,
+              pointWidth: 7,
+              borderRadius: 0,
+              
+            },
+          },
           xAxis: {
-            type: "datetime",
-            labels: { style: { color: subTextColor } },
+            categories: chartData.categories,
+
+            labels: {
+              style: {
+                color: subTextColor,
+              },
+            },
+
             gridLineDashStyle: "ShortDot",
             gridLineWidth: 1,
           },
@@ -112,14 +123,6 @@ const SoCGraph: React.FC = () => {
             tickAmount: 6,
             title: { text: null },
             labels: { style: { color: textColor } },
-          },
-          plotOptions: {
-            column: {
-              pointWidth: 18,
-              borderRadius: 6,
-              pointPadding: 0,
-              grouping: true,
-            },
           },
           tooltip: {
             shared: true,

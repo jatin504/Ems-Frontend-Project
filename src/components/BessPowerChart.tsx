@@ -153,8 +153,8 @@ const BessPowerChart = () => {
               zIndex={10}
             />
             <MenuList bg="gray.700" color="black">
-              <MenuItem onClick={() => console.log('Download PNG clicked')}>Download PNG</MenuItem>
-              <MenuItem onClick={() => console.log('Download CSV clicked')}>Download CSV</MenuItem>
+              <MenuItem onClick={() => ('Download PNG clicked')}>Download PNG</MenuItem>
+              <MenuItem onClick={() => ('Download CSV clicked')}>Download CSV</MenuItem>
             </MenuList>
           </Menu>
         </Box>

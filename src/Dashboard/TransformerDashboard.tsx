@@ -14,52 +14,121 @@ import {
 import { ChevronRightIcon } from "@chakra-ui/icons";
 import { Link as ReactRouterLink } from "react-router-dom";
 import transformerImg from "../assets/transformer.webp";
+import { useTimeHandle } from "../Services/TimeWindowSetting";
+import useTimeseriesData from "../hooks/useTimeseriesData";
+import { useEffect } from "react";
+import StaleIndicator from "../components/Common/StaleIndicator";
 
 /* ================= DATA ================= */
-const transformers = [
-  { id: 1, name: "IR-1 TRANSFORMER", wti: null, oti: null, image: transformerImg },
-  { id: 2, name: "IR-2 TRANSFORMER", wti: 57, oti: 51, image: transformerImg },
-  { id: 3, name: "IR-3 TRANSFORMER", wti: 60, oti: 54, image: transformerImg },
-  { id: 4, name: "IR-4 TRANSFORMER", wti: 63, oti: 55, image: transformerImg },
-  { id: 5, name: "IR-5 TRANSFORMER", wti: 97, oti: 0, image: transformerImg },
-  { id: 6, name: "IR-6 TRANSFORMER", wti: 60, oti: 54, image: transformerImg },
-  { id: 7, name: "IR-7 TRANSFORMER", wti: 96, oti: 0, image: transformerImg },
-  { id: 8, name: "IR-8 TRANSFORMER", wti: 59, oti: 51, image: transformerImg },
-  { id: 9, name: "IR-9 TRANSFORMER", wti: 65, oti: 53, image: transformerImg },
-  { id: 10, name: "IR-10 TRANSFORMER", wti: 57, oti: 51, image: transformerImg },
-  { id: 11, name: "IR-11 TRANSFORMER", wti: 56, oti: 52, image: transformerImg },
-  { id: 12, name: "IR-12 TRANSFORMER", wti: 60, oti: 200, image: transformerImg },
-];
-
 export default function TransformerDashboard() {
   const bgMain = useColorModeValue("white", "#1A202C");
   const bgCard = useColorModeValue("white", "#2D3748");
-
+  
   const titleColor = useColorModeValue(
     "rgba(0,0,0,0.85)",
     "rgba(255,255,255,0.9)"
   );
-
+  
   const breadcrumbMutedColor = useColorModeValue(
     "rgba(0,0,0,0.6)",
     "rgba(255,255,255,0.6)"
   );
-
+  
   const breadcrumbIconColor = useColorModeValue(
     "rgba(0,0,0,0.4)",
     "rgba(255,255,255,0.4)"
   );
-
+  
   const titleTextStyle = {
     fontSize: "12px",
     fontWeight: 600,
     color: titleColor,
   };
+  
+  const {
+      config: timeWindow
+    } = useTimeHandle(
+      12,
+      "hour",
+      "none",
+      [1, "minute"],
+      60000,
+      {
+        timeRange: {
+          type: "last",
+          
+          interval: 1,
+          intervalType: "minute",
+        },
+      }
+    );
+  const buildDataSource = () => ({
+    devices: { patterns: ["_transformer_transformer_"], ids: [] },
+    keys: [
+      {
+        key: "oti",
+        alias: "oti",
+        keyType: "common"
+      },
+      {
+        key: "wti",
+        alias: "wti",
+        keyType: "common"
+      },
+    ],
+    aggregation: timeWindow.aggregation,
+    timeRange: timeWindow.timeRange,
+    orderBy: "DESC"
+  });
+  
+  const { data, fetchData } = useTimeseriesData();
 
+  console.log("TransformerDashboard data", data);
+  
+  useEffect(()=>{
+      fetchData(buildDataSource() as any);
+      const interval = setInterval(() => {
+        fetchData(buildDataSource() as any);
+      }, 60000);
+    },[timeWindow]);
+  
+  const transformers = Object.entries(data || {}).map(
+    ([deviceId, deviceData]: any, index) => ({
+      id: deviceId,
+      sr: index + 1,
+
+      name: `Transformer-${index + 1}`,
+
+      oti:
+        deviceData?.oti?.length > 0
+          ? deviceData.oti[0].value
+          : null,
+
+      otiTs:
+        deviceData?.oti?.length > 0
+          ? deviceData.oti[0].ts
+          : null,
+
+      wti:
+        deviceData?.wti?.length > 0
+          ? deviceData.wti[0].value
+          : null,
+
+      wtiTs:
+        deviceData?.wti?.length > 0
+          ? deviceData.wti[0].ts
+          : null,
+
+      image: transformerImg,
+    })
+  );
+
+// console.log("TRANSFORMERS: ", transformers);
+  
   return (
     <Box p={6} bg={bgMain} minH="100vh">
       {/* ================= Breadcrumb ================= */}
-      <Breadcrumb
+      {/* <Breadcrumb
         spacing="6px"
         separator={<ChevronRightIcon boxSize="14px" color={breadcrumbIconColor} />}
         mb="8px"
@@ -93,12 +162,12 @@ export default function TransformerDashboard() {
             Transformers
           </BreadcrumbLink>
         </BreadcrumbItem>
-      </Breadcrumb>
+      </Breadcrumb> */}
 
       {/* ================= Page Title ================= */}
-      <HStack mb={2}>
+      {/* <HStack mb={2}>
         <Text {...titleTextStyle}>ALL TRANSFORMER STATUS</Text>
-      </HStack>
+      </HStack> */}
 
       {/* ================= Cards Grid ================= */}
       <SimpleGrid
@@ -117,7 +186,7 @@ export default function TransformerDashboard() {
             <Link
               key={t.id}
               as={ReactRouterLink}
-              to={`/devices/transformer/${t.id}`}
+              to={`/devices/transformer/${t.id}?id=${t.id}&name=${t.name}&serial=${t.sr}`}
               _hover={{ textDecoration: "none" }}
             >
               <Box
@@ -141,12 +210,19 @@ export default function TransformerDashboard() {
                   />
 
                   <VStack align="start" spacing={1} fontSize="sm">
-                    <Text color={isWTIAlarm ? "red.500" : "green.600"}>
-                      TRAFO WTI : {t.wti ?? "XXXX"} °C
-                    </Text>
-                    <Text color={isOTIAlarm ? "red.500" : "green.600"}>
-                      TRAFO OTI : {t.oti ?? "XXXX"} °C
-                    </Text>
+                    <HStack spacing={2} align="center">
+                      <Text color={isWTIAlarm ? "red.500" : "green.600"}>
+                        TRAFO WTI : {t.wti ?? "XXXX"} °C
+                      </Text>
+                      <StaleIndicator ts={t.wtiTs} value={t.wti} />
+                    </HStack>
+
+                    <HStack spacing={2} align="center">
+                      <Text color={isOTIAlarm ? "red.500" : "green.600"}>
+                        TRAFO OTI : {t.oti ?? "XXXX"} °C
+                      </Text>
+                      <StaleIndicator ts={t.otiTs} value={t.oti} />
+                    </HStack>
                   </VStack>
                 </HStack>
               </Box>

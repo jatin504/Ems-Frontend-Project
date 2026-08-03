@@ -64,7 +64,7 @@ const CUFBarGraph: React.FC = () => {
   const powerFetch = {
   dataSource: {
     devices: {
-      ids: ["plant_1_pcs_2_bank_bank_2"],
+      ids: ["plant_1_pcs_2_bank_bank_1"],
       patterns: [],
     },
     keys: [
@@ -73,7 +73,7 @@ const CUFBarGraph: React.FC = () => {
     ],
     aggregation: timeWindow.aggregation,
     timeRange: timeWindow.timeRange,
-    orderBy: timeWindow.orderBy,
+    orderBy: "ASC",
   },
 };
   const { data: powerData, fetchData: fetchPower } = useTimeseriesData();
@@ -92,8 +92,20 @@ const CUFBarGraph: React.FC = () => {
 
     /* SOC SPLINE (ALL BANKS) */
     const socRoot = socData.data ?? socData;
+    const socColors = [
+      "#090cb2ff",
+      "#16a34a",
+      "#dc2626",
+      "#7c3aed",
+      "#ea580c",
+      "#0891b2",
+      "#be185d",
+      "#65a30d",
+      "#1d4ed8",
+      "#b45309",
+    ];
 
-    Object.keys(socRoot).forEach((device) => {
+    Object.keys(socRoot).forEach((device, index) => {
       const pts = socRoot[device]?.["SoC (%)"];
       if (Array.isArray(pts)) {
         series.push({
@@ -101,8 +113,8 @@ const CUFBarGraph: React.FC = () => {
           name: `SOC (%)-${device.split("_").pop()}`,
           data: pts.map((p: any) => [p.ts, Number(p.value)]),
           yAxis: 1,
-          color: "#090cb2ff",
-          opacity: 0.35,
+          color: socColors[index % socColors.length],
+          opacity: 0.9,
           lineWidth: 2,
           marker: { enabled: false },
           zIndex: 1,
@@ -220,3 +232,4 @@ const CUFBarGraph: React.FC = () => {
 };
 
 export default CUFBarGraph;
+

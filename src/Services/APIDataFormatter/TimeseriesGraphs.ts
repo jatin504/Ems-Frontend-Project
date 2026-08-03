@@ -29,7 +29,7 @@ export function transformToHighchartsTimeSeries(
   keysConfig: WidgetKeyConfig[]
 ): HighchartsSeries[] {
   const series: HighchartsSeries[] = [];
-console.log(widgetData)
+// console.log(widgetData)
   // Build map: keyName → config (for fast lookup)
   const keyConfigMap = new Map<string, WidgetKeyConfig>();
   keysConfig.forEach(config => {
@@ -85,6 +85,6 @@ console.log(widgetData)
         series.push(seriesItem);
     }
   }
-  console.log("SERIES: ", series);
+  // console.log("SERIES: ", series);
   return series;
 }

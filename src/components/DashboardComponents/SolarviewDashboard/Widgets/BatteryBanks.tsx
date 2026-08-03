@@ -9,20 +9,22 @@ import {
   useBreakpointValue,
   Select,
 } from "@chakra-ui/react";
-import useBatteryBank from "../../../../hooks/PlantView/useBatteryBank";
+// Removed useBatteryBank hook and remote API usage per request
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = import.meta.env.VITE_API_BASE;
+// No remote API calls; using local placeholder data
+import UseInverterBlock from "../../../../hooks/UseInverterBlock";
+import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 
 type Bank = {
   device_id: string;
   soc: number;
   active_device: number;
   non_active_device: number;
-  amps : string;
-  voltage : string;
-  latest_temp : number;
-  max_temp : number;
+  amps: string;
+  voltage: string;
+  latest_temp: number;
+  max_temp: number;
   dod?: number;
   soh?: number;
   pr?: number;
@@ -34,8 +36,6 @@ type Bank = {
 };
 
 
-
-/** Tile with controllable value row box */
 const Tile: React.FC<{
   title: string;
   value?: string | number;
@@ -43,15 +43,15 @@ const Tile: React.FC<{
   bg: string;
   flexGrow?: number;
   valueBox?: {
-    width?: number;   
-    height?: number;  
-    gapPx?: number;   
+    width?: number;
+    height?: number;
+    gapPx?: number;
     angleDeg?: number;
-    opacity?: number; 
+    opacity?: number;
   };
 }> = ({ title, value, sub, bg, flexGrow = 1, valueBox }) => {
   const titleFs = useBreakpointValue({ base: "10px", md: "11px" });
-  const valFs = useBreakpointValue({ base: "13px", md: "14px" });
+  const valFs = useBreakpointValue({ base: "12px", md: "13px" });
   const padX = useBreakpointValue({ base: "10px", md: "12px" });
   const padY = useBreakpointValue({ base: "6px", md: "8px" });
   const h = useBreakpointValue({ base: "50px", md: "54px" });
@@ -64,7 +64,6 @@ const Tile: React.FC<{
     "inset 0 0 0 1px rgba(255,255,255,0.06)"
   );
 
-  // value row sizing
   const rowW = valueBox?.width !== undefined ? `${valueBox.width}px` : "100%";
   const rowH = valueBox?.height !== undefined ? `${valueBox.height}px` : undefined;
   const rowGap = valueBox?.gapPx !== undefined ? `${valueBox.gapPx}px` : "6px";
@@ -137,9 +136,8 @@ const Tile: React.FC<{
   );
 };
 
+
 const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
-  const navigate = useNavigate();
-  // light/dark
   const cardBg = useColorModeValue("white", "#0F1215");
   const nameColor = useColorModeValue("black", "white");
   const socTextColor = useColorModeValue("blackAlpha.700", "whiteAlpha.800");
@@ -151,19 +149,19 @@ const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
   const barFill = useColorModeValue("#14B8A6", "#22D3EE");
 
   const connectedBg = useColorModeValue("#C2FFE9", "#18463E");
-  const powerBg  = useColorModeValue("#F2F2F5", "#3B3A3E");
-  const dailyBg   = useColorModeValue("#EBEFFF", "#27315A");
-  const totalBg     = useColorModeValue("#FFE6E6", "#5D3433");
+  const powerBg = useColorModeValue("#F2F2F5", "#3B3A3E");
+  const dailyBg = useColorModeValue("#EBEFFF", "#27315A");
+  const totalBg = useColorModeValue("#FFE6E6", "#5D3433");
 
   const nameFs = useBreakpointValue({ base: "14px", md: "15px" });
   const socBarW = useBreakpointValue({ base: "120px", md: "140px" });
   const gap = useBreakpointValue({ base: "10px", md: "12px" });
-  // Placeholder values (replace with real data if available)
-  const pr = bank.pr ?? 85; // fallback to 85 if not present
-  const cuf_ac = bank.cuf_ac ?? 90; // fallback to 90 if not present
-  const cuf_dc = bank.cuf_dc ?? 95; // fallback to 95 if not present
+  const pr = bank.pr ?? 85;
+  const cuf_ac = bank.cuf_ac ?? 90;
+  const cuf_dc = bank.cuf_dc ?? 95;
 
-  const bankNum = parseInt(bank.device_id.match(/bank_(\d+)/)?.[1] || "0") || 1;
+  const fixedValueBox = { width: 133, height: 21, gapPx: 10, angleDeg: 0, opacity: 1 };
+  const navigate = useNavigate();
   return (
     <Box
       w="100%"
@@ -175,12 +173,9 @@ const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
     >
       <HStack spacing={gap} align="center" w="100%" wrap="nowrap" overflow="hidden">
         <VStack align="start" spacing="6px" flex="0 0 auto" minW="140px">
-          <Text color={nameColor} fontWeight="semibold" cursor={"pointer"} textTransform={"capitalize"} fontSize={nameFs} noOfLines={1} title={bank.device_id}
-            onClick={() => navigate('/batterybankk', {state : {currentBank : formatString(bank.device_id)}})}
-          >
-            {`Block ${bankNum}`}
+          <Text color={nameColor} fontWeight="semibold" cursor={"pointer"} textTransform={"capitalize"} fontSize={nameFs} noOfLines={1} title={bank.device_id}>
+            {formatString(bank.device_id).replace(/_/g, " ").replace("pcs", "PCS")}
           </Text>
-          {/* PR, CUF AC, CUF DC Bars in a single row with left labels */}
           <VStack align="start" spacing={0} w="100%">
             <HStack spacing={1} align="center">
               <Text color={socTextColor} fontSize={{ base: "8px", md: "8px" }} minW="28px">PR</Text>
@@ -227,13 +222,16 @@ const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
           </VStack>
         </VStack>
 
-        {/* smaller */}
         <Box ml={"-10px"}>
-          <Tile title="Connected" value={`${bankNum}/20`} bg={connectedBg} flexGrow={0.9} />
+          <Tile
+            title="Connected"
+            value={`${bank.active_device}/${bank.active_device + bank.non_active_device}`}
+            bg={connectedBg}
+            flexGrow={0.9}
+          />
         </Box>
         <Tile title="Power" value={bank.power ?? "150 kW"} bg={powerBg} flexGrow={0.9} />
 
-        {/* larger */}
         <Tile
           title="Daily Energy"
           value={bank.daily_energy ?? "250 kWh"}
@@ -253,9 +251,135 @@ const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
 
 const BatteryBanks: React.FC = () => {
   const headerColor = useColorModeValue("black", "white");
-  const [selectedResolution, setSelectedResolution] = useState("Today");
+  const { data: blockData = [] } = UseInverterBlock();
   const [banks, setBanks] = useState<Bank[]>([]);
-//   const banks: Bank[] = [
+
+  const { data: tsData, fetchData: fetchTsData } = useTimeseriesData();
+
+  // Build simple banks array from blockData (no timeseries)
+  useEffect(() => {
+    if (!blockData || !blockData.length) return;
+
+    const formatted: Bank[] = blockData.map((b: any, idx: number) => ({
+      device_id: b.block_name || `block_${idx + 1}`,
+      soc: 80,
+      active_device: b.connected || 0,
+      non_active_device: (b.total_device || 0) - (b.connected || 0),
+      amps: "30 A",
+      voltage: "400 V",
+      latest_temp: 25,
+      max_temp: 30,
+      pr: 0,
+      cuf_ac: 0,
+      cuf_dc: 0,
+      power: b.active_power ? `${b.active_power} kW` : "0 kW",
+      daily_energy: b.daily_energy ? `${(Number(b.daily_energy) / 1000).toFixed(3)} MWh` : "0.000 MWh",
+      total_energy: b.total_energy ? `${(Number(b.total_energy) / 1000).toFixed(3)} MWh` : "0.000 MWh",
+    }));
+
+    setBanks(formatted);
+  }, [blockData]);
+
+  // fetch timeseries for inverters associated with blocks (initial + periodic)
+  useEffect(() => {
+    if (!blockData || !blockData.length) return;
+
+    const fetchFn = () => {
+      fetchTsData({
+        devices: {
+          patterns: ["_inverter_inverter_"],
+          ids: [],
+        },
+        keys: [
+          { key: "active_power", alias: "Active_Power", keyType: "timeseries" },
+          { key: "daily_energy", alias: "Daily_Energy", keyType: "timeseries" },
+          { key: "total_energy", alias: "Total_Energy", keyType: "timeseries" },
+          { key: "inv_pr", alias: "INV_PR", keyType: "timeseries" },
+          { key: "cuf_ac", alias: "CUF_AC", keyType: "timeseries" },
+          { key: "cuf_dc", alias: "CUF_DC", keyType: "timeseries" },
+        ],
+        aggregation: { func: "LAST", interval: 1, intervalType: "minutes" },
+        timeRange: { type: "last", interval: 1, intervalType: "minutes" },
+        orderBy: "DESC",
+      });
+    };
+
+    // initial API hit
+    fetchFn();
+
+    // every 1 minute refresh
+    const interval = setInterval(() => {
+      fetchFn();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [blockData]);
+
+  // merge timeseries values into banks when available
+  useEffect(() => {
+    if (!tsData || !blockData || !blockData.length) return;
+
+    const blockMap: any = {};
+
+    Object.entries(tsData).forEach(([deviceId, row]: any) => {
+      const blockMatch = deviceId.match(/block_(\d+)/i);
+      if (!blockMatch) return;
+      const blockNumber = blockMatch[1];
+      const blockKey = `block_${blockNumber}`;
+
+      if (!blockMap[blockKey]) {
+        const blockInfo: any = blockData.find((b: any) => b.block_name?.match(/\d+/)?.[0] === blockNumber) || {};
+        blockMap[blockKey] = {
+          device_id: blockKey,
+          pr: 0,
+          cuf_ac: 0,
+          cuf_dc: 0,
+          powerValue: 0,
+          dailyEnergyValue: 0,
+          totalEnergyValue: 0,
+          percentCount: 0,
+          active_device: blockInfo.connected || 0,
+          non_active_device: (blockInfo.total_device || 0) - (blockInfo.connected || 0),
+        };
+      }
+
+      const lastVal = (arr: any) => (Array.isArray(arr) && arr.length ? Number(arr[arr.length - 1].value) : 0);
+
+      blockMap[blockKey].powerValue += lastVal(row.Active_Power);
+      blockMap[blockKey].dailyEnergyValue += lastVal(row.Daily_Energy);
+      blockMap[blockKey].totalEnergyValue += lastVal(row.Total_Energy);
+      blockMap[blockKey].pr += lastVal(row.INV_PR);
+      blockMap[blockKey].cuf_ac += lastVal(row.CUF_AC);
+      blockMap[blockKey].cuf_dc += lastVal(row.CUF_DC);
+      blockMap[blockKey].percentCount += 1;
+    });
+
+    const merged: Bank[] = Object.values(blockMap).map((item: any) => ({
+      device_id: item.device_id,
+      soc: 80,
+      active_device: item.active_device,
+      non_active_device: item.non_active_device,
+      amps: "30 A",
+      voltage: "400 V",
+      latest_temp: 25,
+      max_temp: 30,
+      pr: item.percentCount > 0 ? Number((item.pr / item.percentCount).toFixed(2)) : 0,
+      cuf_ac: item.percentCount > 0 ? Number((item.cuf_ac / item.percentCount).toFixed(2)) : 0,
+      cuf_dc: item.percentCount > 0 ? Number((item.cuf_dc / item.percentCount).toFixed(2)) : 0,
+      power: `${item.powerValue.toFixed(2)} kW`,
+      daily_energy: `${(item.dailyEnergyValue / 1000).toFixed(2)} MWh`,
+      total_energy: `${(item.totalEnergyValue / 1000).toFixed(2)} MWh`,
+    }));
+
+    // sort and set
+    merged.sort((a: any, b: any) => {
+      const aNum = parseInt(a.device_id.match(/block_(\d+)/)?.[1] || "0");
+      const bNum = parseInt(b.device_id.match(/block_(\d+)/)?.[1] || "0");
+      return aNum - bNum;
+    });
+
+    setBanks(merged);
+  }, [tsData, blockData]);
 //   { name: "PCS 2 Bank 1", soc: 80, connected: 10, disabled: 0, strings: { voltage: "623.60 V", current: "33.50 A" }, temps: { t1: "27.54 ℃", t2: "31.75 ℃" } },
 //   { name: "PCS 2 Bank 1", soc: 80, connected: 10, disabled: 0, strings: { voltage: "623.60 V", current: "33.50 A" }, temps: { t1: "27.54 ℃", t2: "31.75 ℃" } },
 //   { name: "PCS 2 Bank 1", soc: 80, connected: 10, disabled: 0, strings: { voltage: "623.60 V", current: "33.50 A" }, temps: { t1: "27.54 ℃", t2: "31.75 ℃" } },
@@ -268,136 +392,7 @@ const BatteryBanks: React.FC = () => {
 //   { name: "PCS 2 Bank 1", soc: 80, connected: 10, disabled: 0, strings: { voltage: "623.60 V", current: "33.50 A" }, temps: { t1: "27.54 ℃", t2: "31.75 ℃" } },
 // ];
 
-  const {fetchData} = useBatteryBank();
-
-  useEffect(() => {
-
-    if (selectedResolution === "Today") return;
-
-    fetch(`${BASE_URL}/api/timeseries-resolution-data`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        resolutions: [selectedResolution],
-        devices: {
-          patterns: ["_bank_bank_"]
-        },
-        keys: [
-          "active_power",
-          "battery_cabin_temperature_1",
-          "BCU_2_Chargeable_power"
-        ]
-      })
-    })
-      .then((res) => res.json())
-      .then((j) => {
-
-        if (!j.success) return;
-
-        const resolutionData = j.data?.[selectedResolution] || {};
-
-        const processedBanks: Bank[] = Object.entries(resolutionData).map(
-          ([deviceId, row]: any) => ({
-
-            device_id: deviceId,
-
-            soc: 80,
-            active_device: 1,
-            non_active_device: 0,
-
-            amps: "10 A",
-            voltage: "400 V",
-
-            latest_temp: 25,
-            max_temp: 30,
-
-            pr: 85,
-            cuf_ac: 90,
-            cuf_dc: 95,
-
-            power: row.active_power
-              ? `${row.active_power} kW`
-              : "150 kW",
-
-            daily_energy: row.battery_cabin_temperature_1
-              ? `${row.battery_cabin_temperature_1} kWh`
-              : "250 kWh",
-
-            total_energy: row.BCU_2_Chargeable_power
-              ? `${row.BCU_2_Chargeable_power} MWh`
-              : "5000 MWh"
-
-          })
-        );
-
-        processedBanks.sort((a, b) => {
-          const aNum = parseInt(a.device_id.match(/bank_(\d+)/)?.[1] || "0");
-          const bNum = parseInt(b.device_id.match(/bank_(\d+)/)?.[1] || "0");
-          return aNum - bNum;
-        });
-
-        setBanks(processedBanks);
-
-      })
-      .catch(console.error);
-
-  }, [selectedResolution]);
-
-  useEffect(() => {
-    if (selectedResolution === "Today") {
-      fetch(
-        `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            device_id_patterns: ["_bank_bank_"],
-          }),
-        }
-      )
-        .then((r) => r.json())
-        .then((j) => {
-          if (j.success) {
-            const processedBanks: Bank[] = Object.entries(j.data).map(
-              ([deviceId, row]: any) => ({
-                device_id: deviceId,
-                soc: 80,
-                active_device: 1,
-                non_active_device: 0,
-                amps: "10 A",
-                voltage: "400 V",
-                latest_temp: 25,
-                max_temp: 30,
-                pr: 85,
-                cuf_ac: 90,
-                cuf_dc: 95,
-                power: row.Active_power?.value
-                  ? `${row.Active_power.value} kW`
-                  : "150 kW",
-                daily_energy: row.BCU_1_Energy_charged_today?.value
-                  ? `${row.BCU_1_Energy_charged_today.value} kWh`
-                  : "250 kWh",
-                total_energy: row.BCU_2_Chargeable_power?.value
-                  ? `${row.BCU_2_Chargeable_power.value} MWh`
-                  : "5000 MWh",
-              })
-            );
-
-            // FIX: sort by bank number
-            processedBanks.sort((a, b) => {
-  const aNum = parseInt(a.device_id.match(/bank_(\d+)/)?.[1] || "0");
-  const bNum = parseInt(b.device_id.match(/bank_(\d+)/)?.[1] || "0");
-  return aNum - bNum;
-});
-
-            setBanks(processedBanks);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [selectedResolution]);
+  // No remote effects; banks are static placeholders.
 
   // console.log("DATA: ", banks)
   
@@ -407,21 +402,6 @@ const BatteryBanks: React.FC = () => {
         <Text color={headerColor} fontWeight="semibold" fontSize={{ base: "16px", md: "18px" }}>
           Inverter Block
         </Text>
-        <Select
-          value={selectedResolution}
-          onChange={(e) => setSelectedResolution(e.target.value)}
-          size="sm"
-          w="120px"
-          bg={useColorModeValue("white", "gray.700")}
-          color={headerColor}
-        >
-          <option value="Today">Today</option>
-          <option value="Yesterday">Yesterday</option>
-          <option value="Week">Week</option>
-          <option value="Month">Month</option>
-          <option value="Year">Year</option>
-          <option value="Total">Total</option>
-        </Select>
       </HStack>
     <Box
       height={"100%"}

@@ -24,7 +24,7 @@ const NotificationToast = () => {
       try {
         const res = await fetch("http://75.119.146.115:5179/api/cloud/recommendation");
         const result = await res.json();
-        console.log("API Result:", result, "Timer:", timer, "Visible:", visible);
+        ("API Result:", result, "Timer:", timer, "Visible:", visible);
         if (
           result.success &&
           result.user_approved === null &&

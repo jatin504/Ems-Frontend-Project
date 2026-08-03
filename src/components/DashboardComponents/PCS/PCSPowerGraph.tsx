@@ -284,7 +284,7 @@ const PCSPowerGraph: React.FC = () => {
     >
       <SpineGraph
         apiData={seriesForChart}
-        height={250}
+        height={200}
         onExportReady={setExportFunctions}
         props={{
           yAxis: {

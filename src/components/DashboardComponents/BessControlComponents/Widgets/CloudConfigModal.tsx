@@ -23,6 +23,12 @@ import {
   Tooltip,
   VStack,
   useColorModeValue,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
 } from "@chakra-ui/react";
 import React from "react";
 import CloudDetectionGraph from "./CloudDetectionGraph";
@@ -58,6 +64,10 @@ const CloudConfigModal: React.FC<CloudConfigModalProps> = ({
 
   const bg = useColorModeValue("white", "#161B1B");
   const cardBg = useColorModeValue("gray.50", "#111c2b");
+
+  // Confirmation dialog state for Save
+  const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
+  const cancelRef = React.useRef<HTMLButtonElement | null>(null);
 
   const updateConfig = (key: string, value: number) => {
     setConfig({ ...config, [key]: value });
@@ -484,7 +494,7 @@ const CloudConfigModal: React.FC<CloudConfigModalProps> = ({
           }),
         });
 
-        console.log("RESET SUCCESS");
+        ("RESET SUCCESS");
       } catch (err) {
         console.error("RESET ERROR:", err);
       }
@@ -496,43 +506,72 @@ const CloudConfigModal: React.FC<CloudConfigModalProps> = ({
   <Button
     size="sm"
     colorScheme="blue"
-    onClick={async () => {
-      try {
-        const payload = {
-          safety_factor: config.safety_factor,
-          sustain_interval_min_number: config.sustain_interval_min_number,
-          sustain_interval_number: config.sustain_interval_number,
-          sustain_interval_minute: config.sustain_interval_minute,
-
-          confidance_dispatch_stages: confidence,
-
-          windows_avg_rate_per_minute: windows.reduce((acc: any, w) => {
-            acc[w.name.toLowerCase()] = {
-              morning: Number(w.morning),
-              midday: Number(w.midday),
-              evening: Number(w.evening),
-            };
-            return acc;
-          }, {}),
-
-          current_stage: stageInfo.current_stage,
-          previous_stage: stageInfo.previous_stage,
-          stage_start_time: stageInfo.stage_start_time,
-          setpoint_kw: stageInfo.setpoint_kw,
-        };
-
-        console.log("FINAL PAYLOAD:", payload);
-
-        const data = await saveData(payload);
-        console.log("SAVE RESPONSE:", data);
-
-      } catch (err) {
-        console.error("SAVE ERROR:", err);
-      }
-    }}
+    onClick={() => setIsConfirmOpen(true)}
   >
     Save
   </Button>
+
+  {/* Confirmation dialog for Save */}
+  <AlertDialog
+    isOpen={isConfirmOpen}
+    leastDestructiveRef={cancelRef}
+    onClose={() => setIsConfirmOpen(false)}
+    isCentered
+  >
+    <AlertDialogOverlay>
+      <AlertDialogContent>
+        <AlertDialogHeader fontSize="lg" fontWeight="bold">Confirm Save</AlertDialogHeader>
+
+        <AlertDialogBody>Are you sure you want to save these Cloud settings?</AlertDialogBody>
+
+        <AlertDialogFooter>
+          <Button ref={cancelRef} onClick={() => setIsConfirmOpen(false)} size="sm">Cancel</Button>
+          <Button
+            colorScheme="blue"
+            ml={3}
+            size="sm"
+            onClick={async () => {
+              setIsConfirmOpen(false);
+              try {
+                const payload = {
+                  safety_factor: config.safety_factor,
+                  sustain_interval_min_number: config.sustain_interval_min_number,
+                  sustain_interval_number: config.sustain_interval_number,
+                  sustain_interval_minute: config.sustain_interval_minute,
+
+                  confidance_dispatch_stages: confidence,
+
+                  windows_avg_rate_per_minute: windows.reduce((acc: any, w) => {
+                    acc[w.name.toLowerCase()] = {
+                      morning: Number(w.morning),
+                      midday: Number(w.midday),
+                      evening: Number(w.evening),
+                    };
+                    return acc;
+                  }, {}),
+
+                  current_stage: stageInfo.current_stage,
+                  previous_stage: stageInfo.previous_stage,
+                  stage_start_time: stageInfo.stage_start_time,
+                  setpoint_kw: stageInfo.setpoint_kw,
+                };
+
+                // console.log("FINAL PAYLOAD:", payload);
+
+                const data = await saveData(payload);
+                // console.log("SAVE RESPONSE:", data);
+
+              } catch (err) {
+                console.error("SAVE ERROR:", err);
+              }
+            }}
+          >
+            Yes, Save
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialogOverlay>
+  </AlertDialog>
 </ModalFooter>
       </ModalContent>
       

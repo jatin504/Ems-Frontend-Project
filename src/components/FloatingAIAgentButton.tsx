@@ -513,7 +513,7 @@ export default function FloatingEMSAIAgentSuperAnimated(_: Props) {
     if (!resultJson) return;
 
     if (action === "preview") {
-      console.log("Preview schedule");
+      ("Preview schedule");
       safeAppendMessage({
         type: "ai",
         text: "ARKA: Opening schedule preview..."

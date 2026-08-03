@@ -3,14 +3,11 @@ import HighchartsExporting from "highcharts/modules/exporting";
 import HighchartsReact from "highcharts-react-official";
 import { useColorModeValue } from "@chakra-ui/react";
 import GraphLayout from "../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTimeHandle } from "../../../Services/TimeWindowSetting";
+import useTimeseriesData from "../../../hooks/useTimeseriesData";
 
 HighchartsExporting(Highcharts);
-
-const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
-
-const DEVICE_ID = "plant_1_pcs_2_bank_bank_1";
 
 const PowerSummaryCard = () => {
 
@@ -19,61 +16,75 @@ const PowerSummaryCard = () => {
   const textColor = useColorModeValue("#111", "#fff");
   const labelColor = useColorModeValue("#7a8aa0", "#8aa4bf");
 
-  const [values, setValues] = useState([0,0,0]);
+  const { config: timeWindowConfig } = useTimeHandle(
+    24,
+    "hour",
+    "avg",
+    [1, "hour"],
+    60000,
+    {
+      timeRange: {
+        type: "relative",
+        relativeType: "currentDaySoFar",
+      },
+    }
+  );
 
-  const getVal = (deviceObj:any, key:string) => {
-
-    const realKey = Object.keys(deviceObj)
-      .find(k => k.trim() === key);
-
-    if(!realKey) return 0;
-
-    return Number(deviceObj[realKey]?.value ?? 0);
-  };
-
-  /*  FETCH FUNCTION */
-  const loadData = () => {
-
-    fetch(
-      `${API_BASE}/api/lastest-direct-data/multiple-latest-devices`,
-      {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          device_ids: DEVICE_ID
-        })
-      }
-    )
-    .then(r=>r.json())
-    .then(j=>{
-
-      if(!j.success) return;
-
-      const d = j.data?.[DEVICE_ID];
-      if(!d) return;
-
-      const v1 = getVal(d,"BCU_1_Pack_with_highest_temperature");
-      const v2 = getVal(d,"BCU_1_Rack_current");
-      const v3 = getVal(d,"Battery_cabin_humidity_1");
-
-      setValues([v1,v2,v3]);
-
-    })
-    .catch(console.error);
-
-  };
+  const { data, fetchData } = useTimeseriesData();
 
   useEffect(() => {
+    fetchData({
+      devices: {
+        patterns: [],
+        ids: ["plant_1_plant_device"],
+      },
+      keys: [
+        {
+          key: "inv_total_power",
+          alias: "Solar Gen (kW)",
+          keyType: "common",
+        },
+        {
+          key: "total_grid_power",
+          alias: "BESS Discharged (kW)",
+          keyType: "common",
+        },
+        {
+          key: "ppa_delivered_power",
+          alias: "PPA Delivered (kW)",
+          keyType: "common",
+        },
+      ],
+      aggregation: timeWindowConfig.aggregation,
+      timeRange: timeWindowConfig.timeRange,
+      orderBy: "ASC",
+    });
+  }, [timeWindowConfig]);
 
-    loadData(); //  initial load
+  const values = useMemo(() => {
+    if (!data || typeof data !== "object") return [0, 0, 0];
 
-    const interval = setInterval(() => {
-      loadData();
-    }, 60000); //  1 minute
+    const requestedAliases = [
+      "Solar Gen (kW)",
+      "BESS Discharged (kW)",
+      "PPA Delivered (kW)",
+    ];
 
-    return () => clearInterval(interval); //  cleanup
+    return requestedAliases.map((alias) => {
+      let latestValue = 0;
 
-  }, []);
+      Object.values(data).forEach((deviceObj: any) => {
+        if (!deviceObj || typeof deviceObj !== "object") return;
+
+        const points = (deviceObj as Record<string, any>)[alias];
+        if (Array.isArray(points) && points.length) {
+          latestValue = Number(points[points.length - 1]?.value ?? 0);
+        }
+      });
+
+      return latestValue;
+    });
+  }, [data]);
 
   useEffect(() => {
 
@@ -114,19 +125,35 @@ const PowerSummaryCard = () => {
 
     legend:{ enabled:false },
 
+    tooltip: {
+      useHTML: true,
+      formatter: function () {
+        return `
+          <b>${this.key}</b><br/>
+          <span style="color:${this.color}">●</span>
+          <b>${Number(this.y).toFixed(2)}</b>
+        `;
+      },
+    },
+
     plotOptions:{
       column:{
         borderRadius:10,
         pointWidth:80,
         dataLabels:{
           enabled:true,
+          inside:false,
+          crop:false,
+          overflow:"allow",
+          y:6,
           formatter:function(){
-            return `<b>${this.y}</b>`;
+            return `<b>${Number(this.y).toFixed(2)}</b>`;
           },
           useHTML:true,
           style:{
             color:textColor,
-            textOutline:"none"
+            textOutline:"none",
+            fontWeight:"600"
           }
         }
       }

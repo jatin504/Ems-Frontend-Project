@@ -34,14 +34,14 @@ const Busbar: React.FC<BusbarProps> = ({ points, gap = 6 }) => {
     const newX = Math.round(e.target.x());
     const newY = Math.round(e.target.y());
     setPosition1({ x: newX, y: newY });
-    console.log("Busbar Line 1 dragged to:", { x: newX, y: newY });
+    // console.log("Busbar Line 1 dragged to:", { x: newX, y: newY });
   };
 
   const handleVerticalDragEnd = (e: any) => {
     const newX = Math.round(e.target.x());
     const newY = Math.round(e.target.y());
     setVerticalPos({ x: newX, y: newY });
-    console.log("Vertical line dragged to:", { x: newX, y: newY });
+    // console.log("Vertical line dragged to:", { x: newX, y: newY });
   };
 
   return (

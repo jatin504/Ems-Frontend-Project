@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 const API_BASE =
   (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
-const DEVICE_ID = "plant_1_pcs_2_bank_bank_1";
+const DEVICE_ID = "plant_1_block_1_inverter_inverter_1"; // replace with actual device ID for group captive performance
 
 const GroupCaptivePerformance = () => {
 
@@ -21,7 +21,7 @@ const GroupCaptivePerformance = () => {
     actToday:0
   });
 
-  /* ⭐ SAFE KEY READER (space safe) */
+  /*  SAFE KEY READER (space safe) */
   const getVal = (deviceObj:any,key:string) => {
 
     const realKey = Object.keys(deviceObj)
@@ -53,7 +53,7 @@ const GroupCaptivePerformance = () => {
       if(!d) return;
 
       setVals({
-        ppaTill: getVal(d,"Alarm_1"),
+        ppaTill: getVal(d,"Alarm_2"),
         ppaToday: getVal(d,"Alarm_2"),
         estTill: getVal(d,"BCU_2_Rack_voltage"),
         actToday: getVal(d,"Battery_cabin_humidity_3")
@@ -92,7 +92,7 @@ const GroupCaptivePerformance = () => {
       if(!d) return;
 
       setVals({
-        ppaTill: getVal(d,"Alarm_1"),
+        ppaTill: getVal(d,"Alarm_2"),
         ppaToday: getVal(d,"Alarm_2"),
         estTill: getVal(d,"BCU_2_Rack_voltage"),
         actToday: getVal(d,"Battery_cabin_humidity_3")

@@ -8,6 +8,7 @@ import {
   Input,
   useColorModeValue,
 } from "@chakra-ui/react";
+import { AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { useBessControlModes } from "../../../../hooks/useBessControlModes";
 import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
@@ -218,6 +219,9 @@ export default function ControlServices() {
   // PASSWORD FLOW STATE
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<any>(null);
+  // Confirmation dialog state for Apply
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const cancelRef = React.useRef<HTMLButtonElement | null>(null);
 
   const {
     setBessControlSetpoints,
@@ -296,7 +300,7 @@ export default function ControlServices() {
               size="xs"
               bg="#33D2D2"
               color="white"
-              onClick={handleApply}
+              onClick={() => setIsConfirmOpen(true)}
               isDisabled={!canControlService}
             >
               Apply
@@ -378,6 +382,38 @@ export default function ControlServices() {
           onClose={() => setIsPasswordOpen(false)}
           onConfirm={handlePasswordConfirm}
         />
+        {/* Confirmation dialog for Apply */}
+        <AlertDialog
+          isOpen={isConfirmOpen}
+          leastDestructiveRef={cancelRef}
+          onClose={() => setIsConfirmOpen(false)}
+          isCentered
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Confirm Apply
+              </AlertDialogHeader>
+              <AlertDialogBody>Are you sure you want to apply these setpoints?</AlertDialogBody>
+              <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={() => setIsConfirmOpen(false)} size="sm">
+                  Cancel
+                </Button>
+                <Button
+                  colorScheme="teal"
+                  ml={3}
+                  size="sm"
+                  onClick={() => {
+                    setIsConfirmOpen(false);
+                    handleApply();
+                  }}
+                >
+                  Yes, Apply
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
       </VStack>
     </Box>
   );

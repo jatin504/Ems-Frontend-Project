@@ -65,6 +65,7 @@ interface GraphLayoutProps {
   inProgress? : boolean;
   preDefineTimeInvterval? : boolean;
   setCurrentWidgetInterval? : (interval : "daily" | "month" | "year") => void;
+  hideTitleLine?: boolean;
 }
 
 const GraphLayout: React.FC<GraphLayoutProps> = ({
@@ -93,7 +94,7 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
   downloadOption=true,
   inProgress=false,
   preDefineTimeInvterval=false,
-  setCurrentWidgetInterval
+  setCurrentWidgetInterval,
 }) => {
   const iconColor = useColorModeValue('#004F86', 'white');
   // const { isOpen, onOpen, onClose } = useDisclosure();
@@ -236,22 +237,7 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
           </Menu>)}
         </Flex>
       </Flex>
-      <Flex align={'flex-start'} my={1}>
-        <HStack>
-          {titleLengthSVG && <svg width={`29`} height="3" viewBox={`0 0 29 3`} fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fillRule="evenodd" clipRule="evenodd" d={`M29 3H1L0 0H29V3Z`} fill="#07DBFA" />
-          </svg>}
-          <svg width={titleLengthSVG} height="1" viewBox={`0 0 ${titleLengthSVG} 1`} fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d={`M0 1V0H${titleLengthSVG}V1H0Z`} fill="#DFDFDF" />
-          </svg>
-        </HStack>
-          {/* 413 default width */}
-          <Box mt={-1}>
-            <svg width={titleLengthLongSVG} height="6" viewBox={`0 0 ${titleLengthLongSVG} 6`} fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d={`M0 5V6H4.20711L13.2071 1H18H${titleLengthLongSVG}V0H18H12.7929L3.79289 5H0Z`} fill="#DFDFDF"/>
-            </svg> 
-          </Box>
-      </Flex>
+      
 
       <Box
         as="main"

@@ -37,7 +37,7 @@ const SmbStaticInfos: React.FC<SmbStaticInfosProps> = ({
   /* ================= API CALL ================= */
 
   useEffect(() => {
-    console.log("SmbStaticInfos → selected SMB:", smbId);
+    // console.log("SmbStaticInfos → selected SMB:", smbId);
 
     fetchData({
       devices: {

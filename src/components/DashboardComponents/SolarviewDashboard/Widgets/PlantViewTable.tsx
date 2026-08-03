@@ -1,364 +1,793 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Box,
   Text,
+  Tooltip,
+  useColorMode,
   useColorModeValue,
-  HStack,
-  useMediaQuery,
   IconButton,
-  Flex,
+  HStack,
 } from "@chakra-ui/react";
-import {
-  MaterialReactTable,
-  type MRT_ColumnDef,
-  type MRT_PaginationState,
-} from "material-react-table";
+import WidgetTitle from "../../../Common/WidgetTitle";
+import { useNavigate } from "react-router-dom";
+import { MaterialReactTable, type MRT_ColumnDef } from "material-react-table";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-
+import { useMediaQuery } from "@chakra-ui/react";
 import { MdElectricBolt, MdLinkOff } from "react-icons/md";
-import { TbCircuitDiodeZener } from "react-icons/tb";
-import { FiMaximize, FiMinimize } from "react-icons/fi";
-const BASE_URL = import.meta.env.VITE_API_BASE;
+import { SqeezIcon, ExpandIcon } from "../../../../assets/Icons";
 
 /* ================= TYPES ================= */
 
-interface PCSRow {
-  id: string;
+interface InverterData {
+  deviceId: string;
+  name: string;
   status: any;
+  rawData?: any;
   [key: string]: any;
 }
 
 /* ================= COMPONENT ================= */
 
-export default function PlantViewTable() {
-  const primaryBg = useColorModeValue("primary.light", "primary.dark");
-  const primaryColor = useColorModeValue(
-    "primaryText.light",
-    "primaryText.dark"
-  );
-  const primaryBorder = useColorModeValue(
-    "primaryBorder.light",
-    "primaryBorder.dark"
-  );
+type TrendType = "up" | "down" | "same";
 
+const TrendArrow = ({ trend }: { trend: TrendType }) => {
+  if (trend === "up") {
+    return (
+      <Text color="green.500" fontWeight="700">
+        ▲
+      </Text>
+    );
+  }
+
+  if (trend === "down") {
+    return (
+      <Text color="red.500" fontWeight="700">
+        ▼
+      </Text>
+    );
+  }
+
+  return (
+    <Text color="gray.400" fontWeight="700">
+      ▬
+    </Text>
+  );
+};
+
+export default function InvertersPanel() {
+  const navigate = useNavigate();
+  const [isShortScreen] = useMediaQuery("(max-width: 900px)");
+  const { colorMode } = useColorMode();
+  const bodyBg = useColorModeValue("gray.50", "gray.900");
   const tableMode = useColorModeValue("light", "dark");
-
+  const BASE_URL = import.meta.env.VITE_API_BASE;
   const theme = useMemo(
-    () => createTheme({ palette: { mode: tableMode } }),
+    () =>
+      createTheme({
+        palette: { mode: tableMode },
+      }),
     [tableMode]
   );
 
+  const [rows, setRows] = useState<InverterData[]>([]);
   const [dataMap, setDataMap] = useState<Record<string, any>>({});
+  const previousValues = useRef<Record<string, number>>({});
+  const [trendMap, setTrendMap] = useState<Record<string, TrendType>>({});
+  // modal removed; no selected inverter state required
 
-  const [isShortScreen] = useMediaQuery("(max-width: 900px)");
-
-  const panelRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   /* ===== PAGINATION STATE ===== */
-  const [pagination, setPagination] = useState<MRT_PaginationState>({
+  const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 4,
   });
 
+  /* ---------- backend key map (use lowercase API keys) ---------- */
+
+  const INVERTER_COLUMNS = [
+    "Active Power",
+    "Reactive Power",
+    "DC Voltage",
+    "DC Power",
+    "AC Current L1",
+    "AC Current L2",
+    "AC Current L3",
+    "PF",
+    "Daily Energy",
+    "Apparent Power",
+    "AC Volt L1L2",
+    "AC Volt L2L3",
+    "AC Volt L3L1",
+    "Frequency",
+    "Temperature",
+  ];
+
+  const COLUMN_KEY_MAP: Record<string, string> = {
+    "Active Power": "active_power",
+    "Reactive Power": "reactive_power",
+    "DC Voltage": "voltage",
+    "DC Power": "reactive_power",
+    "AC Current L1": "current",
+    "AC Current L2": "dc_current",
+    "AC Current L3": "ac_current",
+    PF: "efficiency",
+    "Daily Energy": "energy_today",
+    "Apparent Power": "apparent_power",
+    "AC Volt L1L2": "battery_voltage",
+    "AC Volt L2L3": "Alarm1",
+    "AC Volt L3L1": "grid_voltage",
+    Frequency: "frequency",
+    Temperature: "battery_soc",
+  };
+
+  /* ---------- fullscreen ---------- */
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       panelRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+
+      // FULLSCREEN 4 ROWS
+      setPagination((prev) => ({
+        ...prev,
+        pageIndex: 0,
+        pageSize: 4,
+      }));
     } else {
       document.exitFullscreen();
+      setIsFullscreen(false);
+
+      // NORMAL 4 ROWS
+      setPagination((prev) => ({
+        ...prev,
+        pageIndex: 0,
+        pageSize: 4,
+      }));
     }
   };
 
   useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
+    const fn = () => {
+      const fs = !!document.fullscreenElement;
+      setIsFullscreen(fs);
 
-  useEffect(() => {
-    setPagination({
-      pageIndex: 0,
-      pageSize: isFullscreen ? 15 : 4,
-    });
-  }, [isFullscreen]);
-
-  /* ================= COLUMNS ================= */
-
-  const pcsCol = [
-    "ID",
-    "DC_Volt",
-    "DC_Current_B1",
-    "DC_Current_B2",
-    "DC_Current_B3",
-    "DC_Current_Total",
-    "DC_Volt_Total",
-    "DC_Volt_B1",
-    "DC_Volt_B2",
-    "DC_Volt_B3",
-    "AC_Current_L1",
-    "AC_Current_L2",
-    "AC_Current_L3",
-    "PF",
-    "Apparent_Power",
-    "Active_Power",
-    "Reactive_Power",
-    "AC_Volt_L1L2",
-    "AC_Volt_L2L3",
-    "AC_Volt_L3L1",
-    "Grid_Frequency",
-  ];
-
-  const keys = pcsCol.slice(1);
-
-  /* ===== BACKEND KEY MAP ===== */
-  const COLUMN_KEY_MAP: Record<string, string> = {
-    DC_Current_B1: "Active_power",
-    DC_Current_B2: "DCDC1_Battery_side_current",
-    DC_Current_B3: "DCDC1_Bus_side_current",
-    DC_Current_Total: "DCDC1_Bus_side_current",
-    DC_Volt_B1: "DCDC1_Battery_side_voltage",
-    DC_Volt_Total: "Chargeable_capacity",
-    PF: "BCU_1_DOD",
-    Apparent_Power: "BCU_1_Chargeable_capacity",
-    Active_Power: "Active_power",
-    AC_Current_L1: "Alarm_1",
-    AC_Current_L2: "Alarm_2",
-    AC_Volt_L1L2: "Control_unit_cabin_temperature_1",
-    AC_Volt_L2L3: "Control_unit_cabin_humidity_1",
-    AC_Volt_L3L1: "Control_unit_cabin_dew_point_temperature",
-    DC_Volt_B2: "Container_status_1",
-    DC_Volt_B3: "Container_status_2",
-    DC_Volt: "Container_status_3",
-    Grid_Frequency: "DCDC1_ISO_insulation_resistance",
-  };
-
-  /* ===== UI HEADER MAP ===== */
-  const COLUMN_HEADER_MAP: Record<string, string> = {
-    DC_Volt: "Volt",
-    DC_Current_B1: "Power",
-    DC_Current_B2: "Reactive Power",
-    DC_Current_B3: "Apparent Power",
-    DC_Current_Total: "Amps",
-  };
-
-  /* ================= API ================= */
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(
-          `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              device_id_patterns: ["_bank_bank_"],
-            }),
-          }
-        );
-        const j = await response.json();
-        if (j.success) setDataMap(j.data);
-      } catch (error) {
-        console.error(error);
-      }
+      // ESC / browser fullscreen exit sync
+      setPagination((prev) => ({
+        ...prev,
+        pageIndex: 0,
+        pageSize: 4,
+      }));
     };
 
-    // Fetch immediately
+    document.addEventListener("fullscreenchange", fn);
+    return () => document.removeEventListener("fullscreenchange", fn);
+  }, [isShortScreen]);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setPagination((prev) => ({
+        ...prev,
+        pageIndex: 0,
+        pageSize: 4,
+      }));
+    }
+  }, [isShortScreen, isFullscreen]);
+
+  /* ---------- API ---------- */
+
+  useEffect(() => {
+
+    const fetchData = () => {
+      fetch(
+        `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            device_id_patterns: ["_inverter_inverter_"],
+          }),
+        }
+      )
+        .then((r) => r.json())
+        .then((j) => {
+          if (j.success) {
+            setDataMap(j.data);
+          }
+        })
+        .catch(console.error);
+    };
+
+    // first load
     fetchData();
 
-    // Set up interval for every 60 seconds
-    const id = setInterval(fetchData, 60000);
+    // auto refresh every 1 minute
+    const interval = setInterval(() => {
+      fetchData();
+    }, 60 * 1000);
 
-    return () => clearInterval(id);
+    return () => clearInterval(interval);
+
   }, []);
 
-  /* ================= STATUS ICON ================= */
+  /* ---------- map data ---------- */
 
-  const renderStatusIcon = (row: any) => {
-    const trip = row?.Trip_tag_value?.value ?? 0;
-    const lastTs = row?.timestamp?.value ?? 0;
-    const activePower =
-      row?.Active_power?.value ?? row?.Active_Power?.value ?? 0;
-    const now = Date.now();
+  useEffect(() => {
+    const mapped: InverterData[] = [];
+    const trends: Record<string, TrendType> = {};
 
-    if (trip > 0)
-      return (
-        <HStack spacing={1}>
-          <TbCircuitDiodeZener color="purple" size={14} />
-          <Text fontSize="10px" color="purple">
-            Trip
-          </Text>
-        </HStack>
-      );
-
-    if (!lastTs || now - lastTs > 10 * 60 * 1000)
-      return (
-        <HStack spacing={1}>
-          <MdLinkOff color="orange" size={14} />
-          <Text fontSize="10px" color="orange">
-            Non-Comm
-          </Text>
-        </HStack>
-      );
-
-    if (activePower > 0)
-      return (
-        <HStack spacing={1}>
-          <MdElectricBolt color="green" size={14} />
-          <Text fontSize="10px" color="green">
-            Gen
-          </Text>
-        </HStack>
-      );
-
-    return (
-      <HStack spacing={1}>
-        <MdElectricBolt color="red" size={14} />
-        <Text fontSize="10px" color="red">
-          Stop
-        </Text>
-      </HStack>
-    );
-  };
-
-  /* ================= ROWS ================= */
-
-  const buildRows = (prefix: string) => {
-    const devices = Object.values(dataMap);
-    const count = Math.max(devices.length, 6);
-
-    return Array.from({ length: count }).map((_, index) => {
-      const row = devices[index] ?? {};
-      const mapped: PCSRow = {
-        id: `${prefix}-${index + 1}`,
-        status: row,
+    Object.entries(dataMap).forEach(([deviceId, d]: any) => {
+      const suffix = deviceId.match(/_(\d+)$/)?.[1];
+      const name = suffix ? `Inverter-${suffix}` : deviceId;
+      const row: InverterData = {
+        deviceId,
+        name,
+        status: d,
+        rawData: d,
       };
 
-      keys.forEach((k) => {
-        mapped[k] = row?.[COLUMN_KEY_MAP[k] ?? k]?.value ?? "-";
+      INVERTER_COLUMNS.forEach((key) => {
+        const field = d?.[COLUMN_KEY_MAP[key]];
+        const value = field?.value;
+        const unit = field?.unit ?? "";
+
+        const trendKey = `${deviceId}_${key}`;
+
+        const current = Number(value);
+        const previous = previousValues.current[trendKey];
+
+        if (!Number.isNaN(current)) {
+          if (previous === undefined) {
+            trends[trendKey] = "same";
+          } else if (current > previous) {
+            trends[trendKey] = "up";
+          } else if (current < previous) {
+            trends[trendKey] = "down";
+          } else {
+            trends[trendKey] = "same";
+          }
+
+          previousValues.current[trendKey] = current;
+        }
+
+        row[key] =
+          value !== null && value !== undefined && value !== ""
+            ? `${value} ${unit}`.trim()
+            : "--";
       });
 
-      return mapped;
+      mapped.push(row);
     });
-  };
 
-  const rows = useMemo(() => buildRows("INV"), [dataMap]);
+    setTrendMap(trends);
+    setRows(mapped);
+  }, [dataMap]);
 
-  /* ================= COLUMNS ================= */
+  /* ---------- sort ---------- */
 
-  const allColumns = useMemo<MRT_ColumnDef<PCSRow>[]>(() => [
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const na = Number(a.name.replace(/[^\d]/g, ""));
+      const nb = Number(b.name.replace(/[^\d]/g, ""));
+      return na - nb;
+    });
+  }, [rows]);
+
+  /* ---------- columns ---------- */
+
+  const allColumns: MRT_ColumnDef<InverterData>[] = [
     {
-      accessorKey: "id",
+      accessorKey: "name",
       header: "ID",
-      size: 90,
-      Cell: ({ row }) => (
-        <Box textAlign="center">
-          <Text fontWeight="bold" fontSize="10px" noOfLines={1}>
-            {row.original.id}
+      size: isShortScreen ? 80 : 120,
+      minSize: isShortScreen ? 80 : 120,
+      maxSize: isShortScreen ? 80 : 120,
+      muiTableHeadCellProps: { align: "center", sx: { textAlign: "center", padding: "0 !important", fontSize: "11px" } },
+      muiTableBodyCellProps: { align: "center", sx: { textAlign: "center", padding: "0 !important", fontSize: "11px" } },
+      Cell: ({ row }) => {
+        return (
+          <Text
+            w="100%"
+            fontSize="11px"
+            fontWeight={500}
+            textAlign="center"
+            color="#2563EB"
+            style={{ cursor: "pointer", textDecoration: "underline" }}
+            onClick={() =>
+              navigate("/devices/inv/details", {
+                state: {
+                  selectedDevice: {
+                    device_id: row.original.deviceId,
+                    name: row.original.name,
+                    rawData: row.original.rawData,
+                  },
+                },
+              })
+            }
+          >
+            {row.original.name}
           </Text>
-          {renderStatusIcon(row.original.status)}
-        </Box>
-      ),
+        );
+      },
     },
-    ...keys.map((k) => ({
-      accessorKey: k,
-      header: COLUMN_HEADER_MAP[k] ?? k,
-      size: 100,
-      Cell: ({ cell }: { cell: any }) => (
-        <Text
-          fontSize="10px"
-          textAlign="center"
-          whiteSpace="nowrap"
-        >
-          {cell.getValue() as string}
-        </Text>
-      ),
+    {
+      id: "status",
+      header: "Status",
+      enableSorting: false,
+      size: isShortScreen ? 88 : 110,
+      minSize: isShortScreen ? 88 : 110,
+      maxSize: isShortScreen ? 88 : 110,
+      muiTableHeadCellProps: { sx: { textAlign: "left", pl: 1, fontSize: "11px" } },
+      muiTableBodyCellProps: { sx: { textAlign: "left", pl: 1, fontSize: "9px" } },
+      Cell: ({ row }) => {
+        const deviceData = row.original.status ?? row.original.rawData ?? dataMap?.[row.original.deviceId];
+
+        const lastTs =
+          deviceData?.Time_Stamp?.value
+            ? new Date(deviceData.Time_Stamp.value).getTime()
+            : 0;
+
+        const activePower =
+          deviceData?.active_power?.value ??
+          0;
+
+        const now = Date.now();
+
+        if (!lastTs || now - lastTs > 4 * 60 * 1000) {
+          return (
+            <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
+              <Tooltip
+                label="Non-Comm"
+                placement="top"
+                hasArrow
+                openDelay={150}
+                borderRadius="10px"
+                bg="#0F172A"
+                color="white"
+                fontSize="11px"
+                fontWeight="600"
+                px={3}
+                py={2}
+                boxShadow="0 18px 45px rgba(15,23,42,.35)"
+                border="1px solid rgba(255,255,255,.08)"
+                arrowShadowColor="rgba(0,0,0,.35)"
+                motionProps={{
+                  initial: { opacity: 0, y: 8, scale: 0.9 },
+                  animate: { opacity: 1, y: 0, scale: 1 },
+                }}
+              >
+                <Box
+                  w="24px"
+                  h="24px"
+                  borderRadius="full"
+                  bg="#FFF7E6"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  cursor="pointer"
+                >
+                  <MdLinkOff color="orange" size={12} />
+                </Box>
+              </Tooltip>
+            </Box>
+          );
+        }
+
+        if (activePower > 0) {
+          return (
+            <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
+              <Tooltip
+                label="Running"
+                placement="top"
+                hasArrow
+                openDelay={150}
+                borderRadius="10px"
+                bg="#0F172A"
+                color="white"
+                fontSize="11px"
+                fontWeight="600"
+                px={3}
+                py={2}
+                boxShadow="0 18px 45px rgba(15,23,42,.35)"
+                border="1px solid rgba(255,255,255,.08)"
+                arrowShadowColor="rgba(0,0,0,.35)"
+                motionProps={{
+                  initial: { opacity: 0, y: 8, scale: 0.9 },
+                  animate: { opacity: 1, y: 0, scale: 1 },
+                }}
+              >
+                <Box
+                  w="24px"
+                  h="24px"
+                  borderRadius="full"
+                  bg="#EAFBF0"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  cursor="pointer"
+                >
+                  <MdElectricBolt color="#16A34A" size={13} />
+                </Box>
+              </Tooltip>
+            </Box>
+          );
+        }
+
+        return (
+          <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
+            <Tooltip
+              label="Stop"
+              placement="top"
+              hasArrow
+              openDelay={150}
+              borderRadius="10px"
+              bg="#0F172A"
+              color="white"
+              fontSize="11px"
+              fontWeight="600"
+              px={3}
+              py={2}
+              boxShadow="0 18px 45px rgba(15,23,42,.35)"
+              border="1px solid rgba(255,255,255,.08)"
+              arrowShadowColor="rgba(0,0,0,.35)"
+              motionProps={{
+                initial: { opacity: 0, y: 8, scale: 0.9 },
+                animate: { opacity: 1, y: 0, scale: 1 },
+              }}
+            >
+              <Box
+                w="24px"
+                h="24px"
+                borderRadius="full"
+                bg="#FDECEC"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                cursor="pointer"
+              >
+                <MdElectricBolt color="red" size={13} />
+              </Box>
+            </Tooltip>
+          </Box>
+        );
+      },
+    },
+    ...INVERTER_COLUMNS.map((key) => ({
+      accessorKey: key,
+      header: key,
+      size: isShortScreen ? 88 : 110,
+      minSize: isShortScreen ? 88 : 110,
+      maxSize: isShortScreen ? 88 : 110,
+      Cell: ({ row, cell }: { row: any; cell: any }) => {
+        const trend = trendMap[`${row.original.deviceId}_${key}`] ?? "same";
+        return (
+          <HStack
+            key={`${colorMode}-${row.original.deviceId}-${key}`}
+            w="100%"
+            minW="0"
+            maxW="100%"
+            h="28px"
+            px={2}
+            spacing={2}
+            bg={colorMode === "dark" ? "#000000" : "#FFFFFF"}
+            borderRadius="8px"
+            border={
+              colorMode === "dark"
+                ? "1px solid #2D3748"
+                : "1px solid #E5E7EB"
+            }
+            justifyContent="space-between"
+            alignItems="center"
+            overflow="hidden"
+            transition=".25s"
+            _hover={{
+              borderColor: "#94A3B8",
+              boxShadow: "0 8px 18px rgba(15,23,42,.08)",
+            }}
+          >
+            <Text
+              color={colorMode === "dark" ? "#FFFFFF" : "#000000"}
+              fontWeight="600"
+              fontSize={isShortScreen ? "9px" : "11px"}
+              noOfLines={1}
+              overflow="hidden"
+              textOverflow="ellipsis"
+            >
+              {cell.getValue() as string}
+            </Text>
+            <TrendArrow trend={trend} />
+          </HStack>
+        );
+      },
     })),
-  ], []);
+  ];
 
   const columns = useMemo(
-    () => (isShortScreen ? allColumns.slice(0, 5) : allColumns),
-    [isShortScreen, allColumns]
+    () => (isFullscreen ? allColumns : allColumns.slice(0, 7)),
+    [isFullscreen, colorMode, isShortScreen, trendMap]
   );
 
   /* ================= RENDER ================= */
 
+  const borderColor = useColorModeValue("#EEF2F7", "whiteAlpha.200");
+  const headerBg = useColorModeValue("#FFFFFF", "#111827");
+  const textColor = useColorModeValue("#0F172A", "#F9FAFB");
+  const subTextColor = useColorModeValue("gray.500", "gray.300");
+  const tableTextColor = useColorModeValue("#0F172A", "#F8FAFC");
+  const totalBoxBg = useColorModeValue("#F4F8FF", "rgba(255,255,255,0.08)");
+  const totalBoxBorder = useColorModeValue("1px solid #E5EEFF", "1px solid rgba(255,255,255,0.12)");
+  const totalBoxText = useColorModeValue("#0F172A", "#F8FAFC");
+
   return (
-    <Box ref={panelRef} bg={primaryBg} color={primaryColor} p="12px" h="100%">
-      <Text fontSize="sm" fontWeight="bold" mb={1} textAlign="left">
-        Inverter
-      </Text>
-      <Flex align="center" mb={-2} justify="flex-end">
-        <IconButton
-          variant="ghost"
-          aria-label="Toggle fullscreen"
-          icon={isFullscreen ? <FiMinimize /> : <FiMaximize />}
-          onClick={toggleFullscreen}
-          size="sm"
-        />
-      </Flex>
+    <Box
+      ref={panelRef}
+      w="800px"
+      h="310px"
+      bg={bodyBg}
+      overflow="hidden"
+      border="1px solid"
+      borderColor={borderColor}
+      display="flex"
+      flexDirection="column"
+    >
+      <HStack
+        justify="space-between"
+        px={3}
+        py={0.5}
+        bg={headerBg}
+        borderBottom="1px solid"
+        borderColor={borderColor}
+      >
+        <HStack spacing={2} alignItems="center">
+          
 
-      <ThemeProvider theme={theme}>
-        <MaterialReactTable
-          columns={columns}
-          data={rows}
-          layoutMode="grid"
+          <Box lineHeight="1">
+            <WidgetTitle color={textColor}>Inverter Table</WidgetTitle>
+            <Text fontSize="13px" color={subTextColor}>
+              {/* Real-time status and performance overview */}
+            </Text>
+          </Box>
+        </HStack>
 
-          enablePagination
-          enableBottomToolbar
-          state={{ pagination }}
-          onPaginationChange={setPagination}
+        <HStack spacing={2} alignItems="center">
+          <Box
+            px={2}
+            py={1}
+            bg={totalBoxBg}
+            borderRadius="12px"
+            border={totalBoxBorder}
+          >
+            <Text color={totalBoxText} fontWeight="500" fontSize="11px">
+              Total Inverters :
+              <Text as="span" color="#2563EB" fontWeight="700" ml={1} fontSize="11px">
+                {rows.length}
+              </Text>
+            </Text>
+          </Box>
 
-          muiTableHeadCellProps={{
-            align: "center",
-            sx: {
-              textAlign: "center",
-              whiteSpace: "nowrap",
-              py: isShortScreen ? 0.25 : 0.75,
-              px: 1,
-              fontSize: isShortScreen ? "9px" : "10px",
-            },
-          }}
+          <IconButton
+            aria-label="Fullscreen"
+            icon={isFullscreen ? <SqeezIcon /> : <ExpandIcon />}
+            onClick={toggleFullscreen}
+            variant="ghost"
+            size="xs"
+            _hover={{ bg: "transparent", color: "gray.500" }}
+          />
+        </HStack>
+      </HStack>
 
-          muiTableBodyCellProps={{
-            align: "center",
-            sx: {
-              textAlign: "center",
-              whiteSpace: "nowrap",
-              py: isShortScreen ? 0.25 : 0.75,
-              px: 1,
-              fontSize: isShortScreen ? "9px" : "10px",
-            },
-          }}
+      <Box
+        flex="1"
+        h="calc(280px - 44px)"
+        px={1}
+        pt={2}
+        pb={0}
+        bg={bodyBg}
+        overflow="hidden"
+        display="flex"
+        flexDirection="column"
+      >
+        <ThemeProvider theme={theme}>
+          <MaterialReactTable
+            key={colorMode}
+            columns={columns}
+            data={sortedRows}
+            enableTopToolbar={false}
+            enableBottomToolbar={true}
+            enableColumnActions={false}
+            enableColumnFilters={false}
+            enableDensityToggle={false}
+            enableFullScreenToggle={false}
+            enableHiding={false}
+            enablePagination={true}
+            layoutMode="semantic"
+            state={{ pagination }}
+            onPaginationChange={setPagination}
+            manualPagination={false}
+            rowCount={sortedRows.length}
+            initialState={{ density: "compact", pagination: { pageIndex: 0, pageSize: 4 } }}
+            muiTablePaperProps={{
+              sx: {
+                position: "relative",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                transformStyle: "preserve-3d",
+                boxShadow: useColorModeValue("0 28px 80px rgba(15, 23, 42, 0.18)", "0 32px 90px rgba(0, 0, 0, 0.45)"),
+                background: useColorModeValue("linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)", "linear-gradient(180deg, #111827 0%, #111827 100%)"),
+                overflow: "hidden",
+                transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 0,
+                  background: "radial-gradient(circle at top center, rgba(255,255,255,0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(59,130,246,0.16), transparent 24%)",
+                  opacity: 0.8,
+                  pointerEvents: "none",
+                  animation: "pulseGlow 6s ease-in-out infinite",
+                },
+                "@keyframes pulseGlow": {
+                  "0%, 100%": {
+                    opacity: 0.7,
+                  },
+                  "50%": {
+                    opacity: 0.95,
+                  },
+                },
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: useColorModeValue("0 34px 100px rgba(15, 23, 42, 0.22)", "0 38px 110px rgba(0, 0, 0, 0.55)"),
+                },
+              },
+            }}
+            muiTableContainerProps={{
+              sx: {
+                flex: 1,
+                height: "100%",
+                minHeight: 0,
+                overflowY: "auto",
+                overflowX: isFullscreen ? "auto" : "hidden",
+                perspective: "1600px",
+                transformStyle: "preserve-3d",
+                "& .MuiTableHead-root": {
+                  background: useColorModeValue("#F8FAFC", "#111827"),
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 2,
+                  transform: "translateZ(6px)",
+                  boxShadow: "0 10px 32px rgba(15,23,42,0.08)",
+                  "& .MuiTableCell-root": {
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    color: tableTextColor,
+                    borderBottom: "none",
+                    background: useColorModeValue("#F8FAFC", "#111827"),
+                  },
+                },
+                "& .MuiTableBody-root .MuiTableRow-root": {
+                  background: useColorModeValue("rgba(255,255,255,0.96)", "rgba(255,255,255,0.05)"),
+                  boxShadow: useColorModeValue("0 10px 24px rgba(15,23,42,.08)", "0 10px 24px rgba(255,255,255,.04)"),
+                  transition: "transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease",
+                  minHeight: "30px",
+                  height: "auto",
+                  transform: "translateZ(0)",
+                },
+                "& .MuiTableBody-root .MuiTableRow-root:hover": {
+                  transform: "translateY(-6px) translateZ(10px)",
+                  boxShadow: "0 18px 42px rgba(15,23,42,.18)",
+                },
+                "& .MuiTableCell-root": {
+                  transition: "transform 0.3s ease, background 0.3s ease, color 0.3s ease",
+                },
+              },
+            }}
+            muiTableProps={{
+              sx: {
+                tableLayout: "fixed",
 
-          muiPaginationProps={{
-            rowsPerPageOptions: isFullscreen ? [10, 15, 20] : [4, 6, 10],
-            showFirstButton: true,
-            showLastButton: true,
-          }}
+                width: "100%",
+                minWidth: "100%",
 
-          muiTableContainerProps={{
-  sx: {
-    height: isFullscreen ? "calc(100vh - 120px)" : 190,   
-    maxHeight: isFullscreen ? "calc(100vh - 120px)" : 190,
-    overflowY: "auto",
-    overflowX: isFullscreen ? "auto" : "hidden",
-    border: `1px solid ${primaryBorder}`,
-    borderRadius: "8px",
-  },
-}}
+                borderSpacing: "0",
+                borderCollapse: "collapse",
 
-
-          enableGlobalFilter={false}
-          enableColumnFilters={false}
-          enableFilters={false}
-          enableColumnActions={false}
-          enableDensityToggle={false}
-          enableHiding={false}
-          enableTopToolbar={false}
-          enableFullScreenToggle={false}
-        />
-      </ThemeProvider>
+                "& .MuiTableCell-root": {
+                  padding: "4px 8px",
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                },
+              },
+            }}
+            muiTableHeadCellProps={{
+              align: "center",
+              sx: {
+                px: 0,
+                py: 0,
+                textAlign: "center",
+                color: tableTextColor,
+                "& .Mui-TableHeadCell-Content": {
+                  width: "100%",
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+                "& .MuiTableCell-root": {
+                  padding: "4px 8px",
+                  minWidth: 0,
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                  color: tableTextColor,
+                },
+              },
+            }}
+            muiTableBodyCellProps={{
+              align: "center",
+              sx: {
+                px: 0,
+                py: 0,
+                textAlign: "center",
+                color: tableTextColor,
+                "& .MuiTableCell-root": {
+                  textAlign: "center",
+                  padding: "4px 8px",
+                  minWidth: 0,
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                  color: tableTextColor,
+                },
+                "& .MuiTypography-root": {
+                  width: "100%",
+                  textAlign: "center",
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                  color: tableTextColor,
+                },
+              },
+            }}
+            muiBottomToolbarProps={{
+              sx: {
+                minHeight: "34px",
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+                "& .MuiTablePagination-root": {
+                  minHeight: "34px",
+                  marginTop: "-10px",
+                },
+                "& .MuiTablePagination-toolbar": {
+                  minHeight: "34px",
+                  padding: "0 6px",
+                },
+                "& .MuiTablePagination-selectRoot": {
+                  display: "none",
+                },
+                "& .MuiTablePagination-selectLabel": {
+                  display: "none",
+                },
+                "& .MuiTablePagination-spacer": {
+                  display: "none",
+                },
+                "& .MuiTablePagination-displayedRows": {
+                  display: "none",
+                },
+                "& .MuiIconButton-root": {
+                  padding: "2px",
+                },
+              },
+            }}
+            muiPaginationProps={{
+              rowsPerPageOptions: [4],
+              showRowsPerPage: false,
+              showFirstButton: true,
+              showLastButton: true,
+            }}
+          />
+        </ThemeProvider>
+      </Box>
     </Box>
   );
 }
+
+// base url from env

@@ -60,7 +60,7 @@ const CustomizeDashboard = () => {
         margin={[10, 10]}
         containerPadding={[0, 0]}
         onLayoutChange={(currentLayout, allLayouts) => {
-          console.log("Layout changed:", allLayouts);
+          // console.log("Layout changed:", allLayouts);
           //  Save layout to state, localStorage, or API
           // saveLayoutToBackend(allLayouts.lg);
         }}

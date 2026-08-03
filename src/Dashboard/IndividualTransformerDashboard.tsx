@@ -25,6 +25,7 @@ import Led99 from "../components/DashboardComponents/IndividualTransformerDashbo
 import TemperatureTrendChart from "../components/DashboardComponents/IndividualTransformerDashboard/TemperatureTrendChart";
 import TripRelayReset from "../components/DashboardComponents/IndividualTransformerDashboard/TripRelayReset";
 import SynchroCheckValues from "../components/DashboardComponents/IndividualTransformerDashboard/SynchroCheckValues";
+import { useParams, useSearchParams } from "react-router-dom";
 
 /* ================= DATA ================= */
 const transformers = [
@@ -34,15 +35,14 @@ const transformers = [
 ];
 
 export default function IndividualTransformerDashboard() {
-  const [selectedTransformer, setSelectedTransformer] = useState("1");
+  // const [selectedTransformer, setSelectedTransformer] = useState("1");
 
-  const selectedTransformerName = useMemo(
-    () =>
-      transformers.find(
-        (t) => t.id.toString() === selectedTransformer
-      )?.name || "TRANSFORMER",
-    [selectedTransformer]
-  );
+  const [searchParams] = useSearchParams();
+
+  const id = searchParams.get("id");
+  const selectedTransformerName = searchParams.get("name");
+  const serial = searchParams.get("serial");
+
 
   const bgColor = useColorModeValue("#f4f4f4", "gray.900");
   const titleColor = useColorModeValue(
@@ -55,7 +55,7 @@ export default function IndividualTransformerDashboard() {
   );
 
   return (
-    <Box p="16px" bg={bgColor} minH="100vh">
+    <Box p="16px" py={2} mt={-6} bg={bgColor} minH="100vh">
       {/* ================= BREADCRUMB ================= */}
       <Breadcrumb
         spacing="6px"
@@ -63,13 +63,13 @@ export default function IndividualTransformerDashboard() {
         mb="6px"
       >
         <BreadcrumbItem>
-          <BreadcrumbLink fontSize="12px" color={mutedColor}>
+          <BreadcrumbLink fontSize="12px" color={mutedColor} href="/">
             Home
           </BreadcrumbLink>
         </BreadcrumbItem>
 
         <BreadcrumbItem>
-          <BreadcrumbLink fontSize="12px" color={mutedColor}>
+          <BreadcrumbLink fontSize="12px" color={mutedColor} href="/devices/transformer">
             Transformers
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -86,7 +86,7 @@ export default function IndividualTransformerDashboard() {
       </Breadcrumb>
 
       {/* ================= TITLE ================= */}
-      <HStack justify="space-between" mb="12px">
+      {/* <HStack justify="space-between" mb="12px">
         <Text fontSize="12px" fontWeight="600" color={titleColor}>
           {selectedTransformerName}
         </Text>
@@ -104,12 +104,14 @@ export default function IndividualTransformerDashboard() {
             </option>
           ))}
         </Select>
-      </HStack>
+      </HStack> */}
 
       {/* ================= MAIN GRID ================= */}
       <Grid templateColumns="320px 1fr" gap="12px">
         {/* LEFT */}
-        <BayLocalRemote />
+        <BayLocalRemote
+          serial={serial || "1"}
+        />
 
         {/* RIGHT */}
         <Box display="flex" flexDirection="column" gap="12px">
@@ -143,7 +145,9 @@ export default function IndividualTransformerDashboard() {
         <GridItem colSpan={2}>
           <Grid templateColumns="1fr 1fr" gap="12px" alignItems="start">
             <Box mt="-16px">
-              <TemperatureTrendChart />
+              <TemperatureTrendChart
+                id={id}
+              />
             </Box>
 
             <Box display="flex" flexDirection="column" gap="12px">

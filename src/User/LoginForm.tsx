@@ -107,8 +107,8 @@ export default function LoginForm() {
 
         sessionStorage.setItem("role", role);
 
-        console.log("LOGIN ROLE SAVED =", role);
-        console.log("FULL LOGIN RESPONSE =", data);
+        // console.log("LOGIN ROLE SAVED =", role);
+        // console.log("FULL LOGIN RESPONSE =", data);
 
         window.dispatchEvent(new Event("storage"));
 

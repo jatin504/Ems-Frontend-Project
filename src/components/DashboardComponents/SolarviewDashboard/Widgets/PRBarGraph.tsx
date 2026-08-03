@@ -31,44 +31,44 @@ const PRBarGraph: React.FC = () => {
     dataSource: {
       devices: {
         patterns: [],
-        ids: ["plant_1_pcs_2_bank_bank_11"],
+        ids: ["plant_1_plant_device"],
       },
       keys: [
+        // {
+        //   key: "bcu_1_energy_discharged_today",
+        //   alias: "Aux",
+        //   keyType: "individual",
+        //   color: "#e76ed9ff",
+        // },
         {
-          key: "inv_total_power",
-          alias: "Aux",
-          keyType: "individual",
-          color: "#6DA2FF",
-        },
-        {
-          key: "inv_total_daily_ac_energy",
+          key: "inv_daily_energy",
           alias: "Daily Energy (kWh)",
           keyType: "individual",
           color: "#6EE7B7",
         },
         {
-          key: "total_inv_pr",
-          alias: "Gen. Loss (kWh)",
+          key: "grid_export_today",
+          alias: "Grid Export (kWh)",
           keyType: "individual",
-          color: "#e76ed9ff",
+          color: "#6DA2FF",
         },
         {
-          key: "power_factor",
-          alias: "Import kWh",
+          key: "grid_import_today",
+          alias: "Grid Import kWh",
           keyType: "individual",
           color: "#FFA500",
         },
         {
-          key: "bcu_2_dod",
+          key: "plant_availability",
           alias: "Plant availability",
           keyType: "individual",
           color: "#FF0000",
         },
-        
+
       ],
       aggregation: timeWindowCUF.aggregation,
       timeRange: timeWindowCUF.timeRange,
-      orderBy: timeWindowCUF.orderBy,
+      orderBy: "ASC",
     },
   };
 
@@ -92,6 +92,35 @@ const PRBarGraph: React.FC = () => {
     useState<ExportFunctions | null>(null);
 
   /* ---------------- SERIES (UNCHANGED LOGIC) ---------------- */
+  // const seriesForChart = useMemo(() => {
+  //   if (!data || typeof data !== "object") return [];
+
+  //   const deviceKeys = Object.keys(data);
+  //   if (!deviceKeys.length) return [];
+
+  //   const deviceData = data[deviceKeys[0]];
+  //   if (!deviceData) return [];
+
+  //   const series: any[] = [];
+
+  //   fetchingToServerObj.dataSource.keys.forEach((cfg) => {
+  //     const points = deviceData[cfg.alias];
+  //     if (Array.isArray(points) && points.length > 0) {
+  //       const isSpline = cfg.alias === "Plant availability";
+  //       series.push({
+  //         type: isSpline ? "spline" : "column",
+  //         name: cfg.alias,
+  //         color: cfg.color,
+  //         data: points.map((p: any) => [p.ts, p.value]),
+  //         ...(isSpline && { yAxis: 1, marker: { enabled: true } }),
+  //       });
+  //     }
+  //   });
+
+  //   return series;
+  // }, [data]);
+
+  /* ---------------- SERIES (UNCHANGED LOGIC) ---------------- */
   const seriesForChart = useMemo(() => {
     if (!data || typeof data !== "object") return [];
 
@@ -104,15 +133,27 @@ const PRBarGraph: React.FC = () => {
     const series: any[] = [];
 
     fetchingToServerObj.dataSource.keys.forEach((cfg) => {
-      const points = deviceData[cfg.alias];
-      if (Array.isArray(points) && points.length > 0) {
+      const rawPoints = deviceData[cfg.alias];
+
+      if (Array.isArray(rawPoints) && rawPoints.length > 0) {
+        const points = [...rawPoints].sort(
+          (a: any, b: any) => a.ts - b.ts
+        );
+
         const isSpline = cfg.alias === "Plant availability";
+
         series.push({
           type: isSpline ? "spline" : "column",
           name: cfg.alias,
           color: cfg.color,
-          data: points.map((p: any) => [p.ts, p.value]),
-          ...(isSpline && { yAxis: 1, marker: { enabled: true }, zIndex: -1 }),
+
+          data: points.map((p: any) => p.value),
+
+          ...(isSpline && {
+            yAxis: 1,
+            marker: { enabled: true },
+            zIndex: -1,
+          }),
         });
       }
     });
@@ -120,9 +161,48 @@ const PRBarGraph: React.FC = () => {
     return series;
   }, [data]);
 
+  const timestamps = useMemo(() => {
+    if (!data || typeof data !== "object") return [];
+
+    const deviceKeys = Object.keys(data);
+    if (!deviceKeys.length) return [];
+
+    const deviceData = data[deviceKeys[0]];
+    if (!deviceData) return [];
+
+    const firstSeries = [...(deviceData["Daily Energy (kWh)"] || [])].sort(
+      (a: any, b: any) => a.ts - b.ts
+    );
+
+    return firstSeries.map((p: any) => p.ts);
+  }, [data]);
+
+  const categories = useMemo(() => {
+    if (!data || typeof data !== "object") return [];
+
+    const deviceKeys = Object.keys(data);
+    if (!deviceKeys.length) return [];
+
+    const deviceData = data[deviceKeys[0]];
+    if (!deviceData) return [];
+
+    const firstSeries = [...(deviceData["Daily Energy (kWh)"] || [])].sort(
+      (a: any, b: any) => a.ts - b.ts
+    );
+
+    return firstSeries.map((p: any) => {
+      const d = new Date(p.ts);
+
+      return d.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+      });
+    });
+  }, [data]);
+
   return (
     <GraphLayout
-      title="Solar"
+      title="Energy Flow"
       width={["1176px"]}
       height="344px"
       fullScreen
@@ -133,18 +213,18 @@ const PRBarGraph: React.FC = () => {
     >
       <ColumnGraph
         apiData={seriesForChart}
+        category={categories}
         height={280}
         onExportReady={setExportFunctions}
         props={{
+          timestamps,
           plotOptions: {
             column: {
               dataLabels: { enabled: false },
               borderWidth: 0,
-              pointWidth: 7,
-              borderRadius: 0,
-              groupPadding: 0.2,
-              pointPadding: 0.2,
-              pointPlacement: "between",
+              pointWidth: 12,
+              borderRadius: 2,
+              grouping: true,
             },
           },
           tooltip: {
@@ -156,16 +236,22 @@ const PRBarGraph: React.FC = () => {
             style: { color: textColor },
           },
           xAxis: {
-            type: "datetime",
-            minPadding: 0.05,
-            maxPadding: 0.05,
-            startOnTick: false,
-            endOnTick: false,
-            labels: { style: { color: textColor, fontSize: "11px" } },
+            categories,
+
+            labels: {
+              style: {
+                color: textColor,
+                fontSize: "11px",
+              },
+            },
+
             lineColor: axisLineColor,
+
             gridLineWidth: 1,
             gridLineDashStyle: "ShortDot",
             gridLineColor: gridColor,
+
+            // tickInterval: 24 * 60 * 60 * 1000
           },
           yAxis: [
             {

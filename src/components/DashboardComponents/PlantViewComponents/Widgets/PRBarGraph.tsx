@@ -26,7 +26,7 @@ const SolarGraph: React.FC = () => {
       },
     }
   );
-
+//CUF & PR
   const fetchingToServerObj = {
     dataSource: {
       devices: {
@@ -97,6 +97,7 @@ const SolarGraph: React.FC = () => {
           type: "column",
           name: cfg.alias,
           color: cfg.color,
+          yAxis: cfg.alias === "Gen. Loss (kWh)" ? 1 : 0,
           data: points.map((p: any) => [p.ts, p.value]),
         });
       }
@@ -147,15 +148,31 @@ const SolarGraph: React.FC = () => {
             gridLineDashStyle: "ShortDot",
             gridLineColor: gridColor,
           },
-          yAxis: {
-            title: { text: "" },
-            min: 0,
-            max: 1000,
-            gridLineWidth: 1,
-            gridLineDashStyle: "ShortDot",
-            gridLineColor: gridColor,
-            labels: { style: { color: textColor, fontSize: "11px" } },
-          },
+          yAxis: [
+            {
+              title: { text: "" },
+              gridLineWidth: 1,
+              gridLineDashStyle: "ShortDot",
+              gridLineColor: gridColor,
+              labels: {
+                style: {
+                  color: textColor,
+                  fontSize: "11px",
+                },
+              },
+            },
+            {
+              title: { text: "" },
+              opposite: true,
+              gridLineWidth: 0,
+              labels: {
+                style: {
+                  color: textColor,
+                  fontSize: "11px",
+                },
+              },
+            },
+          ],
           legend: {
             enabled: true,
             align: "center",

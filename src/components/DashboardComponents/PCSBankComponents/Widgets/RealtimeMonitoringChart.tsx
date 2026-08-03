@@ -179,9 +179,9 @@ const RealtimeMonitoringChart: React.FC<RealtimeMonitoringChartProps> = ({ bankI
     fetchData({
       devices: { patterns: [], ids: [deviceId] },
       keys: [
-        { key: "soc", alias: "Current (A)", keyType: "individual", type: "spline" },
-        { key: "bcu_1_lowest_pack_voltage", alias: "Voltage (V)", keyType: "individual", type: "spline" },
-        { key: "bcu_1_highest_pack_temperature", alias: "Temp (°C)", keyType: "individual", type: "spline" },
+        { key: "phase_a_voltage", alias: "Voltage (V)", keyType: "individual", type: "spline" },
+        { key: "dc_bus_current", alias: "Current (A)", keyType: "individual", type: "spline" },
+        { key: "battery_cabin_temperature_1", alias: "Temp (°C)", keyType: "individual", type: "spline" },
       ],
       aggregation: timeWindowMonitoring.aggregation,
       timeRange: timeWindowMonitoring.timeRange,
@@ -202,7 +202,7 @@ const RealtimeMonitoringChart: React.FC<RealtimeMonitoringChartProps> = ({ bankI
             type: "spline",
             name: metric,
             data: pts.map((p: any) => [p.ts, p.value]),
-            marker: { enabled: true },
+            marker: { enabled: false },
             yAxis: metric === "Temp (°C)" ? 1 : 0,
           });
         }
@@ -225,7 +225,7 @@ const RealtimeMonitoringChart: React.FC<RealtimeMonitoringChartProps> = ({ bankI
         <Box display="flex" alignItems="center" w="100%">
           <Box fontWeight="600">Real Time Monitoring</Box>
 
-          <Box ml={isFullScreen ? "700px" : "250px"}
+          <Box ml={isFullScreen ? "900px" : "170px"}
             opacity={dateNavEnabled ? 1 : 0.4}
             pointerEvents={dateNavEnabled ? "auto" : "none"}
             display="flex"

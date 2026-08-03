@@ -1,62 +1,181 @@
-import { Box, Text, VStack, HStack, useColorModeValue } from "@chakra-ui/react";
-import { AlertTriangle, AlertCircle } from "lucide-react";
-import { useMemo } from "react";
-import { useLatestPOIData } from "../../../../hooks/poi_meter/useLatestPOIData";
+import React, { useMemo, useEffect } from "react";
+import {
+  Box,
+  Text,
+  VStack,
+  HStack,
+  useColorModeValue,
+} from "@chakra-ui/react";
+
+import {
+  AlertTriangle,
+  AlertCircle,
+} from "lucide-react";
+
+import useTimeseriesData from "../../../../hooks/useTimeseriesData";
+
+import StaleIndicator from "../../../../components/Common/StaleIndicator";
+
 import { useAlarmLatest } from "../../../../hooks/useAlarmLatest";
-import { useNavigate } from "react-router-dom"; // <-- Add this import
+
+import { useNavigate } from "react-router-dom";
 
 const MeterCard = () => {
-  /* ---------- Meter keys ---------- */
-  const keys = useMemo(
-    () => ["voltage", "power_kw", "frequency_hz", "amps", "daily_energy_kwh"],
-    []
-  );
 
-  /* ---------- Meter data ---------- */
-  const { data } = useLatestPOIData(keys);
+  const { data, fetchData } =
+    useTimeseriesData();
 
-  /* ---------- Alarm data (IMPORTANT FIX) ---------- */
-  const { alarmCount, warningCount } = useAlarmLatest();
-  const navigate = useNavigate(); // <-- Add this line
+  /* ---------- Alarm data ---------- */
 
-  /* ---------- Meter calculations ---------- */
-  const sumVoltage = data
-    ? data.reduce((s, i) => s + parseFloat(i.voltage), 0)
-    : 0;
+  const {
+    alarmCount,
+    warningCount,
+  } = useAlarmLatest();
 
-  const sumPower = data
-    ? data.reduce((s, i) => s + parseFloat(i.power_kw), 0)
-    : 0;
+  const navigate =
+    useNavigate();
 
-  const sumFrequency = data
-    ? data.reduce((s, i) => s + parseFloat(i.frequency_hz), 0)
-    : 0;
+  /* ---------- Fetch Meter Data ---------- */
 
-  const sumAmps = data
-    ? data.reduce((s, i) => s + parseFloat(i.amps), 0)
-    : 0;
+  useEffect(() => {
 
-  const sumEnergy = data
-    ? data.reduce((s, i) => s + parseFloat(i.daily_energy_kwh), 0)
-    : 0;
+    fetchData({
 
-  const avgVoltage = data?.length ? sumVoltage / data.length : 0;
-  const avgPower = data?.length ? sumPower / data.length : 0;
-  const avgFrequency = data?.length ? sumFrequency / data.length : 0;
-  const avgAmps = data?.length ? sumAmps / data.length : 0;
+      devices: {
+        patterns: [],
+        ids: [
+          "plant_1_ht_outgoing_meter_1",
+        ],
+      },
+
+      keys: [
+
+        {
+          key: "total_active_power",
+          alias: "Active Power",
+          keyType: "common",
+        },
+
+        {
+          key: "total_reactive_power",
+          alias: "Reactive Power",
+          keyType: "common",
+        },
+
+        {
+          key: "frequency",
+          alias: "Frequency",
+          keyType: "common",
+        },
+
+        {
+          key: "avg_voltage_l",
+          alias: "Voltage",
+          keyType: "common",
+        },
+
+        {
+          key: "avg_current_l",
+          alias: "Current",
+          keyType: "common",
+        },
+
+      ],
+
+      aggregation: {
+        func: "none",
+        interval: 1,
+        intervalType: "minute",
+      },
+
+      timeRange: {
+        type: "last",
+        interval: 10,
+        intervalType: "minute",
+      },
+
+      orderBy: "ASC",
+
+    } as any);
+
+  }, []);
+
+  /* ---------- Transform API Data ---------- */
+
+  const metrics =
+    useMemo(() => {
+
+      if (
+        !data ||
+        typeof data !== "object"
+      ) {
+        return {};
+      }
+
+      const series: any = {};
+
+      Object.values(data).forEach(
+        (deviceObj: any) => {
+
+          if (
+            deviceObj &&
+            typeof deviceObj === "object"
+          ) {
+
+            Object.entries(deviceObj).forEach(
+              ([metric, points]: any) => {
+
+                if (
+                  Array.isArray(points) &&
+                  points.length
+                ) {
+
+                  const latestPoint =
+                    points[
+                      points.length - 1
+                    ];
+
+                  series[metric] = {
+                    value:
+                      latestPoint?.value ??
+                      "--",
+
+                    ts:
+                      latestPoint?.ts || 0,
+                  };
+                }
+              }
+            );
+          }
+        }
+      );
+
+      return series;
+
+    }, [data]);
 
   /* ---------- Theme ---------- */
-  const primaryBg = useColorModeValue("primary.light", "primary.dark");
-  const primaryColor = useColorModeValue(
-    "primaryText.light",
-    "primaryText.dark"
-  );
-  const secondaryColor = useColorModeValue(
-    "secondaryText.light",
-    "secondaryText.dark"
-  );
+
+  const primaryBg =
+    useColorModeValue(
+      "primary.light",
+      "primary.dark"
+    );
+
+  const primaryColor =
+    useColorModeValue(
+      "primaryText.light",
+      "primaryText.dark"
+    );
+
+  const secondaryColor =
+    useColorModeValue(
+      "secondaryText.light",
+      "secondaryText.dark"
+    );
 
   return (
+
     <Box
       width="330px"
       p="16px"
@@ -65,53 +184,180 @@ const MeterCard = () => {
       fontSize="14px"
       color={primaryColor}
     >
+
       {/* ---------- Title ---------- */}
-      <Text fontSize="16px" fontWeight="600" mb={4}>
+
+      <Text
+        fontSize="16px"
+        fontWeight="600"
+        mb={4}
+      >
         Meter
       </Text>
 
       {/* ---------- Meter Values ---------- */}
-      <VStack align="stretch" spacing={3}>
-        <HStack justify="space-between">
-          <Text color={secondaryColor}>Instant Power:</Text>
-          <Text fontWeight="600">{avgPower.toFixed(2)} kW</Text>
-        </HStack>
+
+      <VStack
+        align="stretch"
+        spacing={3}
+      >
+
+        {/* Active Power */}
 
         <HStack justify="space-between">
-          <Text color={secondaryColor}>Daily Energy:</Text>
-          <Text fontWeight="600">{sumEnergy.toFixed(2)} kWh</Text>
+
+          <Text color={secondaryColor}>
+            Active Power:
+          </Text>
+
+          <HStack spacing={1}>
+
+            <Text fontWeight="600">
+              {metrics["Active Power"]?.value ?? "--"}
+            </Text>
+
+            <StaleIndicator
+              ts={metrics["Active Power"]?.ts}
+              value={metrics["Active Power"]?.value}
+            />
+
+          </HStack>
+
         </HStack>
 
-        <HStack justify="space-between">
-          <Text color={secondaryColor}>Frequency:</Text>
-          <Text fontWeight="600">{avgFrequency.toFixed(2)} Hz</Text>
-        </HStack>
+        {/* Reactive Power */}
 
         <HStack justify="space-between">
-          <Text color={secondaryColor}>Voltage:</Text>
-          <Text fontWeight="600">{avgVoltage.toFixed(2)} kV</Text>
+
+          <Text color={secondaryColor}>
+            Reactive Power:
+          </Text>
+
+          <HStack spacing={1}>
+
+            <Text fontWeight="600">
+              {metrics["Reactive Power"]?.value ?? "--"}
+            </Text>
+
+            <StaleIndicator
+              ts={metrics["Reactive Power"]?.ts}
+              value={metrics["Reactive Power"]?.value}
+            />
+
+          </HStack>
+
         </HStack>
 
+        {/* Frequency */}
+
         <HStack justify="space-between">
-          <Text color={secondaryColor}>Current:</Text>
-          <Text fontWeight="600">{avgAmps.toFixed(2)} A</Text>
+
+          <Text color={secondaryColor}>
+            Frequency:
+          </Text>
+
+          <HStack spacing={1}>
+
+            <Text fontWeight="600">
+              {metrics["Frequency"]?.value ?? "--"}
+            </Text>
+
+            <StaleIndicator
+              ts={metrics["Frequency"]?.ts}
+              value={metrics["Frequency"]?.value}
+            />
+
+          </HStack>
+
         </HStack>
+
+        {/* Voltage */}
+
+        <HStack justify="space-between">
+
+          <Text color={secondaryColor}>
+            Voltage:
+          </Text>
+
+          <HStack spacing={1}>
+
+            <Text fontWeight="600">
+              {metrics["Voltage"]?.value ?? "--"}
+            </Text>
+
+            <StaleIndicator
+              ts={metrics["Voltage"]?.ts}
+              value={metrics["Voltage"]?.value}
+            />
+
+          </HStack>
+
+        </HStack>
+
+        {/* Current */}
+
+        <HStack justify="space-between">
+
+          <Text color={secondaryColor}>
+            Current:
+          </Text>
+
+          <HStack spacing={2}>
+
+            <Text fontWeight="600">
+              {metrics["Current"]?.value ?? "--"}
+            </Text>
+
+            <StaleIndicator
+              ts={metrics["Current"]?.ts}
+              value={metrics["Current"]?.value}
+            />
+
+          </HStack>
+
+        </HStack>
+
       </VStack>
 
       {/* ---------- Alarms Section ---------- */}
-      <HStack mt={4} justify="space-between">
+
+      <HStack
+        mt={4}
+        justify="space-between"
+      >
+
+        {/* Alarm Box */}
+
         <VStack
           align="flex-start"
-          bg={useColorModeValue("#FFF8F8", "rgba(255,161,161,0.14)")}
+          bg={useColorModeValue(
+            "#FFF8F8",
+            "rgba(255,161,161,0.14)"
+          )}
           p="10px"
           rounded="8px"
           w="144px"
-          _hover={{ cursor: "pointer", boxShadow: "md" }}
-          onClick={() => navigate("/alarms/latest")}
+          _hover={{
+            cursor: "pointer",
+            boxShadow: "md",
+          }}
+          onClick={() =>
+            navigate("/alarms/latest")
+          }
         >
-          <AlertCircle color="red" size={20} />
-          <Text fontWeight="500">{alarmCount} ALARMS</Text>
+
+          <AlertCircle
+            color="red"
+            size={20}
+          />
+
+          <Text fontWeight="500">
+            {alarmCount} ALARMS
+          </Text>
+
         </VStack>
+
+        {/* Warning Box */}
 
         <VStack
           align="flex-start"
@@ -122,13 +368,28 @@ const MeterCard = () => {
           p="10px"
           rounded="8px"
           w="144px"
-          _hover={{ cursor: "pointer", boxShadow: "md" }}
-          onClick={() => navigate("/alarms/latest")}
+          _hover={{
+            cursor: "pointer",
+            boxShadow: "md",
+          }}
+          onClick={() =>
+            navigate("/alarms/latest")
+          }
         >
-          <AlertTriangle color="orange" size={20} />
-          <Text fontWeight="500">{warningCount} WARNINGS</Text>
+
+          <AlertTriangle
+            color="orange"
+            size={20}
+          />
+
+          <Text fontWeight="500">
+            {warningCount} WARNINGS
+          </Text>
+
         </VStack>
+
       </HStack>
+
     </Box>
   );
 };

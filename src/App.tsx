@@ -1,4 +1,4 @@
-import { Routes, Route, useSearchParams, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Box, useColorModeValue } from "@chakra-ui/react";
 import HomeDashboard from "./Dashboard/HomeDashboard";
 import BatteryBank1Dashboard from "./components/BatteryBank1Dashboard";
@@ -8,6 +8,8 @@ import GensetDashboard from "./Dashboard/GensetDashboard";
 import GridDashboard from "./Dashboard/GridControlDashboard";
 import PPCDashboard from "./Dashboard/PPCDashboard";
 import BessControl from "./Dashboard/BessControl";
+import EventLatest from "./Dashboard/Event_Latest";
+import EventHistory from "./Dashboard/Event_History";
 import NewDashboard from "./Dashboard/NewDashboard";
 import ReportDashboard from "./Dashboard/ReportDashboard";
 import TradingDashboard from "./Dashboard/TradingDashboard";
@@ -16,6 +18,8 @@ import SLDDashboard from "./Dashboard/SLDDashboard";
 import Navbar from "./components/NavBar";
 import AlarmLatest from "./Dashboard/Alarm_Latest";
 import DashboardLog from "./User/DashboardLog";
+import StringNewDashboard from "./Dashboard/StringNewDashboard";
+import WMSDashboard_1 from "./Dashboard/WMSDashboard_1";
 import AlarmHistory from "./Dashboard/Alarm_History";
 import NotificationToast from "./components/NotificationToast";
 // import AlarmEvents from "./Dashboard/Alarm_Events";
@@ -34,17 +38,20 @@ import RackDashboard from "./Dashboard/RevampDashboards/RackDashboard";
 import BessControlDashboard from "./Dashboard/RevampDashboards/BessControlDashboard";
 import UserLogDashboard from "./User/UserLogDashboard";
 import DSMDashboard from "./Dashboard/RevampDashboards/DSMdashboard";
-import Inverter from "./Dashboard/Inverter";
+// import Inverter from "./Dashboard/Inverter";
 import TransformerDashboard from "./Dashboard/TransformerDashboard";
 import IndividualTransformerDashboard from "./Dashboard/IndividualTransformerDashboard";
 import PCSdashboard from "./Dashboard/PCSdashboard";
-import MeterDashboard from "./Dashboard/MeterDashboard";
+import ControlNewDashboard from "./Dashboard/ControlNewDashboard";
+// import MeterDashboard from "./Dashboard/MeterDashboard";
+import MeterDashboard_1 from "./Dashboard/MeterDashboard_1";
 import WMSDashboard from "./Dashboard/WMSDashboard";
 import SwitchGearDashboard from "./Dashboard/SwitchGearDashboard";
 import ProtectionRelayDashboard from "./Dashboard/ProtectionRelayDashboard";
 import SolarDashboard from "./Dashboard/RevampDashboards/solardashboard";
 import DCZoneDashboard from "./Dashboard/DCZoneTabs";
-
+import InverterOverviewDashboard from "./Dashboard/InverterOverviewDashboard";
+import InverterDetailDashboard from "./Dashboard/InverterDetailDashboard";
 import MainLayout from "./layouts/MainLayout";
 import CalendarDashboard from "./Dashboard/CalendarDashboard";
 import RTMDashboard from "./Dashboard/RTMDashboard";
@@ -55,8 +62,35 @@ import MarqueeNewsHeadline from "./components/MarqueeNewsHeadline";
 import NetworkDashboard from "./Dashboard/networkDashboard"; // Corrected import path
 import SolarView from "./Dashboard/SolarView";
 import BillingDashboard from "./Dashboard/BillingDashboard";
-
+import PCSDetail from "./Dashboard/PCSDetail";
+import BessDashboard from "./Dashboard/BessDashboard";
+import BatteryIntelligenceDashboard from "./Dashboard/BatteryIntelligenceDashboard";
+import ControlLoadForecastDashboard from "./Dashboard/ControlLoadForecastDashboard";
 /* Report routes are mapped below directly to DashboardLayout */
+
+function BatteryBankRoute() {
+  const location = useLocation();
+  const source = (location.state as { breadcrumbSource?: string } | null)?.breadcrumbSource;
+
+  const breadcrumbs =
+    source === "bess"
+      ? [
+          { label: "Home", href: "/" },
+          { label: "BESS", href: "/devices/bess" },
+          { label: "Battery Bank" },
+        ]
+      : [
+          { label: "Home", href: "/" },
+          { label: "Plant View", href: "/plantview" },
+          { label: "Battery Bank" },
+        ];
+
+  return (
+    <DashboardLayout breadcrumbs={breadcrumbs}>
+      <PCSBankDashboard />
+    </DashboardLayout>
+  );
+}
 
 /* ---------------- App ---------------- */
 function App() {
@@ -100,12 +134,33 @@ function App() {
             <Route path="/string" element={<StringDashboard />} />
             <Route path="/battery-bank-2/string/:id" element={<StringDashboard />} />
             <Route path="/bess-control" element={<BessControl />} />
+            <Route
+              path="/Load-Forecast"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[{ label: "Home", href: "/" }, { label: "Control" }]}
+                >
+                  <ControlNewDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/control-load-forecast"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[{ label: "Home", href: "/" }, { label: "Control" }, { label: "Load Forecast" }]}
+                >
+                  <ControlLoadForecastDashboard />
+                </DashboardLayout>
+              }
+            />
 
             {/* Alarms */}
             <Route path="/alarms/latest" element={<AlarmLatest />} />
             <Route path="/alarms/history" element={<AlarmHistory />} />
             {/* <Route path="/alarms/events" element={<AlarmEvents />} /> */}
-
+            <Route path="/events/latest" element={<EventLatest />} />
+<Route path="/events/history" element={<EventHistory />} />
             {/* Reports */}
             <Route
               path="/report"
@@ -132,6 +187,19 @@ function App() {
                 </DashboardLayout>
               }
             />
+            <Route
+  path="/string-new-dashboard"
+  element={
+    <DashboardLayout
+      breadcrumbs={[
+        { label: "Home", href: "/" },
+        { label: "String Dashboard" },
+      ]}
+    >
+      <StringNewDashboard />
+    </DashboardLayout>
+  }
+/>
             <Route
               path="/template"
               element={
@@ -279,20 +347,7 @@ function App() {
               }
             />
 
-            <Route
-              path="/batterybankk"
-              element={
-                <DashboardLayout
-                  breadcrumbs={[
-                    { label: "Home", href: "/" },
-                    { label: "Plant View", href: "/plantview" },
-                    { label: "Battery Bank" },
-                  ]}
-                >
-                  <PCSBankDashboard />
-                </DashboardLayout>
-              }
-            />
+            <Route path="/batterybankk" element={<BatteryBankRoute />} />
 
             <Route
               path="/batteryrackk"
@@ -334,6 +389,34 @@ function App() {
                   ]}
                 >
                   <BessControlDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/devices/bess"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Devices", href: "/devices/bess" },
+                    { label: "BESS" },
+                  ]}
+                >
+                  <BessDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/devices/bess/battery-intelligence"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Devices", href: "/devices/bess" },
+                    { label: "Battery Intelligence" },
+                  ]}
+                >
+                  <BatteryIntelligenceDashboard />
                 </DashboardLayout>
               }
             />
@@ -398,7 +481,7 @@ function App() {
                 </DashboardLayout>
               }
             />
-            <Route
+            {/* <Route
               path="/devices/inv"
               element={
                 <DashboardLayout
@@ -408,6 +491,43 @@ function App() {
                   ]}
                 >
                   <Inverter />
+                </DashboardLayout>
+              }
+            /> */}
+            <Route
+              path="/devices/inv"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Inverter" },
+                  ]}
+                >
+                  <InverterOverviewDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/inverter-overview"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[{ label: "Home", href: "/" }, { label: "Inverter Overview" }]}
+                >
+                  <InverterOverviewDashboard />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/devices/inv/details"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Inverter", href: "/devices/inv" },
+                    { label: "Inverter Details" },
+                  ]}
+                >
+                  <InverterDetailDashboard />
                 </DashboardLayout>
               }
             />
@@ -424,7 +544,7 @@ function App() {
                 </DashboardLayout>
               }
             />
-            <Route
+            {/* <Route
               path="/devices/meter"
               element={
                 <DashboardLayout
@@ -434,6 +554,19 @@ function App() {
                   ]}
                 >
                   <MeterDashboard />
+                </DashboardLayout>
+              }
+            /> */}
+            <Route
+              path="/devices/meter-1"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/devices/meter-1" },
+                    { label: "Meter" },
+                  ]}
+                >
+                  <MeterDashboard_1 />
                 </DashboardLayout>
               }
             />
@@ -451,6 +584,19 @@ function App() {
               }
             />
             <Route
+  path="/devices/wms-1"
+  element={
+    <DashboardLayout
+      breadcrumbs={[
+        { label: "Home", href: "/" },
+        { label: "WMS" },
+      ]}
+    >
+      <WMSDashboard_1 />
+    </DashboardLayout>
+  }
+/>
+            <Route
               path="/devices/switch-gear"
               element={
                 <DashboardLayout
@@ -463,6 +609,20 @@ function App() {
                 </DashboardLayout>
               }
             />
+            <Route
+  path="/devices/pcs/details"
+  element={
+    <DashboardLayout
+      breadcrumbs={[
+        { label: "Home", href: "/" },
+        { label: "PCS", href: "/devices/pcs" },
+        { label: "PCS Details" },
+      ]}
+    >
+      <PCSDetail />
+    </DashboardLayout>
+  }
+/>
             <Route
               path="/devices/protection-relay"
               element={

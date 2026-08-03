@@ -11,12 +11,11 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { ChevronDownIcon } from "@chakra-ui/icons";
+import useTimeseriesData from "../../../../hooks/useTimeseriesData";
+import StaleIndicator from "../../../Common/StaleIndicator";
 import { useEffect, useState } from "react";
 
-/* ================= API BASE ================= */
-
-const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
+const BASE_URL = import.meta.env.VITE_API_BASE;
 
 /* Resolution mapping */
 const resolutionMap: Record<string, string> = {
@@ -30,38 +29,36 @@ const resolutionMap: Record<string, string> = {
 /* Status-wise info mapping */
 const statusInfoMap: Record<string, any[]> = {
   status: [
-    { key: "soc", alias: "Plant Availability", agg: "avg", unit: "%" },
-    { key: "Alarm_1", alias: "Grid Availability", agg: "avg", unit: "%" },
-    { key: "Active_power", alias: "Grid Out", agg: "avg", unit: "" },
-    { key: "soc", alias: "Grid Occurrence", agg: "avg", unit: "%" },
-    { key: "Alarm_1", alias: "Plant Downtime", agg: "avg", unit: "%" },
-    { key: "Active_power", alias: "Load Loss", agg: "avg", unit: "" },
+    { key: "total_inv_availability", alias: "Plant Availability", agg: "last", unit: "%" },
+    { key: "grid_availability", alias: "Grid Availability", agg: "last", unit: "%" },
+    { key: "grid_out", alias: "Grid Out", agg: "last", unit: "min" },
+    { key: "grid_out_instance", alias: "Grid Out Occurrence", agg: "last", unit: "" },
+    { key: "plant_down", alias: "Plant Downtime", agg: "last", unit: "min" },
     {
-      key: "soc",
+      key: "plant_down_instance",
       alias: "Plant Downtime Occurrence",
-      agg: "avg",
+      agg: "last",
       unit: "",
     },
   ],
 
   solar: [
-    { key: "Active_power", alias: "PV Generation kWh", agg: "avg", unit: "kWh" },
-    { key: "Power_factor", alias: "PV Power kW", agg: "avg", unit: "kW" },
-    { key: "Energy_charged_today", alias: "CUF%", agg: "avg", unit: "%" },
-    {
-      key: "Control_unit_cabin_dew_point_temperature",
-      alias: "CO2 Saving kg",
-      agg: "avg",
-      unit: "kg",
-    },
-    { key: "soc", alias: "PR %", agg: "avg", unit: "%" },
+    { key: "inv_total_power", alias: "PV Power", agg: "last", unit: "kW" },
+    { key: "inv_daily_energy", alias: "PV Generation", agg: "last", unit: "kWh" },
+    { key: "inv_total_energy", alias: "PV Total Generation", agg: "last", unit: "kWh" },
+    { key: "cuf_ac", alias: "CUF AC", agg: "last", unit: "%" },
+    { key: "cuf_dc", alias: "CUF DC", agg: "last", unit: "%" },
+    { key: "total_inv_pr", alias: "PR", agg: "last", unit: "%" },
   ],
 
   grid: [
-    { key: "soc", alias: "Grid Availability", agg: "avg", unit: "%" },
-    { key: "soc", alias: "Grid Outages", agg: "avg", unit: "" },
-    { key: "soc", alias: "Grid Availability", agg: "avg", unit: "%" },
-    { key: "soc", alias: "Grid Outages", agg: "avg", unit: "" },
+    { key: "total_grid_power", alias: "Grid Power", agg: "last", unit: "kW" },
+    { key: "grid_availability", alias: "Grid Availability", agg: "last", unit: "%" },
+    { key: "grid_avg_frequency", alias: "Grid Frequency", agg: "last", unit: "Hz" },
+    { key: "grid_avg_voltage", alias: "Grid Voltage", agg: "last", unit: "V" },
+    { key: "grid_avg_current", alias: "Grid Current", agg: "last", unit: "A" },
+    { key: "grid_export_today", alias: "Grid Export", agg: "last", unit: "kWh" },
+    { key: "grid_import_today", alias: "Grid Import", agg: "last", unit: "kWh" },
   ],
 
   dg: [
@@ -73,8 +70,8 @@ const statusInfoMap: Record<string, any[]> = {
   ],
 
   bess: [
-    { key: "Energy_charged_today", alias: "BESS kW", agg: "avg", unit: "kWh" },
-    { key: "Energy_discharged_today", alias: "Charge kWh", agg: "avg", unit: "kWh" },
+    { key: "Energy_charged_today", alias: "BESS kW", agg: "last", unit: "kWh" },
+    { key: "Energy_discharged_today", alias: "Charge kWh", agg: "last", unit: "kWh" },
     { key: "Energy_charged_this_month", alias: "Discharge kWh", agg: "avg", unit: "kWh" },
     { key: "Energy_discharged_this_month", alias: "SoC%", agg: "avg", unit: "kWh" },
     { key: "Energy_charged_this_year", alias: "BESS Hz", agg: "avg", unit: "kWh" },
@@ -87,6 +84,7 @@ type CardItem = {
   key: string;
   value: number | null;
   unit: string;
+  ts?: number; // timestamp
 };
 
 const PlantCard = () => {
@@ -103,30 +101,34 @@ const PlantCard = () => {
   const [data, setData] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const {
+    data: tsData,
+    fetchData: fetchTsData,
+  } = useTimeseriesData();
+
+  /* API call */
   useEffect(() => {
     const fetchPlantCard = async () => {
       setLoading(true);
 
       const payload = {
-        table: "plant_1_pcs_2_bank_bank_12",
-        today_table: "plant_1_pcs_2_bank_bank_13",
+        table: "plant_1_plant_device",
+        today_table: "plant_1_plant_device",
         resolution: resolutionMap[currentResolution],
         info: statusInfoMap[currentStatus],
       };
 
       try {
-        const res = await fetch(
-          `${API_BASE}/api/plant_card/`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }
-        );
+        const res = await fetch(`${BASE_URL}/api/plant_card/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
         const json = await res.json();
+
         setData(json?.data?.[payload.resolution] ?? []);
-      } catch {
+      } catch (e) {
         setData([]);
       } finally {
         setLoading(false);
@@ -134,9 +136,64 @@ const PlantCard = () => {
     };
 
     fetchPlantCard();
+
+    const intervalId = setInterval(() => {
+      fetchPlantCard();
+    }, 60000);
+
+    return () => clearInterval(intervalId);
   }, [currentStatus, currentResolution]);
 
+  /* Fetch common timestamp key */
+  useEffect(() => {
+    const fetchTimeseries = () => {
+      fetchTsData({
+        devices: {
+          patterns: [],
+          ids: ["plant_1_plant_device"],
+        },
+
+        keys: [
+          {
+            key: "inv_total_power",
+            alias: "inv_total_power",
+            keyType: "common",
+          },
+        ],
+
+        aggregation: {
+          func: "none",
+          interval: 1,
+          intervalType: "minute",
+        },
+
+        timeRange: {
+          type: "last",
+          interval: 1,
+          intervalType: "minute",
+        },
+
+        orderBy: "DESC",
+      } as any);
+    };
+
+    // Initial call
+    fetchTimeseries();
+
+    // Auto refresh every 1 minute
+    const intervalId = setInterval(fetchTimeseries, 60000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  /* Map backend response by alias */
   const dataMap = Object.fromEntries(data.map((d) => [d.key, d]));
+
+  const commonTs =
+    (tsData as any)?.[
+      "plant_1_plant_device"
+    ]?.["inv_total_power"]?.[0]
+      ?.ts || 0;
 
   return (
     <Box
@@ -150,7 +207,9 @@ const PlantCard = () => {
       zIndex={1}
     >
       <VStack width="100%" height="100%">
+        {/* HEADER */}
         <HStack width="100%" justifyContent="space-between" mb={4}>
+          {/* STATUS DROPDOWN */}
           <Menu placement="bottom-start">
             <MenuButton
               as={Button}
@@ -174,6 +233,7 @@ const PlantCard = () => {
             </MenuList>
           </Menu>
 
+          {/* RESOLUTION DROPDOWN */}
           <Menu placement="bottom-start">
             <MenuButton
               as={Button}
@@ -197,12 +257,14 @@ const PlantCard = () => {
           </Menu>
         </HStack>
 
+        {/* CONTENT */}
         <VStack width="100%" spacing={2}>
           {loading && <Text color={secondaryColor}>Loading...</Text>}
 
           {!loading &&
             statusInfoMap[currentStatus].map((item) => {
               const row = dataMap[item.alias];
+
               return (
                 <HStack
                   key={item.alias}
@@ -210,14 +272,78 @@ const PlantCard = () => {
                   width="100%"
                 >
                   <Text color={secondaryColor}>{item.alias}</Text>
-                  <Text fontWeight="600" color={primaryColor}>
-                    {row?.value ?? "--"} {item.unit}
-                  </Text>
+
+                  <HStack spacing={1}>
+                    <HStack spacing={1}>
+                      <Text fontWeight="600" color={primaryColor}>
+                        {(() => {
+                          let value = Number(row?.value);
+
+                          if (isNaN(value)) return "--";
+
+                          let unit = item.unit;
+
+                          if (unit === "kWh") {
+                            if (value >= 1000) {
+                              value = value / 1000;
+                              unit = "MWh";
+                            }
+
+                            return `${value.toFixed(2)} ${unit}`;
+                          }
+
+                          if (unit === "min") {
+                            if (value < 60) {
+                              return `${value} min`;
+                            }
+
+                            const hours = Math.floor(value / 60);
+                            const minutes = value % 60;
+
+                            if (minutes === 0) {
+                              return `${hours}h`;
+                            }
+
+                            return `${hours}h${minutes}min`;
+                          }
+
+                          return `${value.toFixed(2)} ${unit}`;
+                        })()}
+                      </Text>
+
+                      <StaleIndicator
+                        ts={commonTs}
+                        value={row?.value}
+                      />
+                    </HStack>
+                  </HStack>
                 </HStack>
               );
             })}
         </VStack>
       </VStack>
+
+      {/* ================= Blink Animation ================= */}
+
+      <style>
+        {`
+          .blink-icon {
+            animation: blink 1s infinite;
+          }
+
+          @keyframes blink {
+            0% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0;
+            }
+            100% {
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
     </Box>
   );
 };

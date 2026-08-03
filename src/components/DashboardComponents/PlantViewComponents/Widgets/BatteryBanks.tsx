@@ -128,6 +128,14 @@ const Tile: React.FC<{
   );
 };
 
+const formatBankName = (id: string) => {
+  return id
+    .replace(/^plant_\d+_/, "")
+    .replace("bank_bank", "bank")
+    .replace(/_/g, " ")
+    .replace("pcs", "PCS");
+};
+
 const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
   // light/dark
   const cardBg = useColorModeValue("white", "#0F1215");
@@ -167,9 +175,9 @@ const BatteryRow: React.FC<{ bank: Bank }> = ({ bank }) => {
       <HStack spacing={gap} align="center" w="100%" wrap="nowrap" overflow="hidden">
         <VStack align="start" spacing="6px" flex="0 0 auto" minW="140px">
           <Text color={nameColor} fontWeight="semibold" cursor={"pointer"} textTransform={"capitalize"} fontSize={nameFs} noOfLines={1} title={bank.device_id}
-            onClick={() => navigate('/batterybankk', {state : {currentBank : formatString(bank.device_id)}})}
+            onClick={() => navigate('/batterybankk', {state : {currentBank : bank.device_id}})}
           >
-            {formatString(bank.device_id).replace(/_/g, " ").replace("pcs", "PCS")}
+            {formatBankName(bank.device_id)}
           </Text>
           {/* SoC, DoD, SoH Bars in a single row with left labels */}
           <VStack align="start" spacing={0} w="100%">
@@ -290,15 +298,4 @@ const BatteryBanks: React.FC = () => {
 export default BatteryBanks;
 
 
-function formatString(input: string): string {
-  // Regex to capture pcs number and bank number
-  const regex = /pcs_(\d+).*?bank_(\d+)/;
-  const match = input.match(regex);
 
-  if (match) {
-    const [, pcsNum, bankNum] = match;
-    return `pcs_${pcsNum}_bank_${bankNum}`;
-  }
-
-  return input; 
-}

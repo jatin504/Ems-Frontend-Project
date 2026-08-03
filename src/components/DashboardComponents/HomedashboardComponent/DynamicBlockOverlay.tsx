@@ -19,7 +19,7 @@ const DynamicBlockOverlay = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          device_id_patterns: ["_bank_bank_"]
+          device_id_patterns: ["_inverter_inverter_"],
         })
       }
     )
@@ -38,23 +38,19 @@ const DynamicBlockOverlay = () => {
 
             const d = j.data[deviceId];
 
-            const bankMatch = deviceId.match(/bank_(\d+)/i);
+            const inverterMatch = deviceId.match(/inverter_(\d+)$/i);
 
             let name = deviceId;
 
-            if (bankMatch) {
-              name = `Block ${bankMatch[1]} Details`;
+            if (inverterMatch) {
+              name = `Inverter_${inverterMatch[1]}`;
             }
 
-            const pr =
-              d?.Energy_charged_today?.value ??
-              d?.BCU_1_SOC?.value ??
-              d?.soc?.value ??
-              0;
+            const pr = "";
 
             return {
               name,
-              pr: Number(pr).toFixed(1),
+              pr,
               deviation: (Math.random() * -10).toFixed(1),
               curtailment: Math.floor(Math.random() * 20),
               faults: Math.floor(Math.random() * 3),

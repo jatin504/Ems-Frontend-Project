@@ -12,6 +12,7 @@ import {
   IconButton,
   Checkbox,
 } from "@chakra-ui/react";
+import { AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Button as ChakraButton } from "@chakra-ui/react";
 import { EditIcon } from "@chakra-ui/icons";
 import ReactSelect, { components } from "react-select";
 import usePermissions from "../../../../hooks/usePermissions";
@@ -157,6 +158,9 @@ const CapacityAndStrategyCard: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   // Password modal state for Apply
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  // Confirmation dialog state for Apply
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const cancelRef = React.useRef<HTMLButtonElement | null>(null);
 
   /* ========= PCS OPTIONS ========= */
 
@@ -311,7 +315,7 @@ const CapacityAndStrategyCard: React.FC = () => {
             />
           </Box>
 
-          <Button colorScheme="teal" onClick={handleApply} isDisabled={!canControl}>
+          <Button colorScheme="teal" onClick={() => setIsConfirmOpen(true)} isDisabled={!canControl}>
             Apply
           </Button>
           <ConfirmPasswordModal
@@ -319,6 +323,34 @@ const CapacityAndStrategyCard: React.FC = () => {
             onClose={() => setIsPasswordOpen(false)}
             onConfirm={handlePasswordConfirm}
           />
+          {/* Confirmation dialog for Apply */}
+          <AlertDialog
+            isOpen={isConfirmOpen}
+            leastDestructiveRef={cancelRef}
+            onClose={() => setIsConfirmOpen(false)}
+            isCentered
+          >
+            <AlertDialogOverlay>
+              <AlertDialogContent>
+                <AlertDialogHeader fontSize="lg" fontWeight="bold">Confirm Apply</AlertDialogHeader>
+                <AlertDialogBody>Are you sure you want to apply selected modes?</AlertDialogBody>
+                <AlertDialogFooter>
+                  <ChakraButton ref={cancelRef} onClick={() => setIsConfirmOpen(false)} size="sm">Cancel</ChakraButton>
+                  <ChakraButton
+                    colorScheme="teal"
+                    ml={3}
+                    size="sm"
+                    onClick={() => {
+                      setIsConfirmOpen(false);
+                      handleApply();
+                    }}
+                  >
+                    Yes, Apply
+                  </ChakraButton>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialogOverlay>
+          </AlertDialog>
         </HStack>
 
         {activePCSMode && (

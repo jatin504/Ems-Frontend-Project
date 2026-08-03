@@ -118,9 +118,9 @@ const CustomDashboardView = () => {
         ? JSON.parse(rawDashboard.config)
         : rawDashboard.config;
     const fullDashboard = { ...rawDashboard, config: parsedConfig };
-    console.log("[DASHBOARD_LOAD] loaded dashboard:", fullDashboard);
+    // console.log("[DASHBOARD_LOAD] loaded dashboard:", fullDashboard);
     const normalized = normalizeDashboardConfig(fullDashboard);
-    console.log("[DASHBOARD_LOAD] normalized dashboard:", normalized);
+    // console.log("[DASHBOARD_LOAD] normalized dashboard:", normalized);
     setDashboardConfig(normalized);
 
       Object.values(normalized.config.widgets).forEach((widget: any) => {
@@ -232,9 +232,9 @@ const CustomDashboardView = () => {
             ? JSON.parse(rawDashboard.config)
             : rawDashboard.config;
         const fullDashboard = { ...rawDashboard, config: parsedConfig };
-        console.log("[DASHBOARD_LOAD] loaded dashboard:", fullDashboard);
+        // console.log("[DASHBOARD_LOAD] loaded dashboard:", fullDashboard);
         const normalized = normalizeDashboardConfig(fullDashboard);
-        console.log("[DASHBOARD_LOAD] normalized dashboard:", normalized);
+        // console.log("[DASHBOARD_LOAD] normalized dashboard:", normalized);
         setDashboardConfig(normalized);
 
         // void loadDashboardData({...normalized});
@@ -243,10 +243,10 @@ const CustomDashboardView = () => {
         // ignore
       }
 
-      console.log(
-        "[ADD_WIDGET] widget added and dashboardConfig updated:",
-        widget.id
-      );
+      // console.log(
+      //   "[ADD_WIDGET] widget added and dashboardConfig updated:",
+      //   widget.id
+      // );
     } catch (err) {
       console.error("Error in addWidgetFromTemplate:", err);
     }
@@ -333,7 +333,7 @@ const CustomDashboardView = () => {
         updatedList = [updatedDashboard];
       }
       localStorage.setItem("dashboards", JSON.stringify(updatedList));
-      console.log("[DELETE_WIDGET] Widget deletion saved to localStorage immediately");
+      // console.log("[DELETE_WIDGET] Widget deletion saved to localStorage immediately");
     } catch (err) {
       console.warn("Failed to persist widget deletion to localStorage:", err);
     }
@@ -341,7 +341,7 @@ const CustomDashboardView = () => {
     // Save to database asynchronously
     try {
       await saveDashboard(updatedDashboard);
-      console.log("[DELETE_WIDGET] Widget deletion saved to database successfully");
+      // console.log("[DELETE_WIDGET] Widget deletion saved to database successfully");
     } catch (err) {
       console.warn("Failed to save widget deletion to database:", err);
       // Even if database save fails, localStorage is already updated
@@ -399,7 +399,7 @@ const CustomDashboardView = () => {
         updatedList = [updatedDashboard];
       }
       localStorage.setItem("dashboards", JSON.stringify(updatedList));
-      console.log("[LAYOUT_CHANGE] Layout changes saved to localStorage");
+      // console.log("[LAYOUT_CHANGE] Layout changes saved to localStorage");
     } catch (err) {
       console.warn("Failed to persist layout changes to localStorage:", err);
     }
@@ -408,7 +408,7 @@ const CustomDashboardView = () => {
     setTimeout(async () => {
       try {
         await saveDashboard(updatedDashboard);
-        console.log("[LAYOUT_CHANGE] Layout changes saved to database");
+        // console.log("[LAYOUT_CHANGE] Layout changes saved to database");
       } catch (err) {
         console.warn("Failed to save layout changes to database:", err);
       }

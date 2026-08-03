@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Box,
   Text,
@@ -7,9 +7,7 @@ import {
   Tab,
   useColorModeValue,
   HStack,
-  useMediaQuery,
-  IconButton,
-  Flex,
+  Button,
 } from "@chakra-ui/react";
 import {
   MaterialReactTable,
@@ -20,8 +18,31 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { MdElectricBolt, MdLinkOff } from "react-icons/md";
 import { TbCircuitDiodeZener } from "react-icons/tb";
-import { FiMaximize, FiMinimize } from "react-icons/fi";
 const BASE_URL = import.meta.env.VITE_API_BASE;
+
+type TrendType = "up" | "down" | "same";
+
+const TrendArrow = ({ trend }: { trend: TrendType }) => {
+  if (trend === "up")
+    return (
+      <Text color="green.500" fontWeight="700">
+        ▲
+      </Text>
+    );
+
+  if (trend === "down")
+    return (
+      <Text color="red.500" fontWeight="700">
+        ▼
+      </Text>
+    );
+
+  return (
+    <Text color="gray.400" fontWeight="700">
+      ▬
+    </Text>
+  );
+};
 
 /* ================= TYPES ================= */
 
@@ -34,14 +55,9 @@ interface PCSRow {
 /* ================= COMPONENT ================= */
 
 export default function PlantViewTable() {
-  const primaryBg = useColorModeValue("primary.light", "primary.dark");
   const primaryColor = useColorModeValue(
     "primaryText.light",
     "primaryText.dark"
-  );
-  const primaryBorder = useColorModeValue(
-    "primaryBorder.light",
-    "primaryBorder.dark"
   );
 
   const tableMode = useColorModeValue("light", "dark");
@@ -52,9 +68,10 @@ export default function PlantViewTable() {
   );
 
   const [activeTab, setActiveTab] = useState(0);
-  const [dataMap, setDataMap] = useState<Record<string, any>>({});
+  const [pcsDataMap, setPcsDataMap] = useState<Record<string, any>>({});
+  const [invDataMap, setInvDataMap] = useState<Record<string, any>>({});
 
-  const [isShortScreen] = useMediaQuery("(max-width: 900px)");
+  const previousValues = useRef<Record<string, Record<string, number>>>({});
 
   const panelRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -65,17 +82,26 @@ export default function PlantViewTable() {
     pageSize: 4,
   });
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
+    console.time("fullscreen");
+
     if (!document.fullscreenElement) {
-      panelRef.current?.requestFullscreen();
+      await panelRef.current?.requestFullscreen();
     } else {
-      document.exitFullscreen();
+      await document.exitFullscreen();
     }
+
+    console.timeEnd("fullscreen");
   };
 
   useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    const handler = () => {
+      console.time("render");
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
     document.addEventListener("fullscreenchange", handler);
+
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
@@ -86,36 +112,75 @@ export default function PlantViewTable() {
     });
   }, [isFullscreen]);
 
+  useEffect(() => {
+    console.timeEnd("render");
+  }, [isFullscreen]);
+
+  const getTrend = (
+    current: number,
+    previous: number | undefined
+  ): TrendType => {
+    if (previous === undefined) return "same";
+
+    if (current > previous) return "up";
+
+    if (current < previous) return "down";
+
+    return "same";
+  };
+
   /* ================= COLUMNS ================= */
 
   const pcsCol = [
     "ID",
-    "DC_Volt",
-    "DC_Current_B1",
-    "DC_Current_B2",
+    "Active_Power",
+    
+    "Reactive_Power",
+    
+    // "DC_Current_B1",
+    
     "DC_Current_B3",
     "DC_Current_Total",
-    "DC_Volt_Total",
+    
     "DC_Volt_B1",
     "DC_Volt_B2",
     "DC_Volt_B3",
     "AC_Current_L1",
     "AC_Current_L2",
     "AC_Current_L3",
-    "PF",
-    "Apparent_Power",
-    "Active_Power",
-    "Reactive_Power",
+    "DC_Current_B2",
+    
+    "DC_Volt_Total",
+    
     "AC_Volt_L1L2",
     "AC_Volt_L2L3",
     "AC_Volt_L3L1",
     "Grid_Frequency",
   ];
 
-  const keys = pcsCol.slice(1);
+  const invCol = [
+    "ID",
+    "Active Power",
+    "Reactive Power",
+    "DC Voltage",
+    "DC Power",
+    "AC Current L1",
+    "AC Current L2",
+   "Apparent Power",
+    
+    "Daily Energy",
+  "PF",
+    // "AC Volt L1L2",
+    // "AC Volt L2L3",
+    // "AC Volt L3L1",
+    "Frequency",
+    "Temperature",
+  ];
+
+  const keys = activeTab === 0 ? invCol.slice(1) : pcsCol.slice(1);
 
   /* ===== BACKEND KEY MAP ===== */
-  const COLUMN_KEY_MAP: Record<string, string> = {
+  const PCS_KEY_MAP: Record<string, string> = {
     DC_Current_B1: "Active_power",
     DC_Current_B2: "DCDC1_Battery_side_current",
     DC_Current_B3: "DCDC1_Bus_side_current",
@@ -136,13 +201,45 @@ export default function PlantViewTable() {
     Grid_Frequency: "DCDC1_ISO_insulation_resistance",
   };
 
+  const INV_KEY_MAP: Record<string, string> = {
+    "DC Voltage": "voltage",
+    "DC Power": "reactive_power",
+    "AC Current L1": "current",
+    "AC Current L2": "dc_current",
+    
+    PF: "power_factor",
+    "Daily Energy": "total_energy",
+    "Apparent Power": "apparent_power",
+    "Active Power": "active_power",
+    "Reactive Power": "reactive_power",
+    // "AC Volt L1L2": "Volt_CA",
+    // "AC Volt L2L3": "Volt_BC",
+    // "AC Volt L3L1": "Volt_AB",
+    Frequency: "frequency",
+    Temperature: "Temperature",
+  };
+
   /* ===== UI HEADER MAP ===== */
   const COLUMN_HEADER_MAP: Record<string, string> = {
     DC_Volt: "Volt",
     DC_Current_B1: "Power",
     DC_Current_B2: "Reactive Power",
     DC_Current_B3: "Apparent Power",
-    DC_Current_Total: "Amps",
+    DC_Current_Total: "DC Current Total",
+    "Active Power": "Active Power",
+    "Reactive Power": "Reactive Power",
+    "DC Voltage": "DC Voltage",
+    "DC Power": "DC Power",
+    "AC Current L1": "AC Current L1",
+    "AC Current L2": "AC Current L2",
+    "AC Current L3": "AC Current L3",
+    "Daily Energy": "Daily Energy",
+    "Apparent Power": "Apparent Power",
+    // "AC Volt L1L2": "AC Volt L1L2",
+    // "AC Volt L2L3": "AC Volt L2L3",
+    // "AC Volt L3L1": "AC Volt L3L1",
+    Frequency: "Frequency",
+    Temperature: "Temperature",
   };
 
   /* ================= API ================= */
@@ -150,7 +247,7 @@ export default function PlantViewTable() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(
+        const pcsResponse = await fetch(
           `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
           {
             method: "POST",
@@ -160,17 +257,28 @@ export default function PlantViewTable() {
             }),
           }
         );
-        const j = await response.json();
-        if (j.success) setDataMap(j.data);
+        const pcsJson = await pcsResponse.json();
+        if (pcsJson.success) setPcsDataMap(pcsJson.data);
+
+        const invResponse = await fetch(
+          `${BASE_URL}/api/lastest-direct-data/multiple-latest-devices`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              device_id_patterns: ["_inverter_inverter_"],
+            }),
+          }
+        );
+        const invJson = await invResponse.json();
+        if (invJson.success) setInvDataMap(invJson.data);
       } catch (error) {
         console.error(error);
       }
     };
 
-    // Fetch immediately
     fetchData();
 
-    // Set up interval for every 60 seconds
     const id = setInterval(fetchData, 60000);
 
     return () => clearInterval(id);
@@ -180,46 +288,46 @@ export default function PlantViewTable() {
 
   const renderStatusIcon = (row: any) => {
     const trip = row?.Trip_tag_value?.value ?? 0;
-    const lastTs = row?.timestamp?.value ?? 0;
+    const tsValue = row?.Time_Stamp?.value ?? row?.timestamp?.value;
+    const lastTs = tsValue ? new Date(tsValue).getTime() : 0;
     const activePower =
-      row?.Active_power?.value ?? row?.Active_Power?.value ?? 0;
+      activeTab === 0
+        ? row?.active_power?.value ?? 0
+        : row?.Active_power?.value ?? 0;
     const now = Date.now();
 
-    if (trip > 0)
-      return (
-        <HStack spacing={1}>
-          <TbCircuitDiodeZener color="purple" size={14} />
-          <Text fontSize="10px" color="purple">
-            Trip
-          </Text>
-        </HStack>
-      );
+    let label = "Stop";
+    let color = "red.500";
+    let icon = <MdElectricBolt color="#E53E3E" size={12} />;
 
-    if (!lastTs || now - lastTs > 10 * 60 * 1000)
-      return (
-        <HStack spacing={1}>
-          <MdLinkOff color="orange" size={14} />
-          <Text fontSize="10px" color="orange">
-            Non-Comm
-          </Text>
-        </HStack>
-      );
-
-    if (activePower > 0)
-      return (
-        <HStack spacing={1}>
-          <MdElectricBolt color="green" size={14} />
-          <Text fontSize="10px" color="green">
-            Gen
-          </Text>
-        </HStack>
-      );
+    if (trip > 0) {
+      label = "Trip";
+      color = "purple.500";
+      icon = <TbCircuitDiodeZener color="#805AD5" size={12} />;
+    } else if (!lastTs || now - lastTs > 4 * 60 * 1000) {
+      label = "Non-Comm";
+      color = "orange.500";
+      icon = <MdLinkOff color="#DD6B20" size={12} />;
+    } else if (activePower > 0) {
+      label = "Running";
+      color = "green.500";
+      icon = <MdElectricBolt color="#38A169" size={12} />;
+    }
 
     return (
-      <HStack spacing={1}>
-        <MdElectricBolt color="red" size={14} />
-        <Text fontSize="10px" color="red">
-          Stop
+      <HStack
+        spacing={1.5}
+        px={2}
+        py={1}
+        borderRadius="999px"
+        bg={useColorModeValue("white", "gray.800")}
+        border="1px solid"
+        borderColor={useColorModeValue("gray.200", "whiteAlpha.200")}
+        boxShadow="sm"
+      >
+        {icon}
+        <Text fontSize="10px" fontWeight="700" color={color}>
+          {label}
         </Text>
       </HStack>
     );
@@ -227,27 +335,55 @@ export default function PlantViewTable() {
 
   /* ================= ROWS ================= */
 
-  const buildRows = (prefix: string) => {
-    const devices = Object.values(dataMap);
-    const count = Math.max(devices.length, 6);
+  const buildRows = (
+    prefix: string,
+    sourceData: Record<string, any>,
+    cols: string[],
+    keyMap: Record<string, string>
+  ) => {
+    const devices = Object.values(sourceData);
 
-    return Array.from({ length: count }).map((_, index) => {
-      const row = devices[index] ?? {};
+    return devices.map((row: any, index) => {
       const mapped: PCSRow = {
         id: `${prefix}-${index + 1}`,
         status: row,
       };
 
-      keys.forEach((k) => {
-        mapped[k] = row?.[COLUMN_KEY_MAP[k] ?? k]?.value ?? "-";
+      cols.slice(1).forEach((k) => {
+        const field = row?.[keyMap[k] ?? k];
+        const value =
+          field?.value !== null && field?.value !== undefined
+            ? Number(field.value)
+            : 0;
+
+        mapped[k] =
+          field?.value !== null && field?.value !== undefined
+            ? `${field.value} ${field.unit ?? ""}`.trim()
+            : "--";
+
+        const prev = previousValues.current[mapped.id]?.[k];
+
+        mapped[`${k}_trend`] = getTrend(value, prev);
+
+        if (!previousValues.current[mapped.id]) {
+          previousValues.current[mapped.id] = {};
+        }
+
+        previousValues.current[mapped.id][k] = value;
       });
 
       return mapped;
     });
   };
 
-  const pcsRows = useMemo(() => buildRows("PCS"), [dataMap]);
-  const invRows = useMemo(() => buildRows("INV"), [dataMap]);
+  const pcsRows = useMemo(
+    () => buildRows("PCS", pcsDataMap, pcsCol, PCS_KEY_MAP),
+    [pcsDataMap]
+  );
+  const invRows = useMemo(
+    () => buildRows("INV", invDataMap, invCol, INV_KEY_MAP),
+    [invDataMap]
+  );
 
   /* ================= COLUMNS ================= */
 
@@ -268,71 +404,120 @@ export default function PlantViewTable() {
     ...keys.map((k) => ({
       accessorKey: k,
       header: COLUMN_HEADER_MAP[k] ?? k,
-      size: 100,
-      Cell: ({ cell }) => (
-        <Text
-          fontSize="10px"
-          textAlign="center"
-          whiteSpace="nowrap"
+      size: 150,
+      Cell: ({ cell }: { cell: any }) => (
+        <HStack
+          w="80px"
+          h="24px"
+          bg={useColorModeValue("#F8FAFF", "gray.800")}
+          borderRadius="999px"
+          border="1px solid"
+          borderColor={useColorModeValue("#E2E8F0", "whiteAlpha.200")}
+          justifyContent="space-between"
+          px={1.5}
+          mx="auto"
         >
-          {cell.getValue<string>()}
-        </Text>
+          <Text fontSize="10px" fontWeight="600" textAlign="center" whiteSpace="nowrap">
+            {String(cell.getValue())}
+          </Text>
+          <TrendArrow trend={cell.row.original[`${k}_trend`]} />
+        </HStack>
       ),
     })),
-  ], []);
+  ], [keys]);
 
-  const columns = useMemo(
-    () => (isShortScreen ? allColumns.slice(0, 5) : allColumns),
-    [isShortScreen, allColumns]
-  );
+  const columns = useMemo(() => {
+    return isFullscreen ? allColumns : allColumns.slice(0, 7);
+  }, [allColumns, isFullscreen]);
 
   /* ================= RENDER ================= */
 
   return (
-    <Box ref={panelRef} bg={primaryBg} color={primaryColor} p="12px" h="100%">
-      <Flex align="center" mb={3}>
-        <Tabs index={activeTab} onChange={setActiveTab} variant="unstyled">
-          <TabList
-            bg={useColorModeValue("gray.100", "gray.700")}
-            borderRadius="lg"
-            p="2px"
-            boxShadow="sm"
+    <Box
+      ref={panelRef}
+      w="100%"
+      h="310px"
+      bg={useColorModeValue("#F8FAFC", "gray.950")}
+      borderRadius="14px"
+      overflow="hidden"
+      border="1px solid"
+      borderColor={useColorModeValue("#DBEAFE", "whiteAlpha.200")}
+      boxShadow={useColorModeValue("0 10px 24px rgba(15, 23, 42, 0.06)", "0 10px 24px rgba(0, 0, 0, 0.24)")}
+      display="flex"
+      flexDirection="column"
+      color={primaryColor}
+    >
+      <HStack
+        justify="space-between"
+        px={3}
+        py={1.5}
+        bg={useColorModeValue(isFullscreen ? "#F8FAFC" : "linear-gradient(90deg, #EFF6FF 0%, #FFFFFF 100%)", isFullscreen ? "#111827" : "linear-gradient(90deg, #1F2937 0%, #111827 100%)")}
+        borderBottom="1px solid"
+        borderColor={useColorModeValue("#DBEAFE", "whiteAlpha.100")}
+      >
+        <Box>
+          <Tabs index={activeTab} onChange={setActiveTab} variant="unstyled">
+            <TabList
+              bg={useColorModeValue("gray.100", "gray.700")}
+              borderRadius="lg"
+              p="2px"
+              boxShadow="sm"
+            >
+              <Tab
+                px={4}
+                py={1}
+                fontSize="11px"
+                fontWeight="600"
+                borderRadius="md"
+                _selected={{ bg: "blue.500", color: "white" }}
+              >
+                INV
+              </Tab>
+              <Tab
+                px={4}
+                py={1}
+                fontSize="11px"
+                fontWeight="600"
+                borderRadius="md"
+                _selected={{ bg: "blue.500", color: "white" }}
+              >
+                PCS
+              </Tab>
+            </TabList>
+          </Tabs>
+        </Box>
+
+        <HStack spacing={2}>
+          <Box
+            px={2.5}
+            py={1}
+            bg={useColorModeValue("#E0F2FE", "blue.900")}
+            borderRadius="999px"
+            border="1px solid"
+            borderColor={useColorModeValue("#BAE6FD", "blue.700")}
+            fontSize="11px"
+            fontWeight="700"
+            color={useColorModeValue("blue.700", "blue.100")}
           >
-            <Tab
-              px={5}
-              py={1.5}
-              fontSize="12px"
-              fontWeight="600"
-              borderRadius="md"
-              _selected={{ bg: "blue.500", color: "white" }}
-            >
-              INV
-            </Tab>
-            <Tab
-              px={5}
-              py={1.5}
-              fontSize="12px"
-              fontWeight="600"
-              borderRadius="md"
-              _selected={{ bg: "blue.500", color: "white" }}
-            >
-              PCS
-            </Tab>
-          </TabList>
-        </Tabs>
+            Total : {activeTab === 0 ? invRows.length : pcsRows.length}
+          </Box>
+          <Button size="xs" variant="ghost" onClick={toggleFullscreen}>
+            ⤢
+          </Button>
+        </HStack>
+      </HStack>
 
-        <IconButton
-          ml="auto"
-          variant="ghost"
-          aria-label="Toggle fullscreen"
-          icon={isFullscreen ? <FiMinimize /> : <FiMaximize />}
-          onClick={toggleFullscreen}
-          size="sm"
-        />
-      </Flex>
-
-      <ThemeProvider theme={theme}>
-        <MaterialReactTable
+      <Box
+        flex="1"
+        px={1}
+        pt={2}
+        pb={0}
+        overflow="hidden"
+        display="flex"
+        flexDirection="column"
+      >
+        <ThemeProvider theme={theme}>
+          <MaterialReactTable
           columns={columns}
           data={activeTab === 1 ? pcsRows : invRows}
           layoutMode="grid"
@@ -342,51 +527,169 @@ export default function PlantViewTable() {
           state={{ pagination }}
           onPaginationChange={setPagination}
 
+          muiTablePaperProps={{
+            sx: {
+              position: "relative",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: isFullscreen ? "none" : useColorModeValue("0 16px 40px rgba(15, 23, 42, 0.10)", "0 16px 40px rgba(0, 0, 0, 0.35)"),
+              background: useColorModeValue("linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)", "linear-gradient(180deg, #111827 0%, #0f172a 100%)"),
+              borderRadius: "16px",
+              overflow: "hidden",
+              border: "1px solid",
+              borderColor: useColorModeValue("#E2E8F0", "whiteAlpha.200"),
+            },
+          }}
+
+          muiTableContainerProps={{
+            sx: {
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: isFullscreen ? "auto" : "hidden",
+              "& .MuiTableHead-root": {
+                background: useColorModeValue("#F0F7FF", "#1F2937"),
+                position: "sticky",
+                top: 0,
+                zIndex: 2,
+                boxShadow: "0 6px 16px rgba(15,23,42,0.06)",
+                "& .MuiTableCell-root": {
+                  fontWeight: 700,
+                  fontSize: "12px",
+                  color: useColorModeValue("#0F172A", "#E5E7EB"),
+                  borderBottom: "none",
+                  background: useColorModeValue("#F0F7FF", "#1F2937"),
+                },
+              },
+              "& .MuiTableBody-root .MuiTableRow-root": {
+                background: useColorModeValue("#FFFFFF", "rgba(17,24,39,0.95)"),
+                borderBottom: "1px solid",
+                borderColor: useColorModeValue("#F1F5F9", "whiteAlpha.100"),
+                transition: "background 0.2s ease, box-shadow 0.2s ease",
+                minHeight: "24px",
+                height: "auto",
+              },
+              "& .MuiTableBody-root .MuiTableRow-root:nth-of-type(odd)": {
+                background: useColorModeValue("#FCFDFF", "rgba(15,23,42,0.9)"),
+              },
+              "& .MuiTableBody-root .MuiTableRow-root:hover": {
+                background: useColorModeValue("#F8FAFF", "rgba(30,41,59,0.95)"),
+              },
+              "& .MuiTableCell-root": {
+                padding: "3px 8px",
+              },
+            },
+          }}
+
+          muiTableProps={{
+            sx: {
+              tableLayout: "fixed",
+              width: "100%",
+              minWidth: isFullscreen ? "1600px" : "100%",
+              borderSpacing: "0",
+              borderCollapse: "collapse",
+              "& .MuiTableCell-root": {
+                padding: "4px 8px",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              },
+            },
+          }}
+
           muiTableHeadCellProps={{
             align: "center",
             sx: {
+              px: 0,
+              py: 0,
               textAlign: "center",
-              whiteSpace: "nowrap",
-              py: isShortScreen ? 0.25 : 0.75,
-              px: 1,
-              fontSize: isShortScreen ? "9px" : "10px",
+              "& .Mui-TableHeadCell-Content": {
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              },
+              "& .MuiTableCell-root": {
+                padding: "4px 8px",
+              },
             },
           }}
 
           muiTableBodyCellProps={{
             align: "center",
             sx: {
+              px: 0,
+              py: 0,
               textAlign: "center",
-              whiteSpace: "nowrap",
-              py: isShortScreen ? 0.25 : 0.75,
-              px: 1,
-              fontSize: isShortScreen ? "9px" : "10px",
+              "& .MuiTableCell-root": {
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+                padding: "4px 8px",
+                minWidth: 0,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              },
+              "& .MuiTypography-root": {
+                width: "100%",
+                textAlign: "center",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              },
             },
           }}
 
-          muiTableRowProps={{
-            sx: {
-              height: isShortScreen ? 24 : 32,
-            },
-          }}
-
-          muiPaginationProps={{
-            rowsPerPageOptions: isFullscreen ? [10, 15, 20] : [4, 6, 10],
-            showFirstButton: true,
-            showLastButton: true,
-          }}
-
-          muiTableContainerProps={{
+          muiBottomToolbarProps={{
   sx: {
-    height: isFullscreen ? "calc(100vh - 120px)" : 190,   
-    maxHeight: isFullscreen ? "calc(100vh - 120px)" : 190,
-    overflowY: "auto",
-    overflowX: isFullscreen ? "auto" : "hidden",
-    border: `1px solid ${primaryBorder}`,
-    borderRadius: "8px",
+    minHeight: "36px",
+    height: "36px",
+
+    "& .MuiToolbar-root": {
+      minHeight: "36px",
+      height: "36px",
+      display: "flex",
+      alignItems: "center",
+    },
+
+    "& .MuiTablePagination-root": {
+      display: "flex",
+      alignItems: "center",
+      marginTop: "-10px", // ← isse pura pagination upar aa jayega
+    },
+
+    "& .MuiTablePagination-toolbar": {
+      minHeight: "36px",
+      height: "36px",
+      display: "flex",
+      alignItems: "center",
+      padding: "0 8px",
+    },
   },
 }}
 
+          muiPaginationProps={{
+            showFirstButton: false,
+            showLastButton: false,
+            showRowsPerPage: false,
+            sx: {
+              minHeight: "24px",
+              padding: "0px 8px",
+              "& .MuiTablePagination-displayedRows": {
+                fontSize: "11px",
+                margin: 0,
+                position: "relative",
+                top: "-2px",
+              },
+              "& .MuiTablePagination-actions": {
+                marginLeft: "4px",
+                position: "relative",
+                top: "-2px",
+              },
+            },
+          }}
 
           enableGlobalFilter={false}
           enableColumnFilters={false}
@@ -397,7 +700,8 @@ export default function PlantViewTable() {
           enableTopToolbar={false}
           enableFullScreenToggle={false}
         />
-      </ThemeProvider>
+        </ThemeProvider>
+      </Box>
     </Box>
   );
 }

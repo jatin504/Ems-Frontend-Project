@@ -1,243 +1,295 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
-  Grid,
-  GridItem,
-  useColorModeValue,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  Select,
+  Flex,
   HStack,
   Text,
+  Switch,
+  Button,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Portal,
+  useColorModeValue,
 } from "@chakra-ui/react";
+import { ChevronDownIcon } from "@chakra-ui/icons";
 import { useLocation } from "react-router-dom";
+import { useDevices } from "../../hooks/useDevices";
 
-import StatusSummary from "../../components/DashboardComponents/PCSBankComponents/Widgets/StatusSummary";
-import StringConnectedLayout from "../../components/DashboardComponents/PCSBankComponents/Widgets/StringConnectedLayout";
-import TemperatureCards from "../../components/DashboardComponents/PCSBankComponents/Widgets/TemperatureCards";
-import DeviceCard from "../../components/DashboardComponents/PCSBankComponents/Widgets/DeviceCard";
-import AnalogsCard from "../../components/DashboardComponents/PCSBankComponents/Widgets/AnalogsCard";
-import StringsTable from "../../components/DashboardComponents/PCSBankComponents/Widgets/StringsTable";
-import RealtimeMonitoringChart from "../../components/DashboardComponents/PCSBankComponents/Widgets/RealtimeMonitoringChart";
-import useBatteryBank from "../../hooks/PlantView/useBatteryBank";
-
-const FRAME_W = 1920;
-const FRAME_H = 939; // final dashboard height
+import BankTopSummary from "../../components/DashboardComponents/PCSBankComponents/BankTopSummary";
+import BankHealthSummary from "../../components/DashboardComponents/PCSBankComponents/BankHealthSummary";
+import Powergraph from "../../components/DashboardComponents/PCSBankComponents/Powergraph";
+import LimitsRealtime from "../../components/DashboardComponents/PCSBankComponents/LimitsRealtime";
+import PowerEnergyTrend from "../../components/DashboardComponents/PCSBankComponents/PowerEnergyTrend";
+import BankStatus from "../../components/DashboardComponents/PCSBankComponents/BankStatus";
+import StringsSummary from "../../components/DashboardComponents/PCSBankComponents/StringsSummary";
+import EnvironmentCooling from "../../components/DashboardComponents/PCSBankComponents/EnvironmentCooling";
+import BatteryHealthOverview from "../../components/DashboardComponents/PCSBankComponents/BatteryHealthOverview";
+import VoltageCurrentGraph from "../../components/DashboardComponents/PCSBankComponents/voltageCurrentgraph";
+import SocGraph from "../../components/DashboardComponents/PCSBankComponents/socgraph";
 
 const PCSBankDashboard: React.FC = () => {
-  // tokens
-  const screen = useColorModeValue("#f1f5f9", "#0b0f14");
-  const crumbColor = useColorModeValue("#0f172a", "gray.300");
-  const sepColor = useColorModeValue("#64748b", "gray.500"); // ">" color
+  const bg = useColorModeValue("#f4f7fb", "#0b0f14");
+  const headerBg = useColorModeValue("#ffffff", "#061727");
+  const headerBorder = useColorModeValue(
+    "1px solid #E2E8F0",
+    "1px solid #17334c"
+  );
+  const titleColor = useColorModeValue("#1A202C", "white");
+  const infoColor = useColorModeValue("#4A5568", "#D4DDE6");
+  const textColor = useColorModeValue("#1A202C", "white");
+  const dividerColor = useColorModeValue("#CBD5E0", "#35506A");
 
-
+  const { devices, loading } = useDevices();
   const location = useLocation();
-  const { currentBank } = location.state || {};
+  const incomingBank = (location.state as { currentBank?: string })?.currentBank;
+  const [selectedDevice, setSelectedDevice] = useState("");
 
-  // Persist selectedBank in localStorage
-  const STORAGE_KEY = "pcsbank_selectedBank";
-  const [selectedBank, setSelectedBank] = React.useState<string>(() => {
-    // Priority: location.state > localStorage > ""
-    if (currentBank) return currentBank;
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved || "";
-  });
+  const deviceOptions = useMemo(
+    () =>
+      devices
+        ? devices
+            .filter(
+              (device) =>
+                device.deviceType === "bank" &&
+                /^plant_1_pcs_\d+_bank_bank_\d+$/.test(device.device_id)
+            )
+            .map((device) => ({
+              id: device.device_id,
+              label: device.device_id,
+            }))
+        : [],
+    [devices]
+  );
 
-  const { fetchData, data: banks } = useBatteryBank();
+  useEffect(() => {
+    if (deviceOptions.length === 0) return;
 
-  React.useEffect(() => {
-    fetchData("plant_1");
-  }, []);
-
-
-  // Save selectedBank to localStorage whenever it changes
-  React.useEffect(() => {
-    if (selectedBank) {
-      localStorage.setItem(STORAGE_KEY, selectedBank);
+    if (
+      incomingBank &&
+      deviceOptions.some((d) => d.id === incomingBank)
+    ) {
+      setSelectedDevice(incomingBank);
+    } else {
+      setSelectedDevice(deviceOptions[0].id);
     }
-  }, [selectedBank]);
-
-  // ---- scale to frame width (never upscale) ----
-  const [scale, setScale] = React.useState(1);
-  const viewportRef = React.useRef<HTMLDivElement>(null);
-
-  // React.useLayoutEffect(() => {
-  //   const update = () => {
-  //     const cw =
-  //       viewportRef.current?.clientWidth ?? document.documentElement.clientWidth;
-  //     const s = Math.min(1, (cw - 2) / FRAME_W);
-  //     setScale(s);
-  //   };
-  //   update();
-  //   window.addEventListener("resize", update);
-  //   return () => window.removeEventListener("resize", update);
-  // }, []);
+  }, [incomingBank, deviceOptions, location.key]);
 
   return (
-    <Box w={"100%"}>
-      <Box
-        w={`100%`}
-        h={"100%"}
+    <Box w="100%" minH="100vh" bg={bg}>
+      {/* Header */}
+      <Flex
+        h="38px"
+        bg={headerBg}
+        px="14px"
+        align="center"
+        justify="space-between"
+        borderBottom={headerBorder}
       >
-        <HStack mb="12px" px="4px" spacing="12px">
-          <Text fontWeight="600">Select Bank:</Text>
-          <Select
-            w="240px"
-            size="sm"
-            value={selectedBank}
-            onChange={(e) => setSelectedBank(e.target.value)}
-          >
-            {banks?.map((bank: any) => {
-              const bankId = formatBankId(bank.device_id);
-              const label = bankId.replace(/_/g, " ").replace("pcs", "PCS");
+        <HStack spacing="10px">
+          <Menu>
+            <MenuButton
+              as={Button}
+              rightIcon={<ChevronDownIcon />}
+              w="200px"
+              h="30px"
+              px={2}
+              fontSize="11px"
+              fontWeight="400"
+              textAlign="left"
+              justifyContent="space-between"
+              bg={useColorModeValue("#F8FAFC", "#102133")}
+              border="1px solid"
+              borderColor={useColorModeValue("#D7E2EC", "#23435C")}
+            >
+              {selectedDevice || "Select Bank"}
+            </MenuButton>
 
-              return (
-                <option key={bankId} value={bankId}>
-                  {label}
-                </option>
-              );
-            })}
-          </Select>
+            <Portal>
+              <MenuList
+                minW="unset"
+                w="200px"
+                maxW="200px"
+                maxH="160px"
+                overflowY="auto"
+                p={0}
+                zIndex={9999}
+              >
+                {loading ? (
+                  <MenuItem isDisabled>Loading devices...</MenuItem>
+                ) : (
+                  deviceOptions.map((option) => (
+                    <MenuItem
+                      key={option.id}
+                      onClick={() => setSelectedDevice(option.id)}
+                      h="26px"
+                      px={2}
+                      fontSize="11px"
+                    >
+                      {option.label}
+                    </MenuItem>
+                  ))
+                )}
+              </MenuList>
+            </Portal>
+          </Menu>
+
+          <HStack
+            h="30px"
+            px="12px"
+            spacing="6px"
+            borderRadius="8px"
+            bg={useColorModeValue("#ECFDF3", "#163820")}
+            border="1px solid #2D9D50"
+          >
+            <Flex
+              w="16px"
+              h="16px"
+              borderRadius="full"
+              bg="#2EAF55"
+              align="center"
+              justify="center"
+            >
+              <Box
+                w="6px"
+                h="6px"
+                borderRadius="full"
+                bg="white"
+              />
+            </Flex>
+
+            <Text
+              fontSize="13px"
+              fontWeight="600"
+              color={titleColor}
+            >
+              Healthy
+            </Text>
+          </HStack>
         </HStack>
 
-        {/* Breadcrumb top-left (EXACT: Home > Dashboard > PCS 2 Bank 1) */}
-        {/* <Box px="20px" mb="12px" whiteSpace="nowrap">
-          <Breadcrumb
-            fontSize="14px"
-            separator={<Box as="span" mx="8px" color={sepColor}>{">"}</Box>}
+        <HStack spacing="10px">
+          <Text color={infoColor} fontSize="13px">
+            Auto Refresh
+          </Text>
+
+          <Switch
+            size="sm"
+            colorScheme="green"
+            defaultChecked
+          />
+
+          <Text
+            color={textColor}
+            fontSize="13px"
+            fontWeight="600"
           >
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                href="#"
-                color={crumbColor}
-                fontWeight="600"
-                _hover={{ textDecoration: "none" }}
-              >
-                Home
-              </BreadcrumbLink>
-            </BreadcrumbItem>
+            ON
+          </Text>
 
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                href="#"
-                color={crumbColor}
-                fontWeight="600"
-                _hover={{ textDecoration: "none" }}
-              >
-                Dashboard
-              </BreadcrumbLink>
-            </BreadcrumbItem>
+          <Box
+            w="1px"
+            h="16px"
+            bg={dividerColor}
+          />
 
-            <BreadcrumbItem isCurrentPage>
-              <BreadcrumbLink
-                href="#"
-                color={crumbColor}
-                fontWeight="600"
-                _hover={{ textDecoration: "none" }}
-              >
-                PCS 2 Bank 1
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-          </Breadcrumb>
-        </Box> */}
+          <Text color={infoColor} fontSize="13px">
+            Last Update:
+          </Text>
 
-        {/* Row 1 */}
-        <Grid
-          templateColumns="330px 454px 360px 376px 280px"
-          gap="20px"
-          h="304px"
-          alignItems="stretch"
+          <Text
+            color={textColor}
+            fontSize="13px"
+            fontWeight="500"
+          >
+            11:28:40
+          </Text>
+
+          <Text
+            color={textColor}
+            fontSize="16px"
+            cursor="pointer"
+          >
+            ⛶
+          </Text>
+        </HStack>
+      </Flex>
+
+      {/* Top Summary */}
+      <Box px="12px" pt="12px">
+        <BankTopSummary selectedDevice={selectedDevice} />
+      </Box>
+
+      {/* First Row */}
+      <Box px="12px" mt="12px">
+        <HStack
+          spacing="16px"
+          align="stretch"
+          w="1896px"
         >
-          <GridItem>
-            <Box
-              w="330px"
-              h="304px"
-              display="grid"
-              gridTemplateRows="1fr 1fr"
-              gap="10px"
-            >
-              <StatusSummary
-                title="Strings connected"
-                donutValue={7}
-                donutTotal={10}
-                leftLabel="Connected"
-                leftValue={7}
-                rightLabel="Disabled"
-                rightValue={3}
-              />
-              <StatusSummary
-                title="Cell Balancing"
-                donutValue={1320}
-                donutTotal={1400}
-                leftLabel="Balanced"
-                leftValue={1320}
-                rightLabel="Active"
-                rightValue={80}
-              />
-            </Box>
-          </GridItem>
+          <Box w="430px" mt="-20px">
+            <BankHealthSummary selectedDevice={selectedDevice} />
+          </Box>
 
-          <GridItem>
-            <Box w="454px" h="100%">
-              <StringConnectedLayout bankId={selectedBank} />
-            </Box>
-          </GridItem>
+          <Box w="525px">
+            <BatteryHealthOverview selectedDevice={selectedDevice} />
+          </Box>
 
-          <GridItem>
-            <Box w="360px" h="100%">
-              <TemperatureCards bankId={selectedBank} />
-            </Box>
-          </GridItem>
+          <Box w="880px">
+            <StringsSummary selectedDevice={selectedDevice} />
+          </Box>
+        </HStack>
+      </Box>
 
-          <GridItem>
-            <Box w="376px" h="100%">
-              <AnalogsCard bankId={selectedBank} />
-            </Box>
-          </GridItem>
+      {/* Second Row */}
+      <Box px="12px" mt="16px">
+        <HStack
+          spacing="16px"
+          align="stretch"
+          w="1896px"
+        >
+          <Box w="662px" mt="-20px">
+            <Powergraph selectedDevice={selectedDevice} />
+          </Box>
 
-          <GridItem>
-            <Box w="280px" h="100%">
-              <DeviceCard bankId={selectedBank} />
-            </Box>
-          </GridItem>
-        </Grid>
+          <Box w="522px" mt="-18px" ml="-26px">
+            <PowerEnergyTrend selectedDevice={selectedDevice} />
+          </Box>
 
-        {/* Row 2 */}
-        <Box mt="20px">
-          <Grid
-            templateColumns="930px 930px"
-            gap="20px"
-            h="534px"
-            alignItems="stretch"
-          >
-            <GridItem>
-              <Box w="930px" h="100%">
-                <StringsTable bankId={selectedBank} />
-              </Box>
-            </GridItem>
-            <GridItem>
-              <Box w="930px" h="100%">
-                <RealtimeMonitoringChart bankId={selectedBank} />
-              </Box>
-            </GridItem>
-          </Grid>
-        </Box>
+          <Box w="342px">
+            <BankStatus />
+          </Box>
+
+          <Box w="312px">
+            <LimitsRealtime />
+          </Box>
+        </HStack>
+      </Box>
+
+      {/* Third Row */}
+      <Box px="12px" mt="16px">
+        <HStack spacing="16px" align="stretch" w="1896px">
+          <Box w="620px" mt="-16px">
+            <SocGraph selectedDevice={selectedDevice} />
+          </Box>
+
+          <Box w="620px" mt="-16px">
+            <VoltageCurrentGraph selectedDevice={selectedDevice} />
+          </Box>
+
+          <Box w="620px">
+            <EnvironmentCooling />
+          </Box>
+        </HStack>
+      </Box>
+
+      {/* Remaining Dashboard */}
+      <Box p="12px">
+        {/* Next widgets */}
       </Box>
     </Box>
   );
 };
 
 export default PCSBankDashboard;
-
-function formatBankId(input: string): string {
-  const regex = /pcs_(\d+).*?bank_(\d+)/;
-  const match = input.match(regex);
-
-  if (match) {
-    const [, pcsNum, bankNum] = match;
-    return `pcs_${pcsNum}_bank_${bankNum}`;
-  }
-
-  return input;
-}

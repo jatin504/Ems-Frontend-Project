@@ -1,13 +1,18 @@
 import ConfirmPasswordModal from "./Common/ConfirmPasswordModal";
 import {
   Box, Flex, HStack, IconButton, Button, useDisclosure,
-  Stack, Text, VStack, Image as ChakraImage,   
+  Stack, Text, VStack, Image as ChakraImage,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
   Input, ModalFooter, useColorModeValue, useColorMode, Portal, Divider,
   Menu, MenuButton, MenuList, MenuItem,
 } from "@chakra-ui/react";
 
-import { HamburgerIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
+import {
+  HamburgerIcon,
+  CloseIcon,
+  AddIcon,
+  ChevronDownIcon,
+} from "@chakra-ui/icons";
 import { AiFillHome } from "react-icons/ai";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"; // ← useMemo added
@@ -199,9 +204,24 @@ const Navbar = () => {
       navigate("/batterybankk");
       return;
     }
+
+    if (slug === "meter") {
+      navigate("/devices/meter-1");
+      return;
+    }
+
+    if (slug === "wms") {
+      navigate("/devices/wms-1");
+      return;
+    }
+
+    if (slug === "dc-zone") {
+      navigate("/string-new-dashboard");
+      return;
+    }
+
     navigate(`/devices/${slug}`);
   };
-
   // ---------- Single moving underline ----------
   const navRowRef = useRef<HTMLDivElement>(null);
   const [underline, setUnderline] = useState<{ left: number; width: number; visible: boolean }>({
@@ -212,7 +232,7 @@ const Navbar = () => {
     const row = navRowRef.current;
     if (!row || !el) return;
     const rowRect = row.getBoundingClientRect();
-    const elRect  = el.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
     setUnderline({
       left: elRect.left - rowRect.left,
       width: elRect.width,
@@ -269,17 +289,18 @@ const Navbar = () => {
 
   // Active flags for dropdown parents
   const isDevicesActive = location.pathname.startsWith("/devices");
-  const isSLDActive     = location.pathname.startsWith("/sld");
+  const isSLDActive = location.pathname.startsWith("/sld");
   const isControlActive =
     location.pathname.startsWith("/besscontroll");
-    // location.pathname.startsWith("/ppc") ||
-    // location.pathname.startsWith("/switch-gear");
-  const isAlarmsActive  = location.pathname.startsWith("/alarms");
-  const isReportActive  =
+  location.pathname.startsWith("/control-new-dashboard");
+  // location.pathname.startsWith("/ppc") ||
+  // location.pathname.startsWith("/switch-gear");
+  const isAlarmsActive = location.pathname.startsWith("/alarms");
+  const isReportActive =
     location.pathname.startsWith("/report") ||
     location.pathname.startsWith("/template");
-  const isCustomActive  = location.pathname.startsWith("/custom/dashboard");
-  const isDSMActive     = location.pathname.startsWith("/dsm");
+  const isCustomActive = location.pathname.startsWith("/custom/dashboard");
+  const isDSMActive = location.pathname.startsWith("/dsm");
 
   // hide nav on login
   const hideNav = location.pathname.toLowerCase().startsWith("/login");
@@ -323,7 +344,7 @@ const Navbar = () => {
             {/* NEW: Flux logo (transparent) — SECOND position */}
             <LightLogoProcessed
               src="/NewEtaFluxLogo.svg"   // ⬅️ replaced here
-              h="22px"                
+              h="22px"
               threshold={244}
               tolerance={40}
             />
@@ -424,12 +445,47 @@ const Navbar = () => {
               <Portal>
                 <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr} py={1} minW="180px">
                   <MenuItem onClick={() => goDevice("Inv")} py={1} fontSize="sm">Inverter</MenuItem>
-                  <MenuItem onClick={() => goDevice("pcs")} py={1} fontSize="sm">PCS</MenuItem>
-                  <MenuItem onClick={() => goDevice("wms")} py={1} fontSize="sm">WMS</MenuItem>
-                  <MenuItem onClick={() => goDevice("meter")} py={1} fontSize="sm">METER</MenuItem>
-                  <MenuItem onClick={() => goDevice("bess")} py={1} fontSize="sm">BESS</MenuItem>
+                  <MenuItem onClick={() => goDevice("pcs")} py={1} fontSize="sm">Pcs</MenuItem>
+                  <MenuItem onClick={() => goDevice("wms")} py={1} fontSize="sm">Wms</MenuItem>
+                  <MenuItem onClick={() => goDevice("meter")} py={1} fontSize="sm">Meter</MenuItem>
+                  <Box position="relative">
+                    <Menu placement="right-start" isLazy>
+                      <MenuButton
+                        as={Button}
+                        variant="ghost"
+                        w="100%"
+                        pl={3}
+                        pr={2}
+                        fontSize="sm"
+                        fontWeight="normal"
+                      >
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          w="100%"
+                        >
+                          <Text>Bess</Text>
+                          <ChevronDownIcon transform="rotate(-90deg)" />
+                        </Box>
+                      </MenuButton>
+
+                      <Portal>
+                        <MenuList
+                          zIndex={3000}
+                          minW="180px"
+                        >
+                          <MenuItem onClick={() => navigate("/devices/bess")}>Overview</MenuItem>
+
+                          <MenuItem onClick={() => navigate("/devices/bess/battery-intelligence")}>
+                            Battery Intelligence
+                          </MenuItem>
+                        </MenuList>
+                      </Portal>
+                    </Menu>
+                  </Box>
                   <MenuItem onClick={() => goDevice("transformer")} py={1} fontSize="sm">Transformer</MenuItem>
-                  <MenuItem onClick={() => goDevice("dc-zone")} py={1} fontSize="sm">DC Zone</MenuItem>
+                  <MenuItem onClick={() => goDevice("dc-zone")} py={1} fontSize="sm">Dc Zone</MenuItem>
                   <MenuItem
                     py={1}
                     fontSize="sm"
@@ -485,7 +541,7 @@ const Navbar = () => {
               </MenuButton>
               <Portal>
                 <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr} minW="180px">
-                  <MenuItem onClick={() => navigate("/besscontroll")}>BESS</MenuItem>
+                  <MenuItem onClick={() => navigate("/besscontroll")}>Bess</MenuItem>
                   {/* <MenuItem onClick={() => navigate("/ppc")}>PPC</MenuItem>
                   <MenuItem onClick={() => navigate("/switch-gear")}>Switch Gear</MenuItem> */}
                   {/* --- Add this Solar option --- */}
@@ -493,6 +549,10 @@ const Navbar = () => {
                   <MenuItem onClick={() => navigate("/tradingdashboard")}>Trading</MenuItem>
                   <MenuItem onClick={() => navigate("/genset")}>Genset Control</MenuItem>
                   <MenuItem onClick={() => navigate("/grid")}>Grid Control</MenuItem>
+                  <MenuItem onClick={() => navigate("/Load-Forecast")}>
+                    Load Forecast
+                  </MenuItem>
+                  
                 </MenuList>
               </Portal>
             </Menu>
@@ -518,7 +578,7 @@ const Navbar = () => {
               </Portal>
             </Menu> */}
 
-            {/* Alarms */}
+            {/* Alerts */}
             <Menu placement="bottom-start" isLazy>
               <MenuButton
                 as={Button}
@@ -530,13 +590,33 @@ const Navbar = () => {
                 onClick={setFromEvent}
                 data-active={isAlarmsActive ? "true" : undefined}
               >
-                Alarms
+                Alerts
               </MenuButton>
+
               <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr} minW="220px" py={1}>
-                  <MenuItem onClick={() => navigate("/alarms/latest")}>Alarm</MenuItem>
-                  <MenuItem onClick={() => navigate("/alarms/events")}>Events</MenuItem>
-                  <MenuItem onClick={() => navigate("/alarms/soe")}>SOE</MenuItem>
+                <MenuList
+                  zIndex={2000}
+                  bg={navBg}
+                  color={linkColor}
+                  borderColor={borderClr}
+                  minW="220px"
+                  py={1}
+                >
+                  <MenuItem onClick={() => navigate("/alarms/latest")}>
+                    Alarm
+                  </MenuItem>
+
+                  <MenuItem onClick={() => navigate("/events/latest")}>
+                    Event
+                  </MenuItem>
+
+                  {/* <MenuItem onClick={() => navigate("/events/history")}>
+        Event History
+      </MenuItem> */}
+
+                  <MenuItem onClick={() => navigate("/alarms/soe")}>
+                    SOE
+                  </MenuItem>
                 </MenuList>
               </Portal>
             </Menu>
@@ -563,25 +643,25 @@ const Navbar = () => {
               </Portal>
             </Menu>
             <HStack
-  px={3}
-  py={2}
-  rounded="md"
-  spacing={1}
-  fontWeight="medium"
-  color={linkColor}
-  _hover={{ textDecoration: "none", bg: hoverBg, color: linkColor }}
-  onClick={() => {
-    const token = sessionStorage.getItem("token");
-    const userName = sessionStorage.getItem("userName");
+              px={3}
+              py={2}
+              rounded="md"
+              spacing={1}
+              fontWeight="medium"
+              color={linkColor}
+              _hover={{ textDecoration: "none", bg: hoverBg, color: linkColor }}
+              onClick={() => {
+                const token = sessionStorage.getItem("token");
+                const userName = sessionStorage.getItem("userName");
 
-    window.open(
-  `http://75.119.146.115:5500/Trend?token=${token}&userName=${userName}`,
-  "_blank"
-);
-  }}
->
-  <Text fontSize="sm">Trends</Text>
-</HStack>
+                window.open(
+                  `http://75.119.146.115:5500/Trend?token=${token}&userName=${userName}`,
+                  "_blank"
+                );
+              }}
+            >
+              <Text fontSize="sm">Trends</Text>
+            </HStack>
 
             {/* Custom */}
             <Menu placement="bottom-start" isLazy>
@@ -641,12 +721,15 @@ const Navbar = () => {
               </MenuButton>
               <Portal>
                 <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
+
                   <MenuItem as={RouterLink} to="/newdashboard" fontSize="sm">Dashboard</MenuItem>
                   <MenuItem as={RouterLink} to="/dsm" fontSize="sm">DSM</MenuItem>
                   <MenuItem as={RouterLink} to="/energy-accounting" fontSize="sm">Energy Accounting</MenuItem>
                   <MenuItem as={RouterLink} to="/billing">Billing</MenuItem>
                   <MenuItem as={RouterLink} to="/reports">Reports</MenuItem>
                   <MenuItem as={RouterLink} to="/settings">Setting</MenuItem>
+                  <MenuItem onClick={() => navigate("/Load-Forecast")}>Load Forecast</MenuItem>
+                  
                 </MenuList>
               </Portal>
             </Menu>
@@ -720,7 +803,7 @@ const Navbar = () => {
             {/* Devices list (flat) */}
             <Text fontSize="sm" mt={2} px={2} opacity={0.8}>Devices</Text>
             {[
-              ["INV", "inv"], ["PCS", "pcs"], ["WMS", "wms"], ["METER", "meter"], ["BESS", "bess"],
+              ["INV", "inv"], ["PCS", "pcs"], ["WMS", "wms"], ["METER", "meter"], ["Bess", "bess"],
               ["Transformer", "transformer"], ["DC Zone", "dc-zone"], ["Switch Gear", "switch-gear"],
             ].map(([label, slug]) => (
               <Button key={slug} w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start" onClick={() => goDevice(slug as string)}>

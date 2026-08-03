@@ -308,8 +308,32 @@ const PowerCurve = () => {
 
           xAxis: {
             type: "datetime",
+            min: new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth(),
+              currentDate.getDate(),
+              0,
+              0,
+              0,
+              0
+            ).getTime(),
+            max: new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth(),
+              currentDate.getDate(),
+              23,
+              59,
+              59,
+              999
+            ).getTime(),
+            tickInterval: 2 * 60 * 60 * 1000,
+            startOnTick: true,
+            endOnTick: true,
             crosshair: { color: "rgba(255,255,255,0.15)", width: 1 },
-            labels: { style: { color: subTextColor } },
+            labels: {
+              format: "{value:%H:%M}",
+              style: { color: subTextColor },
+            },
             lineColor: axisLineColor,
             gridLineColor: gridColor,
             gridLineDashStyle: "ShortDot",

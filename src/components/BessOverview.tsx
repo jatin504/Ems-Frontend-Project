@@ -100,8 +100,7 @@ export default function BessOverview() {
               x={45}
               y={334}
               draggable
-              onDragEnd={(e) =>
-                console.log("Active Alarms Group moved to:", e.target.x(), e.target.y())
+              onDragEnd={(e) => ("Active Alarms Group moved to:", e.target.x(), e.target.y())
               }
             >
               <KonvaText text="Active Alarms" fontSize={16} fill="white" fontStyle="bold" y={-25} />

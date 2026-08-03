@@ -65,6 +65,7 @@ interface GraphLayoutProps {
   WidgetProps?: any;
   contentProps?: any;
   onExport?: ExportFunctions | null; // Optional since it might not be passed initially
+  onFullscreenChange?: (value: boolean) => void;
   downloadOption?: boolean;
   inProgress?: boolean;
   preDefineTimeInvterval?: boolean;
@@ -91,6 +92,7 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
   WidgetProps,
   contentProps,
   onExport,
+  onFullscreenChange,
   downloadOption = true,
   inProgress = false,
   preDefineTimeInvterval = false,
@@ -104,23 +106,37 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
   const GraphLayoutRef = useRef<HTMLElement>(null) as React.RefObject<HTMLElement>;
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const handleFullScreen = () => {
-    if (GraphLayoutRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      } else {
-        GraphLayoutRef.current.requestFullscreen();
-        setIsFullscreen(true);
-      }
-    }
-  };
+  // const handleFullScreen = () => {
+  //   if (GraphLayoutRef.current) {
+  //     if (document.fullscreenElement) {
+  //       document.exitFullscreen();
+  //       setIsFullscreen(false);
+  //     } else {
+  //       GraphLayoutRef.current.requestFullscreen();
+  //       setIsFullscreen(true);
+  //     }
+  //   }
+  // };
+  const handleFullScreen = async () => {
+  if (!GraphLayoutRef.current) return;
+
+  if (document.fullscreenElement) {
+    await document.exitFullscreen();
+  } else {
+    await GraphLayoutRef.current.requestFullscreen();
+  }
+};
 
   // Handle exit fullscreen via ESC key or other methods
+  // const handleFullscreenChange = () => {
+  //   if (!document.fullscreenElement) {
+  //     setIsFullscreen(false); // Exited fullscreen
+  //   }
+  // };
   const handleFullscreenChange = () => {
-    if (!document.fullscreenElement) {
-      setIsFullscreen(false); // Exited fullscreen
-    }
+    const full = !!document.fullscreenElement;
+    setIsFullscreen(full);
+    onFullscreenChange?.(full);
   };
 
   // Add event listener for fullscreen change
@@ -147,7 +163,8 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
   return (
     <Box
       ref={GraphLayoutRef}
-      w={isFullscreen ? '1920px' : width}
+      position="relative"
+      w={isFullscreen ? '1900px' : width}
       h={isFullscreen ? '100vh' : height}
       borderRadius="8px"
       border={border}
@@ -155,17 +172,25 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
       p={3}
       px={px}
       mt={5}
-      overflow={'hidden'}
+      overflow={'visible'}
       bg={bg}
       {...WidgetProps}
     >
-      <Flex justifyContent={'space-between'} alignItems="center">
+      <Flex
+        justifyContent="space-between"
+        alignItems="center"
+        h="40px"
+        minH="40px"
+        mb="8px"
+      >
         <HStack>
           <Box
-            fontSize={isFullscreen ? "18px" : "18px"}
-            fontWeight={600}
-            color={useColorModeValue('rgba(0, 0, 0, 1)', 'white')}
+            flex="1"
             pl={2}
+            display="flex"
+            alignItems="center"
+            h="40px"
+            overflow="hidden"
           >
             {title}
           </Box>
@@ -201,7 +226,7 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
               onClose={onClose}
               onReset={onReset || (() => { })}
               onSave={onTimeWindowChange || (() => { })}
-              containerRef={undefined}
+              containerRef={GraphLayoutRef}
             >
               <GoClock color={currentColor} cursor={"pointer"} size={20} />
             </TimeWindow>
@@ -262,9 +287,9 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
       <Box
         as="main"
         pb={6}
-        height={'100%'}
-        width={'100%'}
-        mt={mt || 5}
+        height="calc(100% - 40px)"
+        width="100%"
+        mt={0}
         overflow="visible"
         {...contentProps}
       >
