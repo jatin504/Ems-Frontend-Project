@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, VStack, HStack, Text, useColorModeValue } from "@chakra-ui/react";
-import { CheckCircleIcon } from "@chakra-ui/icons";
+import WidgetTitle from "../../../Common/WidgetTitle";
+// import { CheckCircleIcon } from "@chakra-ui/icons";
 
 /* 40x40 circle + compact label */
 function Bubble({ bg, label }: { bg: string; label: string }) {
@@ -121,13 +122,49 @@ function POIPanel({
 }
 
 /* tiny status dot */
-const SmallDot = ({ color }: { color: string }) => (
-  <Box w="8px" h="8px" borderRadius="full" bg={color} />
-);
+// const SmallDot = ({ color }: { color: string }) => (
+//   <Box w="8px" h="8px" borderRadius="full" bg={color} />
+// );
+
+function AlarmCategory({
+  title,
+  titleColor,
+  alarms,
+}: {
+  title: string;
+  titleColor: string;
+  alarms: string[];
+}) {
+  const itemCol = useColorModeValue("gray.700", "#CFD6D6");
+
+  return (
+    <Box mb="14px">
+      <Text
+        fontSize="12px"
+        fontWeight="600"
+        color={titleColor}
+        mb="6px"
+      >
+        {title}
+      </Text>
+
+      <VStack align="stretch" spacing="5px">
+        {alarms.map((alarm) => (
+          <Text
+            key={alarm}
+            fontSize="12px"
+            color={itemCol}
+            lineHeight="16px"
+          >
+            {alarm}
+          </Text>
+        ))}
+      </VStack>
+    </Box>
+  );
+}
 
 function ActiveAlarmBlock() {
-  const titleCol = useColorModeValue("gray.800", "#E8ECEC");
-  const itemCol = useColorModeValue("gray.700", "#CFD6D6");
   const bottomCol = useColorModeValue("gray.600", "#B7C0C0");
 
   return (
@@ -137,64 +174,76 @@ function ActiveAlarmBlock() {
       display="flex"
       flexDirection="column"
     >
-      <Box>
-        <Text fontSize="sm" color={titleCol} mb="8px">
-          Active alarm
-        </Text>
-        <VStack align="stretch" spacing="6px">
-          <HStack spacing="8px">
-            <SmallDot color="#f59e0b" />
-            <Text fontSize="12px" color={itemCol}>Overtemperature</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#a78bfa" />
-            <Text fontSize="12px" color={itemCol}>High SoC Limit</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#fb7185" />
-            <Text fontSize="12px" color={itemCol}>Isolation fault</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#f59e0b" />
-            <Text fontSize="12px" color={itemCol}>Overtemperature</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#a78bfa" />
-            <Text fontSize="12px" color={itemCol}>High SoC Limit</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#f87171" />
-            <Text fontSize="12px" color={itemCol}>Grid Fault</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#60a5fa" />
-            <Text fontSize="12px" color={itemCol}>Low Voltage</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#fbbf24" />
-            <Text fontSize="12px" color={itemCol}>Communication Error</Text>
-          </HStack>
-          <HStack spacing="8px">
-            <SmallDot color="#34d399" />
-            <Text fontSize="12px" color={itemCol}>Fan Failure</Text>
-          </HStack>
-        </VStack>
-      </Box>
+      
 
-      <Box flex="1" /> {/* Yeh box status row ko bottom par chipka dega */}
+      <AlarmCategory
+        title="CRITICAL"
+        titleColor="#DC2626"
+        alarms={[
+          "🔴 Fire / Thermal runaway",
+          "🔴 Emergency stop",
+          "🔴 PCS trip",
+          "🔴 BMS trip",
+          "🔴 Grid protection trip",
+        ]}
+      />
 
-      <HStack pt="10px" spacing="14px" justify="center">
-        <HStack spacing="6px">
-          <SmallDot color="#22c55e" />
-          <Text fontSize="12px" color={bottomCol}>Charging</Text>
+      <AlarmCategory
+        title="WARNING"
+        titleColor="#F97316"
+        alarms={[
+          "🟠 High temperature",
+          "🟠 Communication degradation",
+          "🟠 SOC limit",
+          "🟠 HVAC failure",
+        ]}
+      />
+
+      
+      
+
+      {/* Charging / Discharging / Idle */}
+      <Box flex="1" />
+
+      <HStack
+        pt="8px"
+        spacing="12px"
+        justify="center"
+      >
+        <HStack spacing="5px">
+          <Box
+            w="8px"
+            h="8px"
+            borderRadius="full"
+            bg="#22c55e"
+          />
+          <Text fontSize="11px" color={bottomCol}>
+            Charging
+          </Text>
         </HStack>
-        <HStack spacing="6px">
-          <SmallDot color="#ef4444" />
-          <Text fontSize="12px" color={bottomCol}>Discharging</Text>
+
+        <HStack spacing="5px">
+          <Box
+            w="8px"
+            h="8px"
+            borderRadius="full"
+            bg="#ef4444"
+          />
+          <Text fontSize="11px" color={bottomCol}>
+            Discharging
+          </Text>
         </HStack>
-        <HStack spacing="6px">
-          <SmallDot color="#22d3ee" />
-          <Text fontSize="12px" color={bottomCol}>Idle</Text>
+
+        <HStack spacing="5px">
+          <Box
+            w="8px"
+            h="8px"
+            borderRadius="full"
+            bg="#22d3ee"
+          />
+          <Text fontSize="11px" color={bottomCol}>
+            Idle
+          </Text>
         </HStack>
       </HStack>
     </Box>
@@ -216,7 +265,7 @@ export default function SystemOverview() {
       p="16px"
     >
       <VStack align="stretch" spacing="12px">
-        <Text fontSize="16px" fontWeight={500}>System Overview</Text>
+        <WidgetTitle fontSize="16px" fontWeight={700}>System Overview</WidgetTitle>
 
         <HStack
           justify="space-between"

@@ -29,20 +29,7 @@ const resolutionMap: Record<string, string> = {
 
 /* Status-wise info mapping */
 const statusInfoMap: Record<string, any[]> = {
-  status: [
-    { key: "soc", alias: "Plant Availability", agg: "avg", unit: "%" },
-    { key: "Alarm_1", alias: "Grid Availability", agg: "avg", unit: "%" },
-    { key: "Active_power", alias: "Grid Out", agg: "avg", unit: "" },
-    { key: "soc", alias: "Grid Occurrence", agg: "avg", unit: "%" },
-    { key: "Alarm_1", alias: "Plant Downtime", agg: "avg", unit: "%" },
-    { key: "Active_power", alias: "Load Loss", agg: "avg", unit: "" },
-    {
-      key: "soc",
-      alias: "Plant Downtime Occurrence",
-      agg: "avg",
-      unit: "",
-    },
-  ],
+  status: [],
 
   solar: [
     { key: "Active_power", alias: "PV Generation kWh", agg: "avg", unit: "kWh" },
@@ -197,26 +184,223 @@ const PlantCard = () => {
           </Menu>
         </HStack>
 
-        <VStack width="100%" spacing={2}>
-          {loading && <Text color={secondaryColor}>Loading...</Text>}
-
-          {!loading &&
-            statusInfoMap[currentStatus].map((item) => {
-              const row = dataMap[item.alias];
-              return (
-                <HStack
-                  key={item.alias}
-                  justifyContent="space-between"
-                  width="100%"
+        <VStack width="100%" spacing={0}>
+          {currentStatus === "status" ? (
+            <>
+              <HStack
+                width="100%"
+                minH="45px"
+                justifyContent="space-between"
+                borderBottom="1px solid"
+                borderColor={useColorModeValue("#E5E5E5", "#4A4A4A")}
+              >
+                <Text
+                  fontSize="11px"
+                  color={secondaryColor}
+                  whiteSpace="nowrap"
                 >
-                  <Text color={secondaryColor}>{item.alias}</Text>
-                  <Text fontWeight="600" color={primaryColor}>
-                    {row?.value ?? "--"} {item.unit}
+                  Operating Mode
+                </Text>
+                <HStack spacing={1}>
+                  <Text
+                    fontSize="11px"
+                    fontWeight="600"
+                    color={primaryColor}
+                    textAlign="right"
+                    maxW="150px"
+                    whiteSpace="normal"
+                    lineHeight="16px"
+                  >
+                    GRID CONNECTED — GFL — PQ CONTROL
+                  </Text>
+                  <Text
+                    fontSize="20px"
+                    lineHeight="1"
+                    fontWeight="300"
+                    color={secondaryColor}
+                    flexShrink={0}
+                  >
+                    ›
                   </Text>
                 </HStack>
-              );
-            })}
+              </HStack>
+
+              <HStack
+                width="100%"
+                minH="45px"
+                justifyContent="space-between"
+              >
+                <Text
+                  fontSize="11px"
+                  color={secondaryColor}
+                  whiteSpace="nowrap"
+                >
+                  EMS Strategy
+                </Text>
+                <HStack spacing={1}>
+                  <Text
+                    fontSize="11px"
+                    fontWeight="600"
+                    color={primaryColor}
+                    whiteSpace="nowrap"
+                  >
+                    Peak Shaving
+                  </Text>
+                  <Text
+                    fontSize="20px"
+                    lineHeight="1"
+                    fontWeight="300"
+                    color={secondaryColor}
+                  >
+                    ›
+                  </Text>
+                </HStack>
+              </HStack>
+            </>
+          ) : (
+            <>
+              {loading && (
+                <Text color={secondaryColor}>
+                  Loading...
+                </Text>
+              )}
+
+              {!loading &&
+                statusInfoMap[currentStatus].map((item) => {
+                  const row = dataMap[item.key];
+                  return (
+                    <HStack
+                      key={item.key}
+                      justifyContent="space-between"
+                      width="100%"
+                    >
+                      <Text color={secondaryColor}>
+                        {item.alias}
+                      </Text>
+                      <Text fontWeight="600" color={primaryColor}>
+                        {row?.value ?? "--"} {item.unit}
+                      </Text>
+                    </HStack>
+                  );
+                })}
+            </>
+          )}
         </VStack>
+
+        {/* ================= BOTTOM STATUS BAR ================= */}
+{currentStatus === "status" && (
+  <HStack
+    width="100%"
+    minH="32px"
+    mt="auto"
+    px="2px"
+    spacing={0}
+    borderTop="1px solid"
+    borderColor={useColorModeValue("#E5E5E5", "#4A4A4A")}
+    overflow="hidden"
+  >
+    {/* RUNNING */}
+    <HStack
+      flex="1.25"
+      minW={0}
+      spacing={0}
+      justifyContent="center"
+      px="4px"
+      borderRight="1px solid"
+      borderColor={useColorModeValue("#E5E5E5", "#4A4A4A")}
+    >
+      <Box
+        w="16px"
+        h="16px"
+        minW="16px"
+        borderRadius="50%"
+        bg="#16A34A"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        color="white"
+        fontSize="8px"
+      >
+        ▶
+      </Box>
+
+      <Text
+        fontSize="8px"
+        fontWeight="700"
+        color="#16A34A"
+        whiteSpace="nowrap"
+        position="relative"
+        left="0px"
+      >
+        RUNNING
+      </Text>
+    </HStack>
+
+    {/* GRID CONNECTED */}
+    <Text
+      flex="1.5"
+      minW={0}
+      textAlign="center"
+      fontSize="7px"
+      color={secondaryColor}
+      whiteSpace="nowrap"
+      overflow="hidden"
+      textOverflow="ellipsis"
+      px="2px"
+      borderRight="1px solid"
+      borderColor={useColorModeValue("#E5E5E5", "#4A4A4A")}
+    >
+      GRID CONNECTED
+    </Text>
+
+    {/* GFL */}
+    <Text
+      flex="0.55"
+      minW={0}
+      textAlign="center"
+      fontSize="7px"
+      color={secondaryColor}
+      whiteSpace="nowrap"
+      overflow="hidden"
+      px="2px"
+      borderRight="1px solid"
+      borderColor={useColorModeValue("#E5E5E5", "#4A4A4A")}
+    >
+      GFL
+    </Text>
+
+    {/* PQ */}
+    <Text
+      flex="0.45"
+      minW={0}
+      textAlign="center"
+      fontSize="7px"
+      color={secondaryColor}
+      whiteSpace="nowrap"
+      px="2px"
+      borderRight="1px solid"
+      borderColor={useColorModeValue("#E5E5E5", "#4A4A4A")}
+    >
+      PQ
+    </Text>
+
+    {/* PEAK SHAVING */}
+    <Text
+      flex="1.25"
+      minW={0}
+      textAlign="center"
+      fontSize="7px"
+      color={secondaryColor}
+      fontWeight="500"
+      whiteSpace="nowrap"
+      overflow="hidden"
+      textOverflow="ellipsis"
+      px="2px"
+    >
+      PEAK SHAVING
+    </Text>
+  </HStack>
+)}
       </VStack>
     </Box>
   );

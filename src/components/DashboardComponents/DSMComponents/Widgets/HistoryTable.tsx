@@ -26,7 +26,7 @@ const HistoryTable: React.FC = () => {
  const API_BASE =
   (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || ""; 
  useEffect(() => {
-   fetch(`${API_BASE}/api/dsm/block_summary?plant_id=plant_1&date=2026-03-05`)
+   fetch(`${API_BASE}/api/dsm/block_summary?plant_id=plant_1&date=2026-08-11`)
      .then(res => res.json())
      .then(data => {
        setRows(data.data)

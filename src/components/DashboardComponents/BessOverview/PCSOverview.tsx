@@ -14,6 +14,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { MdElectricBolt, MdLinkOff } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
+import { ExpandIcon, SqeezIcon } from "../../../assets/Icons";
 import WidgetTitle from "../../Common/WidgetTitle";
 
 type TrendType = "up" | "down" | "same";
@@ -1071,11 +1072,13 @@ return (
         </Box>
 
         <Button
-          size="xs"
-          variant="ghost"
+          aria-label="Toggle fullscreen"
           onClick={toggleFullscreen}
+          variant="ghost"
+          size="xs"
+          _hover={{ bg: "transparent", color: "gray.500" }}
         >
-          ⤢
+          {isFullscreen ? <SqeezIcon /> : <ExpandIcon />}
         </Button>
       </HStack>
     </HStack>

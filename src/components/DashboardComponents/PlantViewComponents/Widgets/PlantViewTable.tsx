@@ -7,7 +7,7 @@ import {
   Tab,
   useColorModeValue,
   HStack,
-  Button,
+  IconButton,
 } from "@chakra-ui/react";
 import {
   MaterialReactTable,
@@ -18,6 +18,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { MdElectricBolt, MdLinkOff } from "react-icons/md";
 import { TbCircuitDiodeZener } from "react-icons/tb";
+import { ExpandIcon, SqeezIcon } from "../../../../assets/Icons";
 const BASE_URL = import.meta.env.VITE_API_BASE;
 
 type TrendType = "up" | "down" | "same";
@@ -435,7 +436,7 @@ export default function PlantViewTable() {
   return (
     <Box
       ref={panelRef}
-      w="100%"
+      w="99%"
       h="310px"
       bg={useColorModeValue("#F8FAFC", "gray.950")}
       borderRadius="14px"
@@ -501,9 +502,14 @@ export default function PlantViewTable() {
           >
             Total : {activeTab === 0 ? invRows.length : pcsRows.length}
           </Box>
-          <Button size="xs" variant="ghost" onClick={toggleFullscreen}>
-            ⤢
-          </Button>
+          <IconButton
+            aria-label="Toggle fullscreen"
+            icon={isFullscreen ? <SqeezIcon /> : <ExpandIcon />}
+            onClick={toggleFullscreen}
+            variant="ghost"
+            size="xs"
+            _hover={{ bg: "transparent", color: "gray.500" }}
+          />
         </HStack>
       </HStack>
 

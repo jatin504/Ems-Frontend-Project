@@ -261,7 +261,7 @@ const PCSBankDashboard: React.FC = () => {
             <BankStatus />
           </Box>
 
-          <Box w="312px">
+          <Box w="322px">
             <LimitsRealtime />
           </Box>
         </HStack>
@@ -278,16 +278,13 @@ const PCSBankDashboard: React.FC = () => {
             <VoltageCurrentGraph selectedDevice={selectedDevice} />
           </Box>
 
-          <Box w="620px">
+          <Box w="590px">
             <EnvironmentCooling />
           </Box>
         </HStack>
       </Box>
 
-      {/* Remaining Dashboard */}
-      <Box p="12px">
-        {/* Next widgets */}
-      </Box>
+      
     </Box>
   );
 };

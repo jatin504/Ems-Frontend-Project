@@ -40,7 +40,7 @@ const LimitsRealtime: React.FC = () => {
 
   return (
     <Box
-      w="300px"
+      w="315px"
       h="300px"
       bg={bg}
       border="1px solid"

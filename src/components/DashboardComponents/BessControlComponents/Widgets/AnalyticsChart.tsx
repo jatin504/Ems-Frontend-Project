@@ -8,6 +8,7 @@ import { FaAngleDown } from "react-icons/fa";
 import { Maximize2 } from "lucide-react";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import AreaspineGraph from "../../../Graphs/RevampCharts/AreasplineGraph";
+import WidgetTitle from "../../../Common/WidgetTitle";
 
 type ChartKey =
   | "activeSetpoint" | "reactiveSetpoint" | "voltageSetpoint"
@@ -173,9 +174,9 @@ export default function AnalyticsChart() {
 
     const Card = ({ title, series }: { title: string; series: any[] }) => (
       <Box border={`1px solid ${BORDER}`} borderRadius="12px" p="12px" bg={CARD_BG} w="100%" h={`${cardH}px`}>
-        <Text fontSize="14px" fontWeight="600" mb="6px" color={TITLE}>
+        <WidgetTitle fontSize="14px" fontWeight="600" mb="6px" color={TITLE}>
           {title}
-        </Text>
+        </WidgetTitle>
         <AreaspineGraph
           height={chartH}
           legendHeight={28}
@@ -211,7 +212,7 @@ export default function AnalyticsChart() {
       <GraphLayout
         title={
           <HStack>
-            <Text fontSize="18px" fontWeight={600} color={TITLE}>{selectedTitle}</Text>
+            <WidgetTitle fontSize="18px" fontWeight={600} color={TITLE}>{selectedTitle}</WidgetTitle>
 
             {/*  DROPDOWN FIXED ONLY */}
             <Menu placement="bottom-start" strategy="fixed" gutter={8}>
@@ -288,9 +289,9 @@ export default function AnalyticsChart() {
               >
                 <HStack>
                   <Maximize2 size={16} />
-                  <Text fontSize="md" fontWeight={600}>
+                  <WidgetTitle fontSize="md" fontWeight={600}>
                     {gridCharts.find((g) => g.key === overlay)?.title}
-                  </Text>
+                  </WidgetTitle>
                 </HStack>
                 <CloseButton onClick={() => setOverlay(null)} />
               </Flex>

@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useColorModeValue } from "@chakra-ui/react";
 
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
-import ColumnGraph from "../../../Graphs/RevampCharts/ColumnGraph";
+import ColumnGraphNew from "../../../Graphs/RevampCharts/ColumnGraphNew";
+import WidgetTitle from "../../../Common/WidgetTitle";
 
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 
 import type { ExportFunctions } from "../../../../types/graphExport/export";
+import type { TimeseriesDataSource } from "../../../../types/timeseries/datasource";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -34,19 +36,19 @@ const GridStackBarGraph: React.FC = () => {
   );
 
   /* API CONFIG */
-  const gridFetch = {
+  const gridFetch: { dataSource: TimeseriesDataSource } = {
     dataSource: {
       devices: {
         ids: ["plant_1_pcs_2_bank_bank_2"],
         patterns: [],
       },
       keys: [
-        { key: "energy_charged_today", alias: "Consumption" },
-  { key: "energy_discharged_today", alias: "Feed" },
+        { key: "energy_charged_today", alias: "Consumption", keyType: "individual" },
+        { key: "energy_discharged_today", alias: "Feed", keyType: "individual" },
       ],
       aggregation: timeWindow.aggregation,
       timeRange: timeWindow.timeRange,
-      orderBy: timeWindow.orderBy,
+      orderBy: "ASC",
     },
   };
 
@@ -64,7 +66,7 @@ const GridStackBarGraph: React.FC = () => {
     const device = Object.keys(root)[0];
     if (!device) return [];
 
-    const d = root[device];
+    const d = root[device] as unknown as Record<string, Array<{ ts: number; value: number }>>;
     const series: any[] = [];
 
     /* CONSUMPTION */
@@ -102,7 +104,6 @@ const GridStackBarGraph: React.FC = () => {
 
   /* COLORS */
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
-  const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
   const gridColor = useColorModeValue(
     "rgba(0,0,0,0.10)",
     "rgba(255,255,255,0.08)"
@@ -114,7 +115,7 @@ const GridStackBarGraph: React.FC = () => {
   /* RENDER */
   return (
     <GraphLayout
-      title="Grid"
+      title={<WidgetTitle color={textColor}>Grid</WidgetTitle>}
       width={["578px"]}
       height="344px"
       fullScreen
@@ -123,50 +124,21 @@ const GridStackBarGraph: React.FC = () => {
       onReset={handleReset}
       onExport={exportFunctions}
     >
-      <ColumnGraph
+      <ColumnGraphNew
         apiData={stackedSeries}
-        height={280}
+        height={250}
         onExportReady={setExportFunctions}
-        props={{
-          plotOptions: {
-            column: {
-              stacking: "normal",
-              borderWidth: 0,
-              pointWidth: 22,
-              borderRadius: 6,
-              groupPadding: 0,
-              pointPadding: 0,
-            },
-          },
-          xAxis: {
-            type: "datetime",
-            labels: { style: { color: subTextColor } },
-            gridLineWidth: 1,
-            gridLineDashStyle: "ShortDot",
-            gridLineColor: gridColor,
-          },
-          yAxis: {
-            min: 0,
-            title: { text: "" },
-            labels: { style: { color: textColor } },
-            gridLineWidth: 1,
-            gridLineDashStyle: "ShortDot",
-            gridLineColor: gridColor,
-          },
-          tooltip: {
-            shared: true,
-            backgroundColor: useColorModeValue(
-              "#fff",
-              "rgba(24,24,27,0.95)"
-            ),
-            style: { color: textColor },
-          },
-          legend: {
-            align: "center",
-            verticalAlign: "bottom",
-            itemStyle: { color: textColor },
-          },
-        }}
+        axisLabelColor={textColor}
+        gridColor={gridColor}
+        lineColor={gridColor}
+        tooltipBg={useColorModeValue("#fff", "rgba(24,24,27,0.95)")}
+        tooltipColor={textColor}
+        legendColor={textColor}
+        stacked
+        barWidth={22}
+        barGap="0%"
+        barCategoryGap="35%"
+        borderRadius={0}
       />
     </GraphLayout>
   );

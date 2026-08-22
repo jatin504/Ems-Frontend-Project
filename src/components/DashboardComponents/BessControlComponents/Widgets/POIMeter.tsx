@@ -1,11 +1,33 @@
 import React from "react";
-import { Box, VStack, HStack, Text, useColorModeValue } from "@chakra-ui/react";
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  useColorModeValue,
+} from "@chakra-ui/react";
 import type { BoxProps } from "@chakra-ui/layout";
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  const softBg     = useColorModeValue("#f3f4f6", "#1C2121"); // inner tile bg
+function StatCard({
+  title,
+  value,
+  status,
+  direction,
+  nominal,
+  limit1,
+  limit2,
+}: {
+  title: string;
+  value: string;
+  status?: string;
+  direction?: string;
+  nominal?: string;
+  limit1?: string;
+  limit2?: string;
+}) {
+  const softBg = useColorModeValue("#f3f4f6", "#1C2121");
   const cardBorder = useColorModeValue("#e5e7eb", "#202525");
-  const textMuted  = useColorModeValue("#64748b", "#A6B0B0");
+  const textMuted = useColorModeValue("#64748b", "#A6B0B0");
   const textStrong = useColorModeValue("#111827", "#E8ECEC");
 
   return (
@@ -14,27 +36,92 @@ function StatCard({ label, value }: { label: string; value: string }) {
       border="1px solid"
       borderColor={cardBorder}
       borderRadius="12px"
-      h="84px"
+      h="155px"
+      minH="78px"
       p="12px"
       flex="1"
+      w="full"
+      minW={0}
     >
-      <VStack align="start" spacing="6px">
+      <VStack align="stretch" spacing="6px">
         <Text fontSize="xs" color={textMuted}>
-          {label}
+          {title}
         </Text>
-        <Text fontSize="md" fontWeight="700" color={textStrong}>
+
+        <Text
+          fontSize="md"
+          fontWeight="700"
+          color={textStrong}
+        >
           {value}
         </Text>
+
+        {direction && (
+          <Text
+            fontSize="10px"
+            fontWeight="700"
+            color={textStrong}
+            mt="2px"
+          >
+            {direction}
+          </Text>
+        )}
+
+        <Text
+          fontSize="10px"
+          fontWeight="600"
+          color="#16A34A"
+          mt="2px"
+        >
+          {status ?? "🟢 Normal"}
+        </Text>
+
+        <Box h="1px" bg={cardBorder} />
+
+        {nominal && (
+          <HStack justify="space-between">
+            <Text fontSize="9px" color={textMuted}>
+              Nominal:
+            </Text>
+            <Text fontSize="9px" color={textStrong} fontWeight="600">
+              {nominal}
+            </Text>
+          </HStack>
+        )}
+
+        {limit1 && (
+          <HStack justify="space-between">
+            <Text fontSize="9px" color={textMuted}>
+              {limit1.split(":")[0]}:
+            </Text>
+            <Text fontSize="9px" color={textStrong} fontWeight="600">
+              {limit1.split(":").slice(1).join(":").trim()}
+            </Text>
+          </HStack>
+        )}
+
+        {limit2 && (
+          <HStack justify="space-between">
+            <Text fontSize="9px" color={textMuted}>
+              {limit2.split(":")[0]}:
+            </Text>
+            <Text fontSize="9px" color={textStrong} fontWeight="600">
+              {limit2.split(":").slice(1).join(":").trim()}
+            </Text>
+          </HStack>
+        )}
       </VStack>
     </Box>
   );
 }
 
 export default function POIMeter(props: BoxProps) {
-  // Outer card colors (dark = #161B1B bg, #202525 border)
-  const cardBg     = useColorModeValue("#ffffff", "#161B1B");
+  const cardBg = useColorModeValue("#ffffff", "#161B1B");
   const cardBorder = useColorModeValue("#e5e7eb", "#202525");
   const titleColor = useColorModeValue("black", "white");
+  const softBg = useColorModeValue("#f3f4f6", "#1C2121");
+  const textMuted = useColorModeValue("#64748b", "#A6B0B0");
+  const textStrong = useColorModeValue("#111827", "#E8ECEC");
 
   return (
     <Box
@@ -49,23 +136,62 @@ export default function POIMeter(props: BoxProps) {
       overflow="hidden"
       {...props}
     >
-      <VStack align="stretch" spacing="16px" h="full">
+      <VStack align="stretch" spacing="6px" h="full">
+
         {/* Title */}
         <Text fontSize="sm" color={titleColor}>
           POI Meter
         </Text>
 
-        {/* Row 1 */}
-        <HStack spacing="16px">
-          <StatCard label="Power"     value="63.27 kW" />
-          <StatCard label="Frequency" value="50.37 Hz" />
-        </HStack>
+        <VStack align="stretch" spacing="4px">
+          {/* TOP: Frequency + POI Voltage */}
+          <HStack spacing="10px" align="stretch" h="155px">
+            <StatCard
+              title="Frequency"
+              value="50.37 Hz"
+              nominal="50 Hz"
+              limit1="UF limit: 49.0 Hz"
+              limit2="OF limit: 51.0 Hz"
+            />
+            <StatCard
+              title="POI Voltage"
+              value="10.994 kV"
+              nominal="11 kV"
+              limit1="UV limit: 10.45 kV"
+              limit2="OV limit: 11.55 kV"
+            />
+          </HStack>
 
-        {/* Row 2 */}
-        <HStack spacing="16px">
-          <StatCard label="Voltage" value="10994.24 kV" />
-          <StatCard label="Current" value="83.90 A" />
-        </HStack>
+          {/* BOTTOM: POI Active Power */}
+          <Box
+            bg={softBg}
+            border="1px solid"
+            borderColor={cardBorder}
+            borderRadius="12px"
+            h="52px"
+            w="full"
+            p="8px 12px"
+          >
+            <HStack w="full" h="full" justify="space-between" align="center">
+              <VStack align="start" spacing="0">
+                <Text fontSize="9px" color={textMuted}>
+                  POI Active Power
+                </Text>
+                <Text fontSize="15px" fontWeight="700" color={textStrong}>
+                  +63.27 MW
+                </Text>
+              </VStack>
+              <VStack align="end" spacing="1px">
+                <Text fontSize="8px" fontWeight="700" color={textStrong}>
+                  DISCHARGING → GRID
+                </Text>
+                <Text fontSize="8px" fontWeight="600" color="#16A34A">
+                  🟢 Normal
+                </Text>
+              </VStack>
+            </HStack>
+          </Box>
+        </VStack>
       </VStack>
     </Box>
   );

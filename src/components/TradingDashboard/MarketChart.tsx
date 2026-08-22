@@ -154,7 +154,7 @@ const MarketChart = () => {
   );
 
   return (
-    <GraphLayout width={["100%"]} height="300px" fullScreen>
+    <GraphLayout width={["1200px"]} height="300px" fullScreen>
       <ColumnGraph
         apiData={dummySeries}
         height={240}

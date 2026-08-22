@@ -1,26 +1,16 @@
 import React from "react";
 import { useColorModeValue } from "@chakra-ui/react";
 
-import InverterStatusCard from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/InverterStatusCard.tsx";
 import PowerTrendChart from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/PowerTrendChart.tsx";
 import YieldChart from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/YieldChart.tsx";
 import InverterTable from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/InverterTable.tsx";
 import InverterHeatmap from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/InverterHeatmap.tsx";
 import PerformanceSummary from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/PerformanceSummary.tsx";
 import TopInverters from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/TopInverters.tsx";
-import InverterAlarms from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/InverterAlarms.tsx";
 import Availiblitychart from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/AvailabilityChart.tsx";
 import DCVoltageChart from "../components/DashboardComponents/Inverter/inverteroverviewcomponent/DCVoltageChart.tsx";
-// NEW WIDGET
 
 const inverterCss = `
-.dashboard-container{
-  display:flex;
-  flex-direction:column;
-  gap:16px;
-  padding:12px
-}
-
 .card{
   background:var(--card-bg);
   border-radius:8px;
@@ -94,6 +84,11 @@ const inverterCss = `
   align-items:flex-start
 }
 
+.responsive-grid{
+  width:100%;
+  box-sizing:border-box;
+}
+
 @media (max-width:1200px){
   .responsive-grid{
     grid-template-columns:1fr !important;
@@ -115,9 +110,13 @@ const InverterDashboard = () => {
     <div
       style={{
         background: pageBg,
-        minHeight: "100vh",
+        width: "100%",
+        minWidth: 0,
         padding: "12px",
-        ...( {
+        boxSizing: "border-box",
+        overflow: "visible",
+
+        ...({
           ["--card-bg" as any]: cardBg,
           ["--card-border" as any]: cardBorder,
           ["--text-color" as any]: textColor,
@@ -127,14 +126,12 @@ const InverterDashboard = () => {
           ["--accent-yellow" as any]: "#b8a52d",
           ["--accent-orange" as any]: "#d98b1f",
           ["--accent-red" as any]: "#d64545",
-        } as React.CSSProperties),
-      }}
+        } as React.CSSProperties)}
+      }
     >
       <style>{inverterCss}</style>
 
-      {/* ===================== ROW 1 + ROW 2 ===================== */}
-      {/* PERFORMANCE SUMMARY | TOP INVERTER | INVERTER TABLE | POWER GRAPH | YIELD CHART */}
-
+      {/* ROW 1 + ROW 2 */}
       <div
         className="responsive-grid"
         style={{
@@ -159,18 +156,26 @@ const InverterDashboard = () => {
           <InverterTable />
         </div>
 
-        <div style={{ alignSelf: "start", marginTop: "-120px" }}>
+        <div
+          style={{
+            alignSelf: "start",
+            marginTop: "-120px",
+          }}
+        >
           <PowerTrendChart />
         </div>
 
-        <div style={{ alignSelf: "start", marginTop: "-120px" }}>
+        <div
+          style={{
+            alignSelf: "start",
+            marginTop: "-120px",
+          }}
+        >
           <YieldChart />
         </div>
       </div>
 
-      {/* ===================== ROW 3 ===================== */}
-      {/* TABLE | ALERT */}
-
+      {/* ROW 3 */}
       <div
         className="responsive-grid"
         style={{

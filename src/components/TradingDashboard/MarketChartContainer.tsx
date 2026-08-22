@@ -29,7 +29,7 @@ const MarketChartContainer = () => {
       <MarketChart />
 
       {/* 🔻 OVERLAP (tight look) */}
-      <Box mt="-12px">
+      <Box mt="-44px">
         <BottomChart />
       </Box>
     </Box>

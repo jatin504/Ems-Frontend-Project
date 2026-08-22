@@ -198,7 +198,7 @@ const InverterPRvsYieldGraph: React.FC<InverterPRvsYieldGraphProps> = (_props) =
       title={<WidgetTitle>Performance Map</WidgetTitle>}
       titleLengthSVG={70}
       titleLengthLongSVG={1680}
-      width={["710px"]}
+      width={["670px"]}
       height={"314px"}
       fullScreen
       timeWindow={false}

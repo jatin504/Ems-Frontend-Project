@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useColorModeValue } from "@chakra-ui/react";
 
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
-import ColumnGraph from "../../../Graphs/RevampCharts/ColumnGraph";
+import ColumnGraphNew from "../../../Graphs/RevampCharts/ColumnGraphNew";
+import WidgetTitle from "../../../Common/WidgetTitle";
 
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
@@ -171,7 +172,9 @@ const CUFBarGraph: React.FC = () => {
   /* ---------------- RENDER ---------------- */
   return (
     <GraphLayout
-      title="Charge / Discharge with SOC"
+      title={
+        <WidgetTitle color={textColor}>Charge / Discharge with SOC</WidgetTitle>
+      }
       width={["578px"]}
       height="344px"
       fullScreen
@@ -180,52 +183,20 @@ const CUFBarGraph: React.FC = () => {
       onReset={handleReset}
       onExport={exportFunctions}
     >
-      <ColumnGraph
+      <ColumnGraphNew
         apiData={mixedSeries}
-        height={280}
+        height={250}
         onExportReady={setExportFunctions}
-        props={{
-          xAxis: {
-            type: "datetime",
-            labels: { style: { color: subTextColor } },
-            tickAmount: 7
-          },
-          yAxis: [
-            {
-              title: { text: "" },
-              labels: { style: { color: textColor } },
-              gridLineColor: gridColor,
-              tickAmount: 6,
-            },
-            {
-              title: { text: "" },
-              opposite: true,
-              tickAmount: 6,
-              // tickPositions: [0, 80, 160, 240, 320, 400], 
-              labels: { style: { color: textColor, fontSize: '12px' } },
-            },
-          ],
-          plotOptions: {
-            column: {
-              pointWidth: 18,
-              borderRadius: 6,
-              grouping: true,
-            },
-          },
-          tooltip: { 
-            shared: true,
-            backgroundColor: useColorModeValue(
-              "#fff",
-              "rgba(24,24,27,0.95)"
-            ),
-            style: { color: textColor },
-          },
-          legend: {
-            align: "center",
-            verticalAlign: "bottom",
-            itemStyle: { color: textColor },
-          },
-        }}
+        axisLabelColor={textColor}
+        gridColor={gridColor}
+        lineColor={gridColor}
+        tooltipBg={useColorModeValue("#fff", "rgba(24,24,27,0.95)")}
+        tooltipColor={textColor}
+        legendColor={textColor}
+        barWidth={18}
+        barGap="10%"
+        barCategoryGap="30%"
+        borderRadius={0}
       />
     </GraphLayout>
   );

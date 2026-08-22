@@ -35,7 +35,7 @@ const TariffCard: React.FC = () => {
       <Flex align="center" justify="center" flexGrow={1}>
         <HStack align="baseline" spacing="10px">
           <Text fontSize="96px" fontWeight="bold" color={useColorModeValue("#111718", "white")}> 
-            {tariffData? tariffData.tariff : 0}
+            {tariffData? tariffData.tariff : 1.38}
           </Text>
           <Text fontSize="20px" color={useColorModeValue("#3A4A5A", "#cfe0ff")}> 
             ₹/kWh

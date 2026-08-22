@@ -17,7 +17,7 @@ import {
 } from "react-icons/md";
 
 import GraphLayout from "../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
-import ColumnGraph from "../../Graphs/RevampCharts/ColumnGraph";
+import ColumnGraphNew from "../../Graphs/RevampCharts/ColumnGraphNew";
 import WidgetTitle from "../../Common/WidgetTitle";
 
 import { useTimeHandle } from "../../../Services/TimeWindowSetting";
@@ -107,12 +107,9 @@ const EnergyOverview = ({ isFullscreen: initialFullscreen = false }: { isFullscr
   const socFetch = useMemo<TimeseriesDataSource>(
     () => ({
       devices: {
-        patterns: [],
-        ids: Array.from({ length: 17 }, (_, i) => [
-          `plant_1_pcs_1_bank_bank_${i + 1}`,
-          `plant_1_pcs_2_bank_bank_${i + 1}`,
-        ]).flat(),
-      },
+  patterns: [],
+  ids: ["plant_1_pcs_2_bank_bank_1"],
+},
 
       keys: [
         {
@@ -196,7 +193,7 @@ const EnergyOverview = ({ isFullscreen: initialFullscreen = false }: { isFullscr
       if (Array.isArray(pts)) {
         series.push({
           type: "spline",
-          name: `SOC-${device.split("_").pop()}`,
+          name: "SOC",
           data: pts.map((p) => [p.ts, Number(p.value)]),
           yAxis: 1,
           color: socColors[index % socColors.length],
@@ -295,7 +292,7 @@ const EnergyOverview = ({ isFullscreen: initialFullscreen = false }: { isFullscr
     return (
     <GraphLayout
       title={<WidgetTitle color={textColor}>Energy Overview</WidgetTitle>}
-      width={["630px"]}
+      width={["615px"]}
       height="320px"
       fullScreen
       timeWindow
@@ -314,79 +311,84 @@ const EnergyOverview = ({ isFullscreen: initialFullscreen = false }: { isFullscr
       >
         {/* Left Summary Cards */}
 
-        <VStack
-          w="185px"
-          h="100%"
-          spacing={2}
-          align="stretch"
-          justify="space-between"
-        >
-          {cards.map((item) => (
-            <HStack
-              key={item.title}
-              spacing={3}
-              p={2}
-              border="1px solid"
-              borderColor={border}
-              borderRadius="10px"
-              bg={useColorModeValue(
-                "gray.50",
-                "rgba(255,255,255,.03)"
-              )}
-            >
-              <Circle
-                size="30px"
-                bg={`${item.color}20`}
+        {!isFullscreen && (
+          <VStack
+            w="175px"
+            h="100%"
+            spacing={2}
+            align="stretch"
+            justify="space-between"
+          >
+            {cards.map((item) => (
+              <HStack
+                key={item.title}
+                spacing={3}
+                p={2}
+                border="1px solid"
+                borderColor={border}
+                borderRadius="10px"
+                bg={useColorModeValue(
+                  "gray.50",
+                  "rgba(255,255,255,.03)"
+                )}
               >
-                <Icon
-                  as={item.icon}
-                  color={item.color}
-                  fontSize="18px"
-                />
-              </Circle>
-
-              <VStack
-                spacing={0}
-                align="start"
-                flex={1}
-              >
-                <Text
-                  fontSize="10px"
-                  color={secondary}
+                <Circle
+                  size="30px"
+                  bg={`${item.color}20`}
                 >
-                  {item.title}
-                </Text>
+                  <Icon
+                    as={item.icon}
+                    color={item.color}
+                    fontSize="18px"
+                  />
+                </Circle>
 
-                <HStack spacing={1}>
-                  <Text
-                    fontSize="16px"
-                    fontWeight="700"
-                  >
-                    {item.value}
-                  </Text>
-
+                <VStack
+                  spacing={0}
+                  align="start"
+                  flex={1}
+                >
                   <Text
                     fontSize="10px"
                     color={secondary}
                   >
-                    {item.unit}
+                    {item.title}
                   </Text>
-                </HStack>
-              </VStack>
-            </HStack>
-          ))}
-        </VStack>
+
+                  <HStack spacing={1}>
+                    <Text
+                      fontSize="16px"
+                      fontWeight="700"
+                    >
+                      {item.value}
+                    </Text>
+
+                    <Text
+                      fontSize="10px"
+                      color={secondary}
+                    >
+                      {item.unit}
+                    </Text>
+                  </HStack>
+                </VStack>
+              </HStack>
+            ))}
+          </VStack>
+        )}
 
         {/* Graph */}
 
-        <Box flex={1} h="100%" minW={0} overflow="hidden">
-          <ColumnGraph
-            key={isFullscreen ? "fullscreen" : "normal"}
-            apiData={mixedSeries}
-            height={isFullscreen ? window.innerHeight - 120 : 240}
-            props={options}
-            onExportReady={setExportFunctions}
-          />
+        <Box flex={1} h="100%" minW={0} w={isFullscreen ? "100%" : "auto"} overflow="hidden">
+          <ColumnGraphNew
+  key={isFullscreen ? "fullscreen" : "normal"}
+  apiData={mixedSeries}
+  height={isFullscreen ? window.innerHeight - 120 : 240}
+  barWidth={isFullscreen ? 16 : 10}
+barCategoryGap={isFullscreen ? "25%" : "40%"}
+barGap={isFullscreen ? "5%" : "8%"}
+borderRadius={6}
+  onExportReady={setExportFunctions}
+/>
         </Box>
       </HStack>
     </GraphLayout>

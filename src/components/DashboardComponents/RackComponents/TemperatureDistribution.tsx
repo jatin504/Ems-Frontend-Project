@@ -95,7 +95,7 @@ const TemperatureDistribution: React.FC = () => {
           </Select>
         </Box>
       }
-      width={["100%"]}
+      width={["500px"]}
       height="100%"
       fullScreen
       timeWindow={false}

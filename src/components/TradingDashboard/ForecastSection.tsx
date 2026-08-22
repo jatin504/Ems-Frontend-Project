@@ -29,7 +29,7 @@ const ForecastSection = ({
     >
       <GraphLayout
         title={title}
-        width={["100%"]}
+        width={["590px"]}
         height="200px"
         downloadOption={false}
       >

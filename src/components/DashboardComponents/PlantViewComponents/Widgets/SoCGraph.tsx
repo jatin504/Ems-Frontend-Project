@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
-import ColumnGraph from "../../../Graphs/RevampCharts/ColumnGraph";
+import ColumnGraphNew from "../../../Graphs/RevampCharts/ColumnGraphNew";
+import WidgetTitle from "../../../Common/WidgetTitle";
 import { useColorModeValue } from "@chakra-ui/react";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
-import { transformToHighchartsTimeSeries } from "../../../../Services/APIDataFormatter/TimeseriesGraphs";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
+import type { TimeseriesDataSource } from "../../../../types/timeseries/datasource";
 
 
   // return [
@@ -37,7 +38,7 @@ const SoCGraph: React.FC = () => {
   );
 
   // Fetch CUF AC, CUF DC, PR
-  const cufFetch = {
+  const cufFetch: { dataSource: TimeseriesDataSource } = {
     dataSource: {
       devices: { patterns: [], ids: ["plant_1_pcs_2_bank_bank_1"] },
       keys: [
@@ -59,7 +60,7 @@ const SoCGraph: React.FC = () => {
 ],
       aggregation: timeWindow.aggregation,
       timeRange: timeWindow.timeRange,
-      orderBy: "ASC",
+      orderBy: "ASC" as const,
     },
   };
 
@@ -76,13 +77,14 @@ const SoCGraph: React.FC = () => {
     // Assume one device for simplicity
     const dev = Object.keys(root)[0];
     if (!dev) return [];
-    const d: { [key: string]: any[] } = root[dev];
+    const d = root[dev] as unknown as Record<string, Array<{ ts: number; value: number }>>;
+    const getSeries = (key: string) => (d[key] ?? []) as Array<{ ts: number; value: number }>;
     // X axis: timestamps
-    const tsArr = (d["CUF AC"] || []).map((p: any) => p.ts);
+    const tsArr = getSeries("CUF AC").map((p) => p.ts);
     // Series data
-    const cufAc = (d["CUF AC"] || []).map((p: any) => p.value);
-    const cufDc = (d["CUF DC"] || []).map((p: any) => p.value);
-    const pr = (d["PR"] || []).map((p: any) => p.value);
+    const cufAc = getSeries("CUF AC").map((p) => p.value);
+    const cufDc = getSeries("CUF DC").map((p) => p.value);
+    const pr = getSeries("PR").map((p) => p.value);
     return [
       {
         type: "column",
@@ -111,7 +113,6 @@ const SoCGraph: React.FC = () => {
   }, [cufData]);
 
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
-  const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
   const gridColor = useColorModeValue(
     "rgba(0,0,0,0.10)",
     "rgba(255,255,255,0.08)"
@@ -121,7 +122,7 @@ const SoCGraph: React.FC = () => {
 
   return (
     <GraphLayout
-      title="CUF & PR"
+      title={<WidgetTitle color={textColor}>CUF & PR</WidgetTitle>}
       width={["578px"]}
       height={"344px"}
       fullScreen
@@ -130,45 +131,21 @@ const SoCGraph: React.FC = () => {
       onReset={handleReset}
       onExport={exportFunctions}
     >
-      <ColumnGraph
+      <ColumnGraphNew
         apiData={mixedSeries}
-        height={260}
+        height={250}
         onExportReady={setExportFunctions}
-        props={{
-          xAxis: {
-            type: "datetime",
-            labels: { style: { color: subTextColor } },
-            gridLineDashStyle: "ShortDot",
-            gridLineWidth: 1,
-          },
-          yAxis: {
-            tickAmount: 6,
-            title: { text: null },
-            labels: { style: { color: textColor } },
-          },
-          plotOptions: {
-            column: {
-              stacking: "normal",
-              pointWidth: 18,
-              borderRadius: 6,
-              pointPadding: 0,
-              grouping: true,
-            },
-          },
-          tooltip: {
-            shared: true,
-            backgroundColor: useColorModeValue(
-              "#fff",
-              "rgba(24,24,27,0.95)"
-            ),
-            style: { color: textColor },
-          },
-          legend: {
-            align: "center",
-            verticalAlign: "bottom",
-            itemStyle: { color: textColor },
-          },
-        }}
+        axisLabelColor={textColor}
+        gridColor={gridColor}
+        lineColor={gridColor}
+        tooltipBg={useColorModeValue("#fff", "rgba(24,24,27,0.95)")}
+        tooltipColor={textColor}
+        legendColor={textColor}
+        stacked
+        barWidth={18}
+        barGap="8%"
+        barCategoryGap="30%"
+        borderRadius={0}
       />
     </GraphLayout>
   );

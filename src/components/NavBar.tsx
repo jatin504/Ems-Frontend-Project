@@ -12,8 +12,25 @@ import {
   CloseIcon,
   AddIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
 } from "@chakra-ui/icons";
 import { AiFillHome } from "react-icons/ai";
+import {
+  FiCpu,
+  FiSliders,
+  FiBell,
+  FiFileText,
+  FiGitBranch,
+  FiSun,
+  FiActivity,
+  FiGrid,
+  FiSettings,
+  FiChevronRight,
+  FiDatabase,
+  FiZap,
+  FiBarChart2,
+  FiLayers,
+} from "react-icons/fi";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"; // ← useMemo added
 import TopRibbonBESS from "./TopRibbonBESS";
@@ -109,6 +126,210 @@ function LightLogoProcessed({
   );
 }
 
+function SidebarSubItem({
+  label,
+  icon,
+  active = false,
+  onClick,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  const textColor = useColorModeValue("#475569", "#CBD5E1");
+
+  return (
+    <HStack
+      position="relative"
+      ml="27px"
+      mr="8px"
+      px="10px"
+      py="6px"
+      minH="32px"
+      borderRadius="9px"
+      cursor="pointer"
+      color={active ? "#FFFFFF" : textColor}
+      bg={
+        active
+          ? "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)"
+          : "transparent"
+      }
+      border={active ? "1px solid rgba(96,165,250,.45)" : "1px solid transparent"}
+      boxShadow={
+        active
+          ? "0 5px 14px rgba(37,99,235,.35), inset 0 1px 0 rgba(255,255,255,.22)"
+          : "none"
+      }
+      transition="all .2s ease"
+      _hover={{
+        bg: active
+          ? "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)"
+          : useColorModeValue("rgba(15,23,42,.05)", "rgba(255,255,255,.06)"),
+        transform: "translateX(3px)",
+      }}
+      onClick={onClick}
+    >
+      <Box
+        position="absolute"
+        left="-17px"
+        top="-18px"
+        w="1px"
+        h="42px"
+        bg={useColorModeValue("#CBD5E1", "#334155")}
+      />
+      <Box
+        position="absolute"
+        left="-20px"
+        w="7px"
+        h="7px"
+        borderRadius="full"
+        bg={active ? "#60A5FA" : "#64748B"}
+        boxShadow={active ? "0 0 8px #60A5FA" : "none"}
+      />
+      <Box
+        w="22px"
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        fontSize="14px"
+      >
+        {icon}
+      </Box>
+      <Text
+        fontSize="11px"
+        fontWeight={active ? "600" : "500"}
+        noOfLines={1}
+      >
+        {label}
+      </Text>
+    </HStack>
+  );
+}
+
+function SidebarMainItem({
+  label,
+  icon,
+  collapsed,
+  active = false,
+  hasChildren = false,
+  isOpen = false,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  collapsed: boolean;
+  active?: boolean;
+  hasChildren?: boolean;
+  isOpen?: boolean;
+  onClick: () => void;
+}) {
+  const textColor = useColorModeValue("#334155", "#E2E8F0");
+
+  return (
+    <Box px="5px" mb="2px">
+      <HStack
+        position="relative"
+        h="40px"
+        px={collapsed ? 0 : "11px"}
+        justify={collapsed ? "center" : "flex-start"}
+        spacing={collapsed ? 0 : "10px"}
+        borderRadius="10px"
+        cursor="pointer"
+        color={active ? "#FFFFFF" : textColor}
+        bg={
+          active
+            ? "linear-gradient(135deg, #3978E8 0%, #285CC4 100%)"
+            : "transparent"
+        }
+        border={
+          active
+            ? "1px solid rgba(96,165,250,.45)"
+            : "1px solid transparent"
+        }
+        boxShadow={
+          active
+            ? "0 4px 10px rgba(37,99,235,.22), inset 0 1px 0 rgba(255,255,255,.16)"
+            : "none"
+        }
+        transition="all .2s cubic-bezier(.4,0,.2,1)"
+        _hover={{
+          transform: "translateY(-1px)",
+          bg: active
+            ? "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)"
+            : useColorModeValue(
+                "linear-gradient(135deg,#F8FAFC,#E2E8F0)",
+                "linear-gradient(135deg,#202938,#151C28)"
+              ),
+          boxShadow: active
+            ? "0 7px 18px rgba(37,99,235,.35), inset 0 1px 0 rgba(255,255,255,.20)"
+            : "0 5px 12px rgba(0,0,0,.12)",
+        }}
+        onClick={onClick}
+        title={collapsed ? label : undefined}
+      >
+        {active && (
+          <Box
+            position="absolute"
+            left="-2px"
+            top="7px"
+            bottom="7px"
+            w="2px"
+            borderRadius="full"
+            bg="#60A5FA"
+            boxShadow="0 0 6px #60A5FA"
+          />
+        )}
+        <Box
+          w="23px"
+          h="23px"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          borderRadius="7px"
+          fontSize="14px"
+          bg={
+            active
+              ? "rgba(255,255,255,.15)"
+              : useColorModeValue("rgba(148,163,184,.12)", "rgba(148,163,184,.12)")
+          }
+          color={active ? "#FFFFFF" : textColor}
+        >
+          {icon}
+        </Box>
+        {!collapsed && (
+          <Text
+            flex="1"
+            fontSize="12px"
+            fontWeight={active ? "600" : "500"}
+            letterSpacing="0.01em"
+          >
+            {label}
+          </Text>
+        )}
+        {!collapsed && hasChildren && (
+          <Box
+            w="18px"
+            h="18px"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            color={active ? "#FFFFFF" : useColorModeValue("#475569", "#CBD5E1")}
+          >
+            <FiChevronRight
+              size={12}
+              style={{
+                transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                transition: "transform .2s ease",
+              }}
+            />
+          </Box>
+        )}
+      </HStack>
+    </Box>
+  );
+}
+
 const Navbar = () => {
   // ROUTER
   const navigate = useNavigate();
@@ -126,6 +347,9 @@ const Navbar = () => {
   const [selectedMenu, setSelectedMenu] = useState("Fleet");
   const [displayName, setDisplayName] = useState<string>("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [openSidebarMenu, setOpenSidebarMenu] = useState<string | null>(null);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   // demo values (bind live later)
   const [livePowerKw] = useState(187.73);
@@ -302,466 +526,368 @@ const Navbar = () => {
   const isCustomActive = location.pathname.startsWith("/custom/dashboard");
   const isDSMActive = location.pathname.startsWith("/dsm");
 
+  const toggleSidebarMenu = (menu: string) => {
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      setOpenSidebarMenu(menu);
+      return;
+    }
+    setOpenSidebarMenu((prev) =>
+      prev === menu ? null : menu
+    );
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const sidebar = sidebarRef.current;
+      if (!sidebar) return;
+      const rect = sidebar.getBoundingClientRect();
+      const inside =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+      if (!inside && !sidebarCollapsed) {
+        setSidebarCollapsed(true);
+        setOpenSidebarMenu(null);
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [sidebarCollapsed]);
+
   // hide nav on login
   const hideNav = location.pathname.toLowerCase().startsWith("/login");
   if (hideNav) return null;
 
   const { colorMode } = useColorMode();
 
+  const sidebarBg = useColorModeValue("white", "#1a202c");
+  const sidebarBorder = useColorModeValue("gray.200", "gray.700");
+
   return (
-    <Box
-      bg={navBg}
-      px={4}
-      boxShadow="md"
-      zIndex={1100}
-      position="relative"
-      width="full"
-      borderBottom="1px solid"
-      borderColor={borderClr}
-      overflowX="hidden"
-    >
-      {/* TOP RIBBON */}
-      <TopRibbonBESS
-        livePowerKw={livePowerKw}
-        lifeChargeMWh={lifeChargeMWh}
-        lifeDischargeMWh={lifeDischargeMWh}
-        dailyChargeMWh={dailyChargeMWh}
-        dailyDischargeMWh={dailyDischargeMWh}
-        cufAcPct={cufAcPct}
-        cufDcPct={cufDcPct}
-        onlineInverters={onlineInverters}
-        totalInverters={totalInverters}
-        updatedAt={updatedAt}
-        leftSlot={
-          <HStack spacing={2}>
-            {/* <ChakraImage
-              src={colorMode === "light" ? cognetaLogoBlack : cognetaLogo}
-              alt="Cogneta"
-              height="64px"           
-              objectFit="contain"
-              bg="transparent"
-            /> */}
-            {/* NEW: Flux logo (transparent) — SECOND position */}
-            <LightLogoProcessed
-              src="/NewEtaFluxLogo.svg"   // ⬅️ replaced here
-              h="22px"
-              threshold={244}
-              tolerance={40}
-            />
-            <Text fontWeight="semibold" color={useColorModeValue("gray.900", "white")} />
-          </HStack>
-        }
-        isLoggedIn={isLoggedIn}
-        displayName={displayName}
-        handleLogout={handleLogout}
-        navigate={navigate}
-      />
-
-      {/* Main Navbar Row */}
-      <Flex
-        minH="40px"
-        alignItems="center"
-        justifyContent="space-between"
-        width="full"
-        py={1}
-        gap={3}
-        flexWrap="wrap"
+    <>
+      {/* FIXED SIDEBAR */}
+      <Box
+        ref={sidebarRef}
+        position="fixed"
+        left="0"
+        top="0"
+        bottom="0"
+        w={sidebarCollapsed ? "60px" : "230px"}
+        bg={useColorModeValue(
+          "linear-gradient(180deg,#F8FAFC 0%,#E8EEF5 100%)",
+          "linear-gradient(180deg,#111B29 0%,#0B1420 100%)"
+        )}
+        borderRight="1px solid"
+        borderColor={useColorModeValue(
+          "rgba(148,163,184,.35)",
+          "rgba(71,85,105,.45)"
+        )}
+        borderRadius="0"
+        boxShadow={useColorModeValue(
+          "8px 0 25px rgba(15,23,42,.10)",
+          "8px 0 25px rgba(0,0,0,.35)"
+        )}
+        transition="width .25s ease"
+        zIndex={1200}
+        overflowY="auto"
+        overflowX="hidden"
+        pt="12px"
+        pb="12px"
+        css={{
+          "&::-webkit-scrollbar": {
+            width: "4px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            background: "rgba(100,116,139,.35)",
+            borderRadius: "10px",
+          },
+        }}
       >
-        {/* Mobile Menu Toggle */}
-        <IconButton
-          size="md"
-          icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
-          aria-label="Open Menu"
-          display={{ base: "inline-flex", md: "none" }}
-          onClick={isOpen ? onClose : onOpen}
-          color={mobileBtnColor}
-          bg={useColorModeValue("gray.100", "gray.700")}
-          _hover={{ bg: useColorModeValue("gray.200", "gray.600") }}
-        />
-
-        {/* Left side: Nav + Dropdowns (Desktop) */}
-        <HStack spacing={4} alignItems="center" flex="1 1 auto" minW={0}>
-          <Flex
-            as="nav"
-            gap={2}
-            wrap="wrap"
-            align="center"
-            display={{ base: "none", md: "flex" }}
-            w="full"
-            position="relative"
-            ref={navRowRef}
-          >
-            {/* Plant Menu */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={undefined} // plant picker isn't a route
-              >
-                {selectedMenu}
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
-                  <MenuItem onClick={() => { setSelectedMenu("Fleet View"); window.location.href = `http://localhost:4444`; }}>
-                    Fleet View
-                  </MenuItem>
-                  <MenuItem onClick={() => { setSelectedMenu("Fleet"); window.location.href = `http://localhost:4445${window.location.pathname}`; }}>
-                    Fleet
-                  </MenuItem>
-                  <MenuItem onClick={() => { setSelectedMenu("Plant 2"); window.location.href = `http://localhost:4446${window.location.pathname}`; }}>
-                    Plant 2
-                  </MenuItem>
-                  <MenuItem onClick={() => { setSelectedMenu("Plant 3"); window.location.href = `http://localhost:4447${window.location.pathname}`; }}>
-                    Plant 3
-                  </MenuItem>
-                </MenuList>
-              </Portal>
-            </Menu>
-
-            {/* links BEFORE SLD */}
-            {linksBeforeSLD.map((link) => (
-              <NavLink key={link.name} {...link} />
-            ))}
-
-            {/* Devices */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={isDevicesActive ? "true" : undefined}
-              >
-                Devices
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr} py={1} minW="180px">
-                  <MenuItem onClick={() => goDevice("Inv")} py={1} fontSize="sm">Inverter</MenuItem>
-                  <MenuItem onClick={() => goDevice("pcs")} py={1} fontSize="sm">Pcs</MenuItem>
-                  <MenuItem onClick={() => goDevice("wms")} py={1} fontSize="sm">Wms</MenuItem>
-                  <MenuItem onClick={() => goDevice("meter")} py={1} fontSize="sm">Meter</MenuItem>
-                  <Box position="relative">
-                    <Menu placement="right-start" isLazy>
-                      <MenuButton
-                        as={Button}
-                        variant="ghost"
-                        w="100%"
-                        pl={3}
-                        pr={2}
-                        fontSize="sm"
-                        fontWeight="normal"
-                      >
-                        <Box
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="space-between"
-                          w="100%"
-                        >
-                          <Text>Bess</Text>
-                          <ChevronDownIcon transform="rotate(-90deg)" />
-                        </Box>
-                      </MenuButton>
-
-                      <Portal>
-                        <MenuList
-                          zIndex={3000}
-                          minW="180px"
-                        >
-                          <MenuItem onClick={() => navigate("/devices/bess")}>Overview</MenuItem>
-
-                          <MenuItem onClick={() => navigate("/devices/bess/battery-intelligence")}>
-                            Battery Intelligence
-                          </MenuItem>
-                        </MenuList>
-                      </Portal>
-                    </Menu>
-                  </Box>
-                  <MenuItem onClick={() => goDevice("transformer")} py={1} fontSize="sm">Transformer</MenuItem>
-                  <MenuItem onClick={() => goDevice("dc-zone")} py={1} fontSize="sm">Dc Zone</MenuItem>
-                  <MenuItem
-                    py={1}
-                    fontSize="sm"
-                    onClick={() => navigate("/devices/switch-gear")}
-                  >
-                    Switch Gear
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/devices/protection-relay")} py={1} fontSize="sm">Protection Relay</MenuItem>
-                </MenuList>
-              </Portal>
-            </Menu>
-
-            {/* SLD */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={isSLDActive ? "true" : undefined}
-              >
-                SLD
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
-                  <MenuItem onClick={() => navigate("/sld")}>Electricals</MenuItem>
-                  <MenuItem onClick={() => navigate("/network-dashboard")}>Networks</MenuItem>
-                </MenuList>
-              </Portal>
-            </Menu>
-
-            {/* links AFTER SLD */}
-            {linksAfterSLD.map((link) => (
-              <NavLink key={link.name} {...link} />
-            ))}
-
-            {/* Control */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={isControlActive ? "true" : undefined}
-              >
-                Control
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr} minW="180px">
-                  <MenuItem onClick={() => navigate("/besscontroll")}>Bess</MenuItem>
-                  {/* <MenuItem onClick={() => navigate("/ppc")}>PPC</MenuItem>
-                  <MenuItem onClick={() => navigate("/switch-gear")}>Switch Gear</MenuItem> */}
-                  {/* --- Add this Solar option --- */}
-                  <MenuItem onClick={() => navigate("/solardashboard")}>Solar</MenuItem>
-                  <MenuItem onClick={() => navigate("/tradingdashboard")}>Trading</MenuItem>
-                  <MenuItem onClick={() => navigate("/genset")}>Genset Control</MenuItem>
-                  <MenuItem onClick={() => navigate("/grid")}>Grid Control</MenuItem>
-                  <MenuItem onClick={() => navigate("/Load-Forecast")}>
-                    Load Forecast
-                  </MenuItem>
-                  
-                </MenuList>
-              </Portal>
-            </Menu>
-
-            {/* PPC - new menu with submenu items */}
-            {/* <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-              >
-                PPC
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr} minW="160px">
-                  <MenuItem onClick={() => navigate("/genset")}>Genset Control</MenuItem>
-                  <MenuItem onClick={() => navigate("/grid")}>Grid Control</MenuItem>
-                </MenuList>
-              </Portal>
-            </Menu> */}
-
-            {/* Alerts */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={isAlarmsActive ? "true" : undefined}
-              >
-                Alerts
-              </MenuButton>
-
-              <Portal>
-                <MenuList
-                  zIndex={2000}
-                  bg={navBg}
-                  color={linkColor}
-                  borderColor={borderClr}
-                  minW="220px"
-                  py={1}
-                >
-                  <MenuItem onClick={() => navigate("/alarms/latest")}>
-                    Alarm
-                  </MenuItem>
-
-                  <MenuItem onClick={() => navigate("/events/latest")}>
-                    Event
-                  </MenuItem>
-
-                  {/* <MenuItem onClick={() => navigate("/events/history")}>
-        Event History
-      </MenuItem> */}
-
-                  <MenuItem onClick={() => navigate("/alarms/soe")}>
-                    SOE
-                  </MenuItem>
-                </MenuList>
-              </Portal>
-            </Menu>
-
-            {/* Report */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={isReportActive ? "true" : undefined}
-              >
-                Report
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
-                  <MenuItem onClick={() => { navigate("/report"); }}>Report Dashboard</MenuItem>
-                  <MenuItem onClick={() => { navigate("/template"); }}>Report Templates</MenuItem>
-                </MenuList>
-              </Portal>
-            </Menu>
-            <HStack
-              px={3}
-              py={2}
-              rounded="md"
-              spacing={1}
-              fontWeight="medium"
-              color={linkColor}
-              _hover={{ textDecoration: "none", bg: hoverBg, color: linkColor }}
-              onClick={() => {
-                const token = sessionStorage.getItem("token");
-                const userName = sessionStorage.getItem("userName");
-
-                window.open(
-                  `http://75.119.146.115:5500/Trend?token=${token}&userName=${userName}`,
-                  "_blank"
-                );
-              }}
-            >
-              <Text fontSize="sm">Trends</Text>
-            </HStack>
-
-            {/* Custom */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={isCustomActive ? "true" : undefined}
-              >
-                Custom
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
-                  {dashboards == null || dashboards?.length === 0 ? (
-                    <MenuItem isDisabled>No custom dashboards</MenuItem>
-                  ) : (
-                    dashboards?.map((d: { id: string; title: string }) => (
-                      <MenuItem key={d.id} onClick={() => navigate(`/custom/dashboard/${d.id}`)}>
-                        {d.title}
-                      </MenuItem>
-                    ))
-                  )}
-                  {/* <MenuItem
-                    onClick={() => {
-                      const token = sessionStorage.getItem("token");
-                      const userName = sessionStorage.getItem("userName");
-
-                      window.open(
-  `http://127.0.0.1:5500/Trend%20Application/trend.html?token=${token}&userName=${userName}`,
-  "_blank"
-);
-                    }}
-                  >
-                    Trends
-                  </MenuItem> */}
-                </MenuList>
-              </Portal>
-            </Menu>
-
-            {/* PASS - Last Menu */}
-            <Menu placement="bottom-start" isLazy>
-              <MenuButton
-                as={Button}
-                variant="ghost"
-                size="sm"
-                px={3}
-                py={2}
-                fontWeight="medium"
-                onClick={setFromEvent}
-                data-active={isDSMActive ? "true" : undefined}
-              >
-                PASS
-              </MenuButton>
-              <Portal>
-                <MenuList zIndex={2000} bg={navBg} color={linkColor} borderColor={borderClr}>
-
-                  <MenuItem as={RouterLink} to="/newdashboard" fontSize="sm">Dashboard</MenuItem>
-                  <MenuItem as={RouterLink} to="/dsm" fontSize="sm">DSM</MenuItem>
-                  <MenuItem as={RouterLink} to="/energy-accounting" fontSize="sm">Energy Accounting</MenuItem>
-                  <MenuItem as={RouterLink} to="/billing">Billing</MenuItem>
-                  <MenuItem as={RouterLink} to="/reports">Reports</MenuItem>
-                  <MenuItem as={RouterLink} to="/settings">Setting</MenuItem>
-                  <MenuItem onClick={() => navigate("/Load-Forecast")}>Load Forecast</MenuItem>
-                  
-                </MenuList>
-              </Portal>
-            </Menu>
-
-            {/* ---- GLOBAL UNDERLINE ---- */}
-            <Box
-              position="absolute"
-              bottom="-1px"
-              left={`${underline.left}px`}
-              width={`${underline.width}px`}
-              height="2px"
-              bg={navLinkUnderlineColor}
-              borderRadius="2px"
-              transition="left .2s ease, width .2s ease, opacity .15s ease"
-              opacity={underline.visible ? 1 : 0}
-              pointerEvents="none"
-            />
-          </Flex>
-        </HStack>
-
-        {/* Right side: Create button */}
-        <Flex alignItems="center" gap={3}>
+        {/* Collapse Toggle */}
+        <Flex
+          px={sidebarCollapsed ? 0 : "12px"}
+          justifyContent={sidebarCollapsed ? "center" : "flex-end"}
+          mb="16px"
+        >
           <IconButton
-            icon={<AddIcon />}
-            aria-label="Create Dashboard"
+            icon={
+              sidebarCollapsed ? (
+                <ChevronRightIcon />
+              ) : (
+                <ChevronRightIcon transform="rotate(180deg)" />
+              )
+            }
+            aria-label="Toggle Sidebar"
             size="sm"
-            bg="#33D2D2"
-            colorScheme="blue"
-            onClick={openCreateCustomDashboard}
+            borderRadius="10px"
+            color={useColorModeValue("#334155", "#CBD5E1")}
+            bg={useColorModeValue(
+              "linear-gradient(145deg,#FFFFFF,#E2E8F0)",
+              "linear-gradient(145deg,#263244,#17202D)"
+            )}
+            border="1px solid"
+            borderColor={useColorModeValue("#CBD5E1", "#334155")}
+            boxShadow={useColorModeValue(
+              "3px 4px 8px rgba(15,23,42,.15), inset 1px 1px 2px white",
+              "3px 4px 8px rgba(0,0,0,.35), inset 1px 1px 2px rgba(255,255,255,.08)"
+            )}
+            _hover={{
+              transform: "translateY(-1px)",
+            }}
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         </Flex>
-      </Flex>
+
+        {/* Sidebar Menu Items */}
+        <VStack spacing="4px" align="stretch">
+          <SidebarMainItem
+            label="Devices"
+            icon={<FiCpu />}
+            collapsed={sidebarCollapsed}
+            active={isDevicesActive}
+            hasChildren
+            isOpen={openSidebarMenu === "Devices"}
+            onClick={() => toggleSidebarMenu("Devices")}
+          />
+          {!sidebarCollapsed && openSidebarMenu === "Devices" && (
+            <Box>
+              <SidebarSubItem label="Inverter" icon={<FiZap />} active={location.pathname === "/devices/inv"} onClick={() => navigate("/devices/inv")} />
+              <SidebarSubItem label="PCS" icon={<FiCpu />} active={location.pathname === "/devices/pcs"} onClick={() => navigate("/devices/pcs")} />
+              <SidebarSubItem label="BESS" icon={<FiDatabase />} active={location.pathname === "/devices/bess"} onClick={() => navigate("/devices/bess")} />
+              <SidebarSubItem label="Meter" icon={<FiActivity />} active={location.pathname === "/devices/meter-1"} onClick={() => navigate("/devices/meter-1")} />
+              <SidebarSubItem label="Transformer" icon={<FiLayers />} active={location.pathname === "/devices/transformer"} onClick={() => navigate("/devices/transformer")} />
+              <SidebarSubItem label="DC Zone" icon={<FiGrid />} active={location.pathname === "/string-new-dashboard"} onClick={() => navigate("/string-new-dashboard")} />
+              <SidebarSubItem label="WMS" icon={<FiActivity />} active={location.pathname === "/devices/wms-1"} onClick={() => navigate("/devices/wms-1")} />
+              <SidebarSubItem label="Switch Gear" icon={<FiSliders />} active={location.pathname === "/devices/switch-gear"} onClick={() => navigate("/devices/switch-gear")} />
+              <SidebarSubItem label="Protection Relay" icon={<FiZap />} active={location.pathname === "/devices/protection-relay"} onClick={() => navigate("/devices/protection-relay")} />
+            </Box>
+          )}
+
+          <SidebarMainItem
+            label="Control"
+            icon={<FiSliders />}
+            collapsed={sidebarCollapsed}
+            active={isControlActive}
+            hasChildren
+            isOpen={openSidebarMenu === "Control"}
+            onClick={() => toggleSidebarMenu("Control")}
+          />
+          {!sidebarCollapsed && openSidebarMenu === "Control" && (
+            <Box>
+              <SidebarSubItem label="BESS" icon={<FiDatabase />} active={location.pathname === "/besscontroll"} onClick={() => navigate("/besscontroll")} />
+              <SidebarSubItem label="Solar" icon={<FiSun />} active={location.pathname === "/solardashboard"} onClick={() => navigate("/solardashboard")} />
+              <SidebarSubItem label="Trading" icon={<FiBarChart2 />} active={location.pathname === "/tradingdashboard"} onClick={() => navigate("/tradingdashboard")} />
+              <SidebarSubItem label="Manual Black Start" icon={<FiGitBranch />} active={location.pathname === "/manual-black-start"} onClick={() => navigate("/manual-black-start")} />
+              <SidebarSubItem label="Genset" icon={<FiGrid />} active={location.pathname === "/genset"} onClick={() => navigate("/genset")} />
+              <SidebarSubItem label="Grid" icon={<FiGrid />} active={location.pathname === "/grid"} onClick={() => navigate("/grid")} />
+              <SidebarSubItem label="Load Forecast" icon={<FiActivity />} active={location.pathname === "/Load-Forecast"} onClick={() => navigate("/Load-Forecast")} />
+            </Box>
+          )}
+
+          <SidebarMainItem
+            label="Alerts"
+            icon={<FiBell />}
+            collapsed={sidebarCollapsed}
+            active={isAlarmsActive}
+            hasChildren
+            isOpen={openSidebarMenu === "Alerts"}
+            onClick={() => toggleSidebarMenu("Alerts")}
+          />
+          {!sidebarCollapsed && openSidebarMenu === "Alerts" && (
+            <Box>
+              <SidebarSubItem label="Alarm" icon={<FiBell />} active={location.pathname === "/alarms/latest"} onClick={() => navigate("/alarms/latest")} />
+              <SidebarSubItem label="Event" icon={<FiFileText />} active={location.pathname === "/events/latest"} onClick={() => navigate("/events/latest")} />
+              <SidebarSubItem label="SOE" icon={<FiActivity />} active={location.pathname === "/alarms/soe"} onClick={() => navigate("/alarms/soe")} />
+            </Box>
+          )}
+
+          <SidebarMainItem
+            label="Report"
+            icon={<FiFileText />}
+            collapsed={sidebarCollapsed}
+            active={isReportActive}
+            hasChildren
+            isOpen={openSidebarMenu === "Report"}
+            onClick={() => toggleSidebarMenu("Report")}
+          />
+          {!sidebarCollapsed && openSidebarMenu === "Report" && (
+            <Box>
+              <SidebarSubItem label="Report Dashboard" icon={<FiBarChart2 />} active={location.pathname === "/report"} onClick={() => navigate("/report")} />
+              <SidebarSubItem label="Report Templates" icon={<FiFileText />} active={location.pathname === "/template"} onClick={() => navigate("/template")} />
+            </Box>
+          )}
+
+          <SidebarMainItem
+            label="SLD"
+            icon={<FiGitBranch />}
+            collapsed={sidebarCollapsed}
+            active={isSLDActive}
+            hasChildren
+            isOpen={openSidebarMenu === "SLD"}
+            onClick={() => toggleSidebarMenu("SLD")}
+          />
+          {!sidebarCollapsed && openSidebarMenu === "SLD" && (
+            <Box>
+              <SidebarSubItem label="Electricals" icon={<FiGrid />} active={location.pathname === "/sld"} onClick={() => navigate("/sld")} />
+              <SidebarSubItem label="Networks" icon={<FiGitBranch />} active={location.pathname === "/network-dashboard"} onClick={() => navigate("/network-dashboard")} />
+            </Box>
+          )}
+
+          <SidebarMainItem
+            label="Plant View"
+            icon={<FiGrid />}
+            collapsed={sidebarCollapsed}
+            active={location.pathname === "/plantview"}
+            onClick={() => navigate("/plantview")}
+          />
+
+          <SidebarMainItem
+            label="Solar"
+            icon={<FiSun />}
+            collapsed={sidebarCollapsed}
+            active={location.pathname === "/solarview"}
+            onClick={() => navigate("/solarview")}
+          />
+
+          <SidebarMainItem
+            label="Trends"
+            icon={<FiBarChart2 />}
+            collapsed={sidebarCollapsed}
+            active={false}
+            onClick={() => {
+              const token = sessionStorage.getItem("token");
+              const userName = sessionStorage.getItem("userName");
+              window.open(
+                `http://75.119.146.115:5500/Trend?token=${token}&userName=${userName}`,
+                "_blank"
+              );
+            }}
+          />
+
+          <SidebarMainItem
+            label="Custom"
+            icon={<FiLayers />}
+            collapsed={sidebarCollapsed}
+            active={isCustomActive}
+            hasChildren
+            isOpen={openSidebarMenu === "Custom"}
+            onClick={() => toggleSidebarMenu("Custom")}
+          />
+          {!sidebarCollapsed && openSidebarMenu === "Custom" && (
+            <Box>
+              {dashboards && dashboards.length > 0 ? (
+                dashboards.map((d: { id: string; title: string }) => (
+                  <SidebarSubItem
+                    key={d.id}
+                    label={d.title}
+                    icon={<FiLayers />}
+                    active={location.pathname === `/custom/dashboard/${d.id}`}
+                    onClick={() => navigate(`/custom/dashboard/${d.id}`)}
+                  />
+                ))
+              ) : (
+                <SidebarSubItem label="No dashboards" icon={<FiLayers />} active={false} onClick={() => {}} />
+              )}
+            </Box>
+          )}
+
+          <SidebarMainItem
+            label="PASS"
+            icon={<FiDatabase />}
+            collapsed={sidebarCollapsed}
+            active={isDSMActive}
+            hasChildren
+            isOpen={openSidebarMenu === "PASS"}
+            onClick={() => toggleSidebarMenu("PASS")}
+          />
+          {!sidebarCollapsed && openSidebarMenu === "PASS" && (
+            <Box>
+              <SidebarSubItem label="Dashboard" icon={<FiGrid />} active={location.pathname === "/newdashboard"} onClick={() => navigate("/newdashboard")} />
+              <SidebarSubItem label="DSM" icon={<FiSliders />} active={location.pathname === "/dsm"} onClick={() => navigate("/dsm")} />
+              <SidebarSubItem label="Energy Accounting" icon={<FiDatabase />} active={location.pathname === "/energy-accounting"} onClick={() => navigate("/energy-accounting")} />
+              <SidebarSubItem label="Billing" icon={<FiFileText />} active={location.pathname === "/billing"} onClick={() => navigate("/billing")} />
+              <SidebarSubItem label="Reports" icon={<FiBarChart2 />} active={location.pathname === "/reports"} onClick={() => navigate("/reports")} />
+              <SidebarSubItem label="Setting" icon={<FiSettings />} active={location.pathname === "/settings"} onClick={() => navigate("/settings")} />
+              <SidebarSubItem label="Load Forecast" icon={<FiActivity />} active={location.pathname === "/Load-Forecast"} onClick={() => navigate("/Load-Forecast")} />
+            </Box>
+          )}
+
+          <SidebarMainItem
+            label="Settings"
+            icon={<FiSettings />}
+            collapsed={sidebarCollapsed}
+            active={location.pathname === "/settings"}
+            onClick={() => navigate("/settings")}
+          />
+        </VStack>
+        {!sidebarCollapsed && (
+          <VStack
+            position="absolute"
+            bottom="8px"
+            left="0"
+            right="0"
+            spacing="0"
+            align="center"
+            pointerEvents="none"
+          >
+            <Text fontSize="9px" color={useColorModeValue("#64748B", "#94A3B8")}>
+              v3.1.0
+            </Text>
+            <Text fontSize="9px" color={useColorModeValue("#64748B", "#94A3B8")}>
+              Designed by Cogneta Green Solution
+            </Text>
+          </VStack>
+        )}
+      </Box>
+
+      {/* MAIN CONTENT AREA */}
+      <Box
+        ml={{ base: 0, md: sidebarCollapsed ? "60px" : "230px" }}
+        width={{
+          base: "100%",
+          md: `calc(100vw - ${sidebarCollapsed ? "60px" : "230px"})`,
+        }}
+        maxW="none"
+        minW={0}
+        overflowX="auto"
+        overflowY="hidden"
+        transition="margin-left .25s ease, width .25s ease"
+      >
+        {/* TOP RIBBON */}
+        <TopRibbonBESS
+          livePowerKw={livePowerKw}
+          lifeChargeMWh={lifeChargeMWh}
+          lifeDischargeMWh={lifeDischargeMWh}
+          dailyChargeMWh={dailyChargeMWh}
+          dailyDischargeMWh={dailyDischargeMWh}
+          cufAcPct={cufAcPct}
+          cufDcPct={cufDcPct}
+          onlineInverters={onlineInverters}
+          totalInverters={totalInverters}
+          updatedAt={updatedAt}
+          leftSlot={
+            <HStack spacing={2} ml={"18px"}>
+              <LightLogoProcessed
+                src="/NewEtaFluxLogo.svg"
+                h="22px"
+                threshold={244}
+                tolerance={40}
+              />
+              <Text fontWeight="semibold" color={useColorModeValue("gray.900", "white")} />
+            </HStack>
+          }
+          isLoggedIn={isLoggedIn}
+          displayName={displayName}
+          handleLogout={handleLogout}
+          navigate={navigate}
+        />
+
+      </Box>
 
       {/* Create Dashboard Modal */}
       <Modal isOpen={isOpencreatingCustomDashboard} onClose={closeCreateCustomDashboard}>
@@ -778,72 +904,7 @@ const Navbar = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-      {/* Mobile View */}
-      {isOpen && (
-        <Box pb={4} display={{ md: "none" }}>
-          <Stack as="nav" spacing={2}>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
-              onClick={() => { setSelectedMenu("Fleet View"); window.location.href = `http://localhost:4444`; }}>
-              Fleet View
-            </Button>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
-              onClick={() => { setSelectedMenu("Fleet"); window.location.href = `http://localhost:4445${window.location.pathname}`; }}>
-              Fleet
-            </Button>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
-              onClick={() => { setSelectedMenu("Plant 2"); window.location.href = `http://localhost:4446${window.location.pathname}`; }}>
-              Plant 2
-            </Button>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start"
-              onClick={() => { setSelectedMenu("Plant 3"); window.location.href = `http://localhost:4447${window.location.pathname}`; }}>
-              Plant 3
-            </Button>
-
-            {/* Devices list (flat) */}
-            <Text fontSize="sm" mt={2} px={2} opacity={0.8}>Devices</Text>
-            {[
-              ["INV", "inv"], ["PCS", "pcs"], ["WMS", "wms"], ["METER", "meter"], ["Bess", "bess"],
-              ["Transformer", "transformer"], ["DC Zone", "dc-zone"], ["Switch Gear", "switch-gear"],
-            ].map(([label, slug]) => (
-              <Button key={slug} w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start" onClick={() => goDevice(slug as string)}>
-                {label}
-              </Button>
-            ))}
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start" onClick={() => navigate("/devices/protection-relay")}>
-              Protection Relay
-            </Button>
-
-            {/* SLD (mobile) */}
-            <Text fontSize="sm" mt={2} px={2} opacity={0.8}>SLD</Text>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start" onClick={() => navigate("/sld")}>
-              Electricals
-            </Button>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start" onClick={() => navigate("/sld/networks")}>
-              Networks
-            </Button>
-
-            {/* Alarms (mobile) */}
-            <Text fontSize="sm" mt={2} px={2} opacity={0.8}>Alarms</Text>
-            <HStack px={2}>
-              <Button size="xs" variant="solid" onClick={() => navigate("/alarms/latest")}>Latest</Button>
-              <Button size="xs" variant="outline" onClick={() => navigate("/alarms/history")}>History</Button>
-            </HStack>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start" onClick={() => navigate("/alarms/events")}>
-              Events
-            </Button>
-            <Button w="100%" variant="ghost" color={mobileBtnColor} justifyContent="flex-start" onClick={() => navigate("/alarms/soe")}>
-              SOE
-            </Button>
-
-            {[...linksAfterSLD].map((link) => (
-              <NavLink key={link.name} {...link} />
-            ))}
-          </Stack>
-        </Box>
-      )}
-
-    </Box>
+    </>
   );
 };
 

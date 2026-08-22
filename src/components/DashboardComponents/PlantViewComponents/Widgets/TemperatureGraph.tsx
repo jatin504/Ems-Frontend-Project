@@ -256,7 +256,8 @@ const TemperatureGraph: React.FC = () => {
           <TabPanel height="100%" p={0}>
             <SpineGraph
               apiData={seriesForChart}
-              height="260"
+              height={isFullScreen ? "100%" : 210}
+              isFullscreen={isFullScreen}
               onExportReady={setExportFunctions}
             />
           </TabPanel>
@@ -264,7 +265,8 @@ const TemperatureGraph: React.FC = () => {
           <TabPanel height="100%" p={0}>
             <SpineGraph
               apiData={seriesForChart}
-              height="260px"
+              height={isFullScreen ? "100%" : "260px"}
+              isFullscreen={isFullScreen}
               onExportReady={setExportFunctions}
             />
           </TabPanel>

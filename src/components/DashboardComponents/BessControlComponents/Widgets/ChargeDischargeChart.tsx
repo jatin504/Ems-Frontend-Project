@@ -3,6 +3,7 @@ import { Box, Text, useColorModeValue } from "@chakra-ui/react";
 import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import ColumnGraph from "../../../Graphs/ColumnGraph";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
+import WidgetTitle from "../../../Common/WidgetTitle";
 
 const ChargeDischargeChart: React.FC = () => {
   // Light/Dark colors (dark keeps #161B1B)
@@ -179,7 +180,7 @@ const ChargeDischargeChart: React.FC = () => {
 
   return (
     <GraphLayout
-      title={"Charge/Discharge"}
+      title={<WidgetTitle>Charge/Discharge</WidgetTitle>}
       width={["578px"]}
       height="344px"
       bg={CARD_BG}

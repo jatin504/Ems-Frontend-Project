@@ -90,12 +90,13 @@ const PCSLifetimeThroughput = () => {
     <Box
       bg={bg}
       borderRadius="12px"
-      p={5}
+      p={3}
       border={outerBorder}
       w="100%"
-      minH="300px"
+      h="180px"
+      overflow="hidden"
     >
-      <Box mb={5}>
+      <Box mb={2}>
         <WidgetTitle color={textColor}>Lifetime & Throughput</WidgetTitle>
       </Box>
 
@@ -106,8 +107,8 @@ const PCSLifetimeThroughput = () => {
         {stats.map((item, index) => (
           <Box
             key={index}
-            px={3}
-            py={3}
+            px={2}
+            py={1}
             borderRight={
               index % 4 !== 3 ? `1px solid ${border}` : "none"
             }
@@ -117,10 +118,10 @@ const PCSLifetimeThroughput = () => {
             bg={itemBg}
             borderRadius="md"
           >
-            <HStack align="flex-start" spacing={3}>
+            <HStack align="flex-start" spacing={2}>
               <Box
-                w="24px"
-                h="24px"
+                w="20px"
+                h="20px"
                 borderRadius="full"
                 border={`1px solid ${item.color}`}
                 display="flex"
@@ -145,7 +146,7 @@ const PCSLifetimeThroughput = () => {
 
                 <Text
                   color={textColor}
-                  fontSize="22px"
+                  fontSize="18px"
                   fontWeight="700"
                   lineHeight="1.2"
                 >
@@ -154,7 +155,7 @@ const PCSLifetimeThroughput = () => {
 
                 <Text
                   color={subColor}
-                  fontSize="11px"
+                  fontSize="10px"
                 >
                   {item.unit}
                 </Text>

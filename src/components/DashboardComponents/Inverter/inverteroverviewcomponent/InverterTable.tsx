@@ -522,7 +522,7 @@ export default function InvertersPanel() {
   return (
     <Box
       ref={panelRef}
-      w="760px"
+      w="710px"
       h="600px"
       bg={bodyBg}
       overflow="hidden"

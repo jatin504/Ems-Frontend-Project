@@ -81,15 +81,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       if (window.devicePixelRatio !== initialDPR.current) return;
 
       const baseWidth = 1920;
-      const baseHeight = 1080;
       const currentWidth = window.innerWidth;
-      const currentHeight = window.innerHeight;
-
-      const widthScale = currentWidth / baseWidth;
-      const heightScale = currentHeight / baseHeight;
-      const scaleFactor = Math.max(widthScale, heightScale);
-
-      setScale(scaleFactor); // You may choose widthScale if you prefer
+      const availableWidth = currentWidth - 82;
+      const widthScale = availableWidth / baseWidth;
+      setScale(widthScale * 1.05);
     };
 
     updateScale(); // Run once on mount
@@ -101,6 +96,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   return (
     <Box
       w="100%"
+      pl={{ base: 0, md: "82px" }}
+      boxSizing="border-box"
       bg={useColorModeValue("#F4F6F6", "#0E1111")}
       overflowX="hidden"
       sx={{ zoom: scale }}
@@ -148,11 +145,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* DASHBOARD CONTENT */}
       <Container
-        maxW="1920px"
-        px="16px"
+        maxW="none"
+        width="100%"
+        px="8px"
         pb="16px"
         mx="0"
         ml="0"
+        boxSizing="border-box"
       >
         <Flex direction="column" w="100%">
           {children}

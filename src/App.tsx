@@ -24,6 +24,7 @@ import AlarmHistory from "./Dashboard/Alarm_History";
 import NotificationToast from "./components/NotificationToast";
 // import AlarmEvents from "./Dashboard/Alarm_Events";
 import ConfigDashboard from "./Dashboard/ConfigDashboard";
+import ManualBlackStartDashboard from "./Dashboard/ManualBlackStartDashboard";
 import ConfigList from "./components/ConfigList";
 import UsersPage from "./User/UsersPage";
 import ProfilePage from "./User/ProfilePage";
@@ -557,6 +558,20 @@ function App() {
                 </DashboardLayout>
               }
             /> */}
+            <Route
+              path="/manual-black-start"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/" },
+                    { label: "Control", href: "/besscontroll" },
+                    { label: "Manual Black Start" },
+                  ]}
+                >
+                  <ManualBlackStartDashboard />
+                </DashboardLayout>
+              }
+            /> 
             <Route
               path="/devices/meter-1"
               element={

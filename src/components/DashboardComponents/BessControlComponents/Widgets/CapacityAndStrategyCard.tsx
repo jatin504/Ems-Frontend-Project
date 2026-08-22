@@ -13,7 +13,7 @@ import {
   Checkbox,
 } from "@chakra-ui/react";
 import { AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Button as ChakraButton } from "@chakra-ui/react";
-import { EditIcon } from "@chakra-ui/icons";
+import { EditIcon, ChevronDownIcon } from "@chakra-ui/icons";
 import ReactSelect, { components } from "react-select";
 import usePermissions from "../../../../hooks/usePermissions";
 import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
@@ -22,6 +22,7 @@ import { useCurrentStrategy } from "../../../../hooks/current_strategy/useCurren
 import { useDevices } from "../../../../hooks/useDevices";
 import { useBessControlModes } from "../../../../hooks/useBessControlModes";
 import ControlStrategyModal from "../../BessControlComponents/Widgets/ControlStrategyModal";
+import WidgetTitle from "../../../Common/WidgetTitle";
 
 /* ================= CONSTANTS ================= */
 
@@ -29,23 +30,81 @@ const SELECT_ALL_OPTION = { label: "Select All", value: "__ALL__" };
 
 const MODE_OPTIONS = [
   SELECT_ALL_OPTION,
-  "Reactive power setting disabled",
-  "Reactive power setting",
-  "Power factor setting",
-  "PQ mode",
-  "V/F off-grid mode",
-  "VSG mode",
-  "DC source mode",
-  "AC constant power mode",
-  "DC constant power mode",
-  "DC constant current mode",
-  "Ramp",
-  "COSPHI",
-  "V Droop",
-  "FRT",
-  "P",
-  "Q",
-].map((m) => (typeof m === "string" ? { label: m, value: m } : m));
+  {
+    label: "Grid Control Mode",
+    options: [
+      {
+        label: "Reactive power setting disabled",
+        value: "Reactive power setting disabled",
+      },
+      {
+        label: "Reactive power setting",
+        value: "Reactive power setting",
+      },
+      {
+        label: "Power factor setting",
+        value: "Power factor setting",
+      },
+      {
+        label: "PQ mode",
+        value: "PQ mode",
+      },
+      {
+        label: "DC source mode",
+        value: "DC source mode",
+      },
+      {
+        label: "AC constant power mode",
+        value: "AC constant power mode",
+      },
+      {
+        label: "DC constant power mode",
+        value: "DC constant power mode",
+      },
+      {
+        label: "DC constant current mode",
+        value: "DC constant current mode",
+      },
+      {
+        label: "Ramp",
+        value: "Ramp",
+      },
+      {
+        label: "COSPHI",
+        value: "COSPHI",
+      },
+      {
+        label: "V Droop",
+        value: "V Droop",
+      },
+      {
+        label: "FRT",
+        value: "FRT",
+      },
+      {
+        label: "P",
+        value: "P",
+      },
+      {
+        label: "Q",
+        value: "Q",
+      },
+    ],
+  },
+  {
+    label: "Grid-Forming Mode",
+    options: [
+      {
+        label: "V/F off-grid mode",
+        value: "V/F off-grid mode",
+      },
+      {
+        label: "VSG mode",
+        value: "VSG mode",
+      },
+    ],
+  },
+];
 
 const MODE_KEY_MAP: Record<string, string> = {
   "Reactive power setting disabled": "reactive_power_setting_disabled",
@@ -71,18 +130,31 @@ const MODE_KEY_MAP: Record<string, string> = {
 const CheckboxOptionMode = (props: any) => {
   const isSelectAll = props.value === "__ALL__";
 
+  const allModeOptions = props.selectProps.options.flatMap(
+    (option: any) =>
+      option.options
+        ? option.options
+        : option.value !== "__ALL__"
+        ? [option]
+        : []
+  );
+
+  const selectedValues = props.selectProps.value || [];
+  const selectedCount = selectedValues.filter(
+    (item: any) => item.value !== "__ALL__"
+  ).length;
+
+  const allSelected =
+    allModeOptions.length > 0 &&
+    selectedCount === allModeOptions.length;
+
   return (
     <components.Option {...props}>
       <HStack justify="space-between" w="full">
         <Checkbox
           size="sm"
           pointerEvents="none"
-          isChecked={
-            isSelectAll
-              ? props.selectProps.value?.length ===
-                props.selectProps.options.length - 1
-              : props.isSelected
-          }
+          isChecked={isSelectAll ? allSelected : props.isSelected}
         >
           {props.label}
         </Checkbox>
@@ -143,6 +215,10 @@ const CapacityAndStrategyCard: React.FC = () => {
   const cardBg = useColorModeValue("#ffffff", "#161B1B");
   const cardBorder = useColorModeValue("#e5e7eb", "#202525");
   const softBg = useColorModeValue("#f3f4f6", "#1C2121");
+  const groupLabelColor = useColorModeValue(
+    "#475569",
+    "#94A3B8"
+  );
 
   const { strategy, loading, updateStrategy } = useCurrentStrategy();
   const { devices } = useDevices();
@@ -155,6 +231,12 @@ const CapacityAndStrategyCard: React.FC = () => {
   const [localRemoteMode, setLocalRemoteMode] = useState<"Local" | "Remote">("Local");
   const [backendModes, setBackendModes] = useState<any>({}); 
   const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<
+    Record<string, boolean>
+  >({
+    "Grid Control Mode": true,
+    "Grid-Forming Mode": true,
+  });
   const [isOpen, setIsOpen] = useState(false);
   // Password modal state for Apply
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
@@ -276,9 +358,9 @@ const CapacityAndStrategyCard: React.FC = () => {
       opacity={!canControl ? 0.6 : 1}
     >
       <VStack spacing="16px" align="stretch">
-        <Text fontWeight={600} fontSize="16px">
-          Widget
-        </Text>
+        <WidgetTitle fontWeight={600} fontSize="16px">
+          Control Mode
+        </WidgetTitle>
 
         <HStack spacing="12px" align="flex-end">
           <Select
@@ -306,8 +388,88 @@ const CapacityAndStrategyCard: React.FC = () => {
               styles={selectStyles}
               menuPortalTarget={document.body}
               placeholder="Select Mode"
-              components={{ Option: CheckboxOptionMode }}
-              onChange={setSelectedModes}
+              components={{
+                Option: CheckboxOptionMode,
+                GroupHeading: () => null,
+                Group: (props: any) => {
+                  const groupLabel = props.label;
+                  const isCollapsed = collapsedGroups[groupLabel];
+                  return (
+                    <components.Group {...props}>
+                      <Box
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setCollapsedGroups((prev) => ({
+                            ...prev,
+                            [groupLabel]: !prev[groupLabel],
+                          }));
+                        }}
+                        cursor="pointer"
+                        userSelect="none"
+                        px="8px"
+                        py="7px"
+                        bg={softBg}
+                        borderBottom="1px solid"
+                        borderColor={cardBorder}
+                      >
+                        <HStack justify="space-between">
+                          <Text
+                            fontSize="11px"
+                            fontWeight="700"
+                            color={groupLabelColor}
+                            textTransform="uppercase"
+                            letterSpacing="0.4px"
+                          >
+                            {groupLabel}
+                          </Text>
+                          <ChevronDownIcon
+                            boxSize="16px"
+                            transition="transform 0.2s"
+                            transform={
+                              isCollapsed
+                                ? "rotate(-90deg)"
+                                : "rotate(0deg)"
+                            }
+                          />
+                        </HStack>
+                      </Box>
+                      {!isCollapsed && props.children}
+                    </components.Group>
+                  );
+                },
+              }}
+              onChange={(selected: any) => {
+                const selectedValues = Array.isArray(selected)
+                  ? selected
+                  : selected
+                  ? [selected]
+                  : [];
+
+                const allModeOptions = MODE_OPTIONS.flatMap(
+                  (option: any) =>
+                    option.options
+                      ? option.options
+                      : option.value !== "__ALL__"
+                      ? [option]
+                      : []
+                );
+
+                const clickedSelectAll = selectedValues.some(
+                  (item: any) => item.value === "__ALL__"
+                );
+
+                if (clickedSelectAll) {
+                  const currentlyAllSelected =
+                    selectedModes.length === allModeOptions.length;
+                  setSelectedModes(
+                    currentlyAllSelected ? [] : allModeOptions
+                  );
+                } else {
+                  setSelectedModes(selectedValues || []);
+                }
+              }}
               onPencilClick={(mode: string) => {
                 setIsModeMenuOpen(false);
                 setActivePCSMode(mode);
@@ -332,10 +494,20 @@ const CapacityAndStrategyCard: React.FC = () => {
           >
             <AlertDialogOverlay>
               <AlertDialogContent>
-                <AlertDialogHeader fontSize="lg" fontWeight="bold">Confirm Apply</AlertDialogHeader>
-                <AlertDialogBody>Are you sure you want to apply selected modes?</AlertDialogBody>
+                <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                  Confirm Apply
+                </AlertDialogHeader>
+                <AlertDialogBody>
+                  Are you sure you want to apply selected modes?
+                </AlertDialogBody>
                 <AlertDialogFooter>
-                  <ChakraButton ref={cancelRef} onClick={() => setIsConfirmOpen(false)} size="sm">Cancel</ChakraButton>
+                  <ChakraButton
+                    ref={cancelRef}
+                    onClick={() => setIsConfirmOpen(false)}
+                    size="sm"
+                  >
+                    Cancel
+                  </ChakraButton>
                   <ChakraButton
                     colorScheme="teal"
                     ml={3}
@@ -398,7 +570,7 @@ const CapacityAndStrategyCard: React.FC = () => {
         )}
 
         <HStack justify="space-between">
-          <Text fontWeight={600}>Control Strategy</Text>
+          <WidgetTitle fontWeight={600}>Control Strategy</WidgetTitle>
           <HStack>
             <Select
               size="sm"

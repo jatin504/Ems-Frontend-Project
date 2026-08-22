@@ -103,6 +103,7 @@ export default function RackDashboard() {
                 <Box
                   flex="1.45"
                   h="360px"
+                  mt={"-21px"}
                 >
                   <CellVoltageHeatmap />
                 </Box>
@@ -119,6 +120,8 @@ export default function RackDashboard() {
                 <Box
                   flex="1.15"
                   h="360px"
+
+
                 >
                   <ProtectionAlarmSummary />
                 </Box>
@@ -143,6 +146,7 @@ export default function RackDashboard() {
                   w="620px"
                   h="300px"
                   ml="200px"
+                  mt={"-16px"}
                 >
                   <EnergyTrend />
                 </Box>

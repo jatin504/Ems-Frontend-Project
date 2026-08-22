@@ -22,7 +22,7 @@ const PlantViewDashboard = () => {
             <HStack
                 width={"100%"}
                 height={"308px"}
-                gap={'20px'}
+                gap={'10px'}
             >
                 <Box
                     width={"330px"}
@@ -52,17 +52,17 @@ const PlantViewDashboard = () => {
             <HStack
                 width={"100%"}
                 height={"1072px"}
-                gap={"20px"}
+                gap={"10px"}
             >
                 <VStack
                     width={"1176px"}
                     height={"100%"}
-                    gap={"20px"}
+                    gap={"10px"}
                 >
                     <HStack
                         width={"100%"}
                         height={"344px"}
-                        gap={"20px"}
+                        gap={"10px"}
                     >
                         <Box
                             width={"578px"}
@@ -80,7 +80,7 @@ const PlantViewDashboard = () => {
                     <HStack
                         width={"100%"}
                         height={"344px"}
-                        gap={"20px"}
+                        gap={"10px"}
                     >
                         <Box
                             width={"578px"}
@@ -98,7 +98,7 @@ const PlantViewDashboard = () => {
                     <HStack
                         width={"100%"}
                         height={"340px"}
-                        gap={"20px"}
+                        gap={"10px"}
                     >
                         <Box
                             width={"578px"}

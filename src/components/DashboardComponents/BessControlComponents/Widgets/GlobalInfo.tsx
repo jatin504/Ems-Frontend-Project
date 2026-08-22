@@ -1,54 +1,57 @@
 import React from "react";
-import { Box, VStack, HStack, Text, useColorModeValue } from "@chakra-ui/react";
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  useColorModeValue,
+} from "@chakra-ui/react";
 import type { BoxProps } from "@chakra-ui/layout";
+import WidgetTitle from "../../../Common/WidgetTitle";
 
-const Row = ({ l, v }: { l: string; v: string }) => {
-  const textMuted   = useColorModeValue("gray.600", "#A6B0B0");
+const InfoRow = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) => {
+  const textMuted = useColorModeValue("gray.600", "#A6B0B0");
   const textPrimary = useColorModeValue("gray.800", "#E8ECEC");
 
   return (
     <HStack
-      w="300px"
-      h="24px"
-      spacing="4px"
+      w="full"
       justify="space-between"
-      overflow="hidden"
-      sx={{ transform: "rotate(0deg)", opacity: 1 }}
+      spacing="8px"
     >
-      <Text fontSize="xs" color={textMuted} noOfLines={1} flex="1">
-        {l}
-      </Text>
       <Text
-        fontSize="sm"
-        color={textPrimary}
-        fontWeight="bold"
-        textAlign="right"
+        fontSize="10px"
+        color={textMuted}
         noOfLines={1}
-        flexShrink={0}
-        minW="28px"
       >
-        {v}
+        {label}
+      </Text>
+
+      <Text
+        fontSize="10px"
+        color={textPrimary}
+        fontWeight="600"
+        textAlign="right"
+        whiteSpace="nowrap"
+      >
+        {value}
       </Text>
     </HStack>
   );
 };
 
 export default function GlobalInfo(props: BoxProps) {
-  const labels = [
-    "Stop",
-    "Grid connected",
-    "Power limit",
-    "Running",
-    "Power limit stop",
-    "Fault",
-    "Derating",
-    "Comm. error",
-  ];
-  const values = ["10", "40", "0", "30", "0", "1", "0", "0"];
-
-  const cardBg     = useColorModeValue("white", "#161B1B");
+  const cardBg = useColorModeValue("white", "#161B1B");
   const cardBorder = useColorModeValue("gray.200", "#202525");
-  const heading    = useColorModeValue("gray.800", "#E8ECEC");
+  const titleColor = useColorModeValue("#000000", "#FFFFFF");
+  const textMuted = useColorModeValue("gray.600", "#A6B0B0");
+  const textPrimary = useColorModeValue("gray.800", "#E8ECEC");
 
   return (
     <Box
@@ -56,41 +59,143 @@ export default function GlobalInfo(props: BoxProps) {
       border="1px solid"
       borderColor={cardBorder}
       borderRadius="12px"
-      w="332px"
+      w="250px"
       h="260px"
       p="16px"
       overflow="hidden"
       {...props}
     >
-      <VStack align="stretch" spacing="10px" h="full">
-        <Text
-          w="152px"
+      <VStack
+        align="stretch"
+        spacing="7px"
+        h="full"
+      >
+        {/* Title */}
+        <WidgetTitle
+          w="auto"
           h="24px"
-          color={useColorModeValue("#000000", "#FFFFFF")}
+          color={titleColor}
           fontFamily="Poppins, sans-serif"
-          fontWeight={700}
           fontStyle="normal"
           fontSize="16px"
           lineHeight="100%"
           letterSpacing="0"
           opacity={1}
         >
-          Global Information
-        </Text>
+          BESS Health
+        </WidgetTitle>
 
-        {/* Font box area: exactly 300×194, gap 1px */}
+        {/* Health Information */}
         <VStack
-          w="300px"
-          h="194px"
-          spacing="1px"     
           align="stretch"
-          overflow="hidden"
-          sx={{ transform: "rotate(0deg)", opacity: 1 }}
+          spacing="4px"
+          w="full"
         >
-          {labels.map((l, i) => (
-            <Row key={l} l={l} v={values[i]} />
-          ))}
+          <InfoRow
+            label="PCS Online"
+            value="46/46"
+          />
+
+          <InfoRow
+            label="BMS Online"
+            value="46/46"
+          />
+
+          <InfoRow
+            label="Containers Available"
+            value="46/46"
+          />
+
+          <InfoRow
+            label="Communication"
+            value="100%"
+          />
+
+          <InfoRow
+            label="Data Quality"
+            value="99.98%"
+          />
         </VStack>
+
+        {/* Divider */}
+        <Box
+          w="full"
+          h="1px"
+          bg={cardBorder}
+        />
+
+        {/* Last Command */}
+        <Box>
+          <Text
+            fontSize="12px"
+            fontWeight="700"
+            color={textPrimary}
+            mb="4px"
+          >
+            Last Command
+          </Text>
+
+          <HStack
+            justify="space-between"
+            align="start"
+          >
+            <Box>
+              <Text
+                fontSize="10px"
+                fontWeight="600"
+                color={textPrimary}
+              >
+                P = +75 MW
+              </Text>
+
+              <Text
+                fontSize="9px"
+                color={textMuted}
+                mt="2px"
+              >
+                11:42:15
+              </Text>
+            </Box>
+
+            <Box textAlign="right">
+              <Text
+                fontSize="9px"
+                color={textMuted}
+              >
+                Status:
+              </Text>
+
+              <Text
+                fontSize="9px"
+                fontWeight="600"
+                color="green.500"
+              >
+                🟢 Executed
+              </Text>
+            </Box>
+          </HStack>
+
+          <VStack
+            align="stretch"
+            spacing="2px"
+            mt="4px"
+          >
+            <InfoRow
+              label="Command"
+              value="75 MW"
+            />
+
+            <InfoRow
+              label="POI"
+              value="74.8 MW"
+            />
+
+            <InfoRow
+              label="Tracking error"
+              value="0.2 MW"
+            />
+          </VStack>
+        </Box>
       </VStack>
     </Box>
   );

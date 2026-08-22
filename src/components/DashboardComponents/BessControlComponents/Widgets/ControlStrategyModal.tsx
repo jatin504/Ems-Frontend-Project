@@ -38,12 +38,6 @@ import {
   TabPanel,
   Switch,
   Tooltip,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogBody,
-  AlertDialogFooter,
 } from "@chakra-ui/react";
 import { AddIcon, DeleteIcon, EditIcon, ViewIcon } from "@chakra-ui/icons";
 import SimulateBessOptimizeAPI from "../../../../api/BessControlAPI";
@@ -210,7 +204,7 @@ export default function TariffConfigurationModal({
         strategy = "peak_shaving";
       }
 
-      // console.log("SIMULATION STRATEGY:", strategy);
+      console.log("SIMULATION STRATEGY:", strategy);
 
       // Extend the type to include cycles_used_today for capped dynamic
       type SimulationResult = {
@@ -230,7 +224,7 @@ export default function TariffConfigurationModal({
 
       const response: { result: SimulationResult } = await SimulateBessOptimizeAPI(strategy);
 
-      // console.log("SIMULATION RESPONSE:", response);
+      console.log("SIMULATION RESPONSE:", response);
 
       const timeline =
         response?.result?.timeline ??
@@ -487,9 +481,6 @@ export default function TariffConfigurationModal({
   // PASSWORD CONFIRMATION FLOW
   const [isPasswordOpen, setIsPasswordOpen] = React.useState(false);
   const [pendingPayload, setPendingPayload] = React.useState<any>(null);
-  // Confirmation dialog state for Save action
-  const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
-  const cancelRef = React.useRef<HTMLButtonElement | null>(null);
 
   //  Modal open hone par GET /strategy/configuration se values load karo
   React.useEffect(() => {
@@ -589,11 +580,9 @@ export default function TariffConfigurationModal({
             });
           };
 
-          const windows = peak.windows || {};
-
-          pushPSArray(windows["off_peak"] || windows["off-peak"] || [], "Off-peak");
-          pushPSArray(windows["mid_peak"] || windows["mid-peak"] || [], "Mid-peak");
-          pushPSArray(windows["peak"] || [], "Peak");
+          pushPSArray(peak.off_peak || [], "Off-peak");
+          pushPSArray(peak.mid_peak || [], "Mid-peak");
+          pushPSArray(peak.peak || [], "Peak");
 
           if (psWindows.length > 0) {
             setPeakWindows(psWindows);
@@ -826,6 +815,9 @@ export default function TariffConfigurationModal({
       virtual: virtualPayload,
     };
 
+    console.log("Peak Windows:", peakWindows);
+    console.log("Payload:", payload);
+
     // Open password modal instead of saving directly
     if (!canControl) {
       console.warn("User has no BESS control permission");
@@ -846,7 +838,7 @@ export default function TariffConfigurationModal({
     try {
       setSaving(true);
       const data = await saveStrategyConfiguration(pendingPayload, password);
-      // console.log("Tariff config saved OK:", data);
+      console.log("Tariff config saved OK:", data);
     } catch (err) {
       console.error("Save error:", err);
     } finally {
@@ -1096,7 +1088,7 @@ export default function TariffConfigurationModal({
                     colorScheme="purple"
                     onClick={() => {
                       if (!canControl) return;   // permission check
-                      setIsConfirmOpen(true);
+                      handleSave();
                     }}
                     isDisabled={!canControl}
                     isLoading={saving}
@@ -2295,43 +2287,6 @@ export default function TariffConfigurationModal({
         </ModalBody>
 
         {/* NEW: Max Cycles per Day Modal */}
-        {/* Confirmation dialog for Save */}
-        <AlertDialog
-          isOpen={isConfirmOpen}
-          leastDestructiveRef={cancelRef}
-          onClose={() => setIsConfirmOpen(false)}
-          isCentered
-        >
-          <AlertDialogOverlay>
-            <AlertDialogContent>
-              <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                Confirm Save
-              </AlertDialogHeader>
-
-              <AlertDialogBody>
-                Are you sure you want to save these settings?
-              </AlertDialogBody>
-
-              <AlertDialogFooter>
-                <Button ref={cancelRef} onClick={() => setIsConfirmOpen(false)} size="sm">
-                  Cancel
-                </Button>
-                <Button
-                  colorScheme="purple"
-                  ml={3}
-                  onClick={() => {
-                    setIsConfirmOpen(false);
-                    handleSave();
-                  }}
-                  isLoading={saving}
-                  size="sm"
-                >
-                  Yes, Save
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialogOverlay>
-        </AlertDialog>
         <MaxCyclesPerDayModal
           isOpen={isMaxCyclesModalOpen}
           onClose={() => setIsMaxCyclesModalOpen(false)}

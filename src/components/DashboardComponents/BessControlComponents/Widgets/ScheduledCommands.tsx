@@ -163,9 +163,9 @@ export default function ScheduledCommands() {
 
   return (
     <>
-      <Box bg={cardBg} border="1px solid" borderColor={cardBorder} borderRadius="12px" w="332px" h="578px" p={0} opacity={1} overflow="hidden">
+      <Box bg={cardBg} border="1px solid" borderColor={cardBorder} borderRadius="12px" w="302px" h="578px" p={0} opacity={1} overflow="hidden">
         <VStack align="stretch" spacing={0} h="full">
-          <Box w="332px" h="96px" p="16px" borderBottomWidth="1px" borderColor={cardBorder}>
+          <Box w="302px" h="96px" p="16px" borderBottomWidth="1px" borderColor={cardBorder}>
             <VStack align="stretch" spacing="8px" h="full" justify="flex-start">
               <Text w="300px" h="24px" color={headerText} fontFamily="'Poppins', sans-serif" fontWeight={700} fontSize="16px" lineHeight="1" noOfLines={1}>
                 Scheduled Commands

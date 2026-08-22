@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Flex,
@@ -17,8 +17,6 @@ import type { ExportFunctions } from "../../../../types/graphExport/export";
 const EFFICIENCY_ALIAS = "Efficiency (%)";
 
 const PCSEfficiency = () => {
-  const bg = useColorModeValue("#FFFFFF", "#0B2239");
-  const border = useColorModeValue("rgba(15,23,42,0.08)", "rgba(255,255,255,0.06)");
   const titleColor = useColorModeValue("#0F172A", "white");
   const mutedColor = useColorModeValue("#64748B", "#94A3B8");
   const statBoxBg = useColorModeValue("#F8FAFC", "#10263C");
@@ -46,8 +44,7 @@ const PCSEfficiency = () => {
 
   const { data, fetchData } = useTimeseriesData();
   const [exportFunctions, setExportFunctions] = useState<ExportFunctions | null>(null);
-  const [selectedDevice, setSelectedDevice] = useState("ALL");
-  const [deviceOptions, setDeviceOptions] = useState<any[]>([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const dataSource = {
     devices: {
@@ -71,38 +68,17 @@ const PCSEfficiency = () => {
     fetchData(dataSource as any);
   }, [timeWindow]);
 
-  useEffect(() => {
-    const widgetData = data as any;
-    if (!widgetData) {
-      setDeviceOptions([]);
-      return;
-    }
-
-    const options = Object.keys(widgetData).map((deviceId) => ({
-      id: deviceId,
-      label: deviceId,
-    }));
-
-    options.sort((a, b) => a.label.localeCompare(b.label));
-    setDeviceOptions(options);
-  }, [data]);
-
   const filteredData = useMemo(() => {
     const widgetData = data as any;
     if (!widgetData) return null;
 
-    if (selectedDevice === "ALL") return widgetData;
-
-    const deviceData = widgetData[selectedDevice];
-    if (!deviceData) return null;
-
-    return { [selectedDevice]: deviceData };
-  }, [data, selectedDevice]);
+    return widgetData;
+  }, [data]);
 
   const seriesForChart = useMemo(() => {
     if (!filteredData) return [];
 
-    const series = Object.entries(filteredData).flatMap(([deviceId, device]: [string, any], index) => {
+    const series = Object.entries(filteredData).flatMap(([, device]: [string, any], index) => {
       const points = device?.[EFFICIENCY_ALIAS] ?? [];
       if (!points.length) return [];
 
@@ -130,21 +106,23 @@ const PCSEfficiency = () => {
   return (
     <GraphLayout
       title={<WidgetTitle color={titleColor}>PCS Power</WidgetTitle>}
-      width={["830px"]}
+      width={["700px"]}
       height="300px"
       fullScreen
+      onFullscreenChange={setIsFullscreen}
       timeWindow
       onTimeWindowChange={handleTimeWindowChange}
       onReset={handleReset}
       onExport={exportFunctions}
     >
-      <Flex h="100%">
+      <Flex h="100%" w="100%" minW={0} overflow="hidden" align="stretch">
         {/* Graph */}
-        <Box flex={1}>
-          <Box h="270px">
+        <Box flex={1} minW={0} h="100%" overflow="hidden">
+          <Box w="100%" h="100%" overflow="hidden">
             <SpineGraph
               apiData={seriesForChart}
               height={240}
+              isFullscreen={isFullscreen}
               onExportReady={setExportFunctions}
               props={{
                 yAxis: {
@@ -165,86 +143,88 @@ const PCSEfficiency = () => {
         </Box>
 
         {/* Right Stats */}
-        <Box
-          w="100px"
-          minW="100px"
-          h="140px"
-          ml={3}
-          bg={statBoxBg}
-          border={`1px solid ${statBoxBorder}`}
-          borderRadius="8px"
-          px={2}
-          py={1.5}
-          display="flex"
-          alignItems="center"
-        >
-          <VStack
-            align="start"
-            spacing={2.5}
-            w="100%"
+        {!isFullscreen && (
+          <Box
+            w="100px"
+            minW="100px"
+            h="140px"
+            ml={3}
+            bg={statBoxBg}
+            border={`1px solid ${statBoxBorder}`}
+            borderRadius="8px"
+            px={2}
+            py={1.5}
+            display="flex"
+            alignItems="center"
           >
-            <Box w="100%">
-              <Text
-                fontSize="10px"
-                color={mutedColor}
-              >
-                Average
-              </Text>
-
-              <Text
-                color={titleColor}
-                fontSize="18px"
-                fontWeight="700"
-                lineHeight="1.1"
-              >
-                {avg.toFixed(2)}
+            <VStack
+              align="start"
+              spacing={2.5}
+              w="100%"
+            >
+              <Box w="100%">
                 <Text
-                  as="span"
-                  fontSize="11px"
-                  ml={1}
+                  fontSize="10px"
+                  color={mutedColor}
                 >
-                  %
+                  Average
                 </Text>
-              </Text>
-            </Box>
 
-            <Box w="100%">
-              <Text
-                fontSize="9px"
-                color="#94A3B8"
-              >
-                Max
-              </Text>
+                <Text
+                  color={titleColor}
+                  fontSize="18px"
+                  fontWeight="700"
+                  lineHeight="1.1"
+                >
+                  {avg.toFixed(2)}
+                  <Text
+                    as="span"
+                    fontSize="11px"
+                    ml={1}
+                  >
+                    %
+                  </Text>
+                </Text>
+              </Box>
 
-              <Text
-                color={titleColor}
-                fontWeight="600"
-                fontSize="15px"
-                lineHeight="1.1"
-              >
-                {max.toFixed(2)} %
-              </Text>
-            </Box>
+              <Box w="100%">
+                <Text
+                  fontSize="9px"
+                  color="#94A3B8"
+                >
+                  Max
+                </Text>
 
-            <Box w="100%">
-              <Text
-                fontSize="9px"
-                color={mutedColor}
-              >
-                Min
-              </Text>
+                <Text
+                  color={titleColor}
+                  fontWeight="600"
+                  fontSize="15px"
+                  lineHeight="1.1"
+                >
+                  {max.toFixed(2)} %
+                </Text>
+              </Box>
 
-              <Text
-                color={titleColor}
-                fontWeight="600"
-                fontSize="15px"
-                lineHeight="1.1"
-              >
-                {min.toFixed(2)} %
-              </Text>
-            </Box>
-          </VStack>
-        </Box>
+              <Box w="100%">
+                <Text
+                  fontSize="9px"
+                  color={mutedColor}
+                >
+                  Min
+                </Text>
+
+                <Text
+                  color={titleColor}
+                  fontWeight="600"
+                  fontSize="15px"
+                  lineHeight="1.1"
+                >
+                  {min.toFixed(2)} %
+                </Text>
+              </Box>
+            </VStack>
+          </Box>
+        )}
       </Flex>
     </GraphLayout>
   );

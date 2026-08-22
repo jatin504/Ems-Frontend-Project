@@ -104,7 +104,7 @@ const CellVoltageHeatmap = () => {
       title="Cell Voltage Heatmap"
       titleLengthSVG={75}
       titleLengthLongSVG={1680}
-      width={["100%"]}
+      width={["750px"]}
       height={"100%"}
       fullScreen
       timeWindow={false}

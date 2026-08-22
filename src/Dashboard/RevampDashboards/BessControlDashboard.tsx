@@ -3,7 +3,7 @@ import { Box, VStack, HStack, useColorModeValue } from "@chakra-ui/react";
 import POIMeter from "../../components/DashboardComponents/BessControlComponents/Widgets/POIMeter";
 import GlobalInfo from "../../components/DashboardComponents/BessControlComponents/Widgets/GlobalInfo";
 import MeanAndPQ from "../../components/DashboardComponents/BessControlComponents/Widgets/MeanAndPQ";
-
+import EMSSummaryFooter from "../../components/DashboardComponents/BessControlComponents/Widgets/EMSSummaryFooter";
 import CapacityAndStrategyCard from "../../components/DashboardComponents/BessControlComponents/Widgets/CapacityAndStrategyCard";
 import AnalyticsChart from "../../components/DashboardComponents/BessControlComponents/Widgets/AnalyticsChart";
 // import NewAnalyticsChart from "../../components/DashboardComponents/BessControlComponents/Widgets/EnergyBlockChart";
@@ -41,18 +41,18 @@ export default function BessControlDashboard() {
   return (
     <Box w="100%" minH="100%">
       <Box w="100%" minH="100%">
-        <VStack align="stretch" spacing="20px" pb="20px" w="full" h="full">
+        <VStack align="stretch" spacing="20px" pb="0px" w="full" h="full">
           {/* ROW 1 — exact: 447 + 327 + 362 + 332 + 332 + (4×20 gap) = 1880 */}
-          <HStack align="stretch" w="full" h="260px" spacing="20px">
+          <HStack align="stretch" w="full" h="260px" spacing="10px">
             <Box flex="0 0 447px" minW="447px" h="260px"><SystemOverview /></Box>
-                <Box flex="0 0 327px" minW="327px" h="260px"><SoCWithChargeCard /></Box>
+            <Box flex="0 0 327px" minW="327px" h="260px"><SoCWithChargeCard /></Box>
             <Box flex="0 0 362px" minW="362px" h="260px"><POIMeter /></Box>
             <Box flex="0 0 332px" minW="332px" h="260px"><GlobalInfo /></Box>
             <Box flex="0 0 332px" minW="332px" h="260px"><MeanAndPQ /></Box>
           </HStack>
 
           {/* ROW 2 — 1176 (left) + 20 (gap) + 684 (right) = 1880 */}
-          <HStack align="stretch" w="full" h="619px" spacing="20px">
+          <HStack align="stretch" w="full" h="619px" spacing="10px">
             {/* LEFT column (locked 1176×619) */}
             <VStack w="1176px" h="619px" spacing="0px" align="stretch" flex="0 0 1176px">
               {/* 214px row */}
@@ -62,23 +62,27 @@ export default function BessControlDashboard() {
                 </Box>
               </HStack>
               {/* 385px row */}
-              <HStack spacing="20px" align="stretch" h="385px">
+              <HStack spacing="10px" align="stretch" h="385px">
                 <Box flex="0 0 578px" minW="578px" h="385px"><AnalyticsChart /></Box>
                 <Box flex="0 0 578px" minW="578px" h="385px"><ChargeDischargeChart /></Box>
               </HStack>
             </VStack>
 
             {/* RIGHT column (locked 684×619) */}
-            <HStack w="684px" h="619px" spacing="20px" align="stretch" flex="0 0 684px">
+            <HStack w="684px" h="619px" spacing="10px" align="stretch" flex="0 0 684px">
               <Box flex="0 0 332px" minW="332px" h="619px"><ControlServices /></Box>
               <Box flex="0 0 332px" minW="332px" h="619px"><ScheduledCommands /></Box>
             </HStack>
           </HStack>
 
-          {/* ROW 3 */}
-          {/* <HStack align="stretch" w="full" h="385px" spacing="20px" mt="-60px">
-            <Box flex="0 0 578px" minW="578px" h="385px"><NewAnalyticsChart /></Box>
-          </HStack> */}
+          {/* ROW 3 — EMS SUMMARY */}
+          <Box
+            w="full"
+            h="86px"
+            mt="-50px"
+          >
+            <EMSSummaryFooter />
+          </Box>
         </VStack>
       </Box>
 

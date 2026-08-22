@@ -24,9 +24,8 @@ interface StringData {
   current: number;
   soc: number;
   soe: number;
-  avgTemp: number;
-  maxTemp: number;
-  minTemp: number;
+  dailyEnergy: number;
+  totalEnergy: number;
   deltaV: number;
   balance: string;
 }
@@ -93,9 +92,8 @@ const rows: StringData[] = [
     current: 18.35,
     soc: 78.5,
     soe: 72.1,
-    avgTemp: 36.2,
-    maxTemp: 41.6,
-    minTemp: 31.4,
+    dailyEnergy: 402.5,
+    totalEnergy: 1248.6,
     deltaV: 14,
     balance: "Balanced",
   },
@@ -106,9 +104,8 @@ const rows: StringData[] = [
     current: 18.41,
     soc: 78.6,
     soe: 72.2,
-    avgTemp: 35.8,
-    maxTemp: 41.9,
-    minTemp: 30.9,
+    dailyEnergy: 418.9,
+    totalEnergy: 1251.2,
     deltaV: 15,
     balance: "Balanced",
   },
@@ -119,9 +116,8 @@ const rows: StringData[] = [
     current: 18.22,
     soc: 78.4,
     soe: 72.0,
-    avgTemp: 35.9,
-    maxTemp: 42.0,
-    minTemp: 31.0,
+    dailyEnergy: 395.4,
+    totalEnergy: 1246.8,
     deltaV: 16,
     balance: "Balanced",
   },
@@ -132,9 +128,8 @@ const rows: StringData[] = [
     current: 18.49,
     soc: 78.5,
     soe: 72.1,
-    avgTemp: 36.1,
-    maxTemp: 42.2,
-    minTemp: 31.2,
+    dailyEnergy: 431.2,
+    totalEnergy: 1253.1,
     deltaV: 17,
     balance: "Balanced",
   },
@@ -145,9 +140,8 @@ const rows: StringData[] = [
     current: 18.10,
     soc: 78.3,
     soe: 71.8,
-    avgTemp: 36.4,
-    maxTemp: 42.5,
-    minTemp: 31.5,
+    dailyEnergy: 389.8,
+    totalEnergy: 1244.9,
     deltaV: 18,
     balance: "Balancing",
   },
@@ -158,9 +152,8 @@ const rows: StringData[] = [
     current: 18.27,
     soc: 78.6,
     soe: 72.2,
-    avgTemp: 36.0,
-    maxTemp: 42.1,
-    minTemp: 31.1,
+    dailyEnergy: 406.7,
+    totalEnergy: 1250.4,
     deltaV: 16,
     balance: "Balanced",
   },
@@ -171,9 +164,8 @@ const rows: StringData[] = [
     current: 18.33,
     soc: 78.4,
     soe: 72.0,
-    avgTemp: 35.7,
-    maxTemp: 41.7,
-    minTemp: 30.8,
+    dailyEnergy: 423.1,
+    totalEnergy: 1247.3,
     deltaV: 15,
     balance: "Balanced",
   },
@@ -184,9 +176,8 @@ const rows: StringData[] = [
     current: 18.15,
     soc: 78.3,
     soe: 71.8,
-    avgTemp: 35.6,
-    maxTemp: 41.3,
-    minTemp: 30.6,
+    dailyEnergy: 447.6,
+    totalEnergy: 1243.7,
     deltaV: 14,
     balance: "Balanced",
   },
@@ -341,29 +332,20 @@ const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
       },
 
       {
-        accessorKey: "avgTemp",
-        header: "Avg Temp (°C)",
-        size: 95,
+        accessorKey: "dailyEnergy",
+        header: "Daily Energy (kWh)",
+        size: 110,
         Cell: ({ row }) => (
-          <ValueBox value={`${row.original.avgTemp}°`} trend="up" />
+          <ValueBox value={`${row.original.dailyEnergy} kWh`} trend="up" />
         ),
       },
 
       {
-        accessorKey: "maxTemp",
-        header: "Max Temp (°C)",
-        size: 95,
+        accessorKey: "totalEnergy",
+        header: "Total Energy (kWh)",
+        size: 110,
         Cell: ({ row }) => (
-          <ValueBox value={`${row.original.maxTemp}°`} trend="down" />
-        ),
-      },
-
-      {
-        accessorKey: "minTemp",
-        header: "Min Temp (°C)",
-        size: 95,
-        Cell: ({ row }) => (
-          <ValueBox value={`${row.original.minTemp}°`} trend="same" />
+          <ValueBox value={`${row.original.totalEnergy} kWh`} trend="same" />
         ),
       },
 

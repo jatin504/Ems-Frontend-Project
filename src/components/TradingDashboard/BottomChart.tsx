@@ -8,8 +8,8 @@ const BottomChart = () => {
 
   return (
     <GraphLayout
-      width={["100%"]}
-      height="180px"
+      width={["1200px"]}
+      height="220px"
       downloadOption={false} // ✅ MENU REMOVED
     >
       <ColumnGraph

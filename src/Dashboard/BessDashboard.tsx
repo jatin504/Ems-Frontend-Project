@@ -4,6 +4,7 @@ import { Box, Grid, GridItem } from "@chakra-ui/react";
 import PlantCard from "../components/DashboardComponents/BessOverview/PlantCard";
 import MeterCard from "../components/DashboardComponents/BessOverview/MeterCard";
 import PCSLifetimeThroughput from "../components/DashboardComponents/BessOverview/PCSLifetimeThroughput";
+import SOCSummary from "../components/DashboardComponents/BessOverview/SOCSummary";
 import PCSOverview from "../components/DashboardComponents/BessOverview/PCSOverview";
 import EnergyOverview from "../components/DashboardComponents/BessOverview/EnergyOverview";
 import Banksummary from "../components/DashboardComponents/BessOverview/Banksummary";
@@ -13,11 +14,11 @@ import Flow from "../components/DashboardComponents/BessOverview/Flow";
 
 const BessDashboard = () => {
   return (
-    <Box p={4} w="100%">
+    <Box ml="-8px" pl={0} pr={1} pt={1} pb={1} w="100%">
       <Grid
         templateColumns="280px 280px 620px 650px"
         templateRows="auto auto auto"
-        gap={4}
+        gap={2}
       >
         {/* Row 1 */}
         <GridItem colSpan={1}>
@@ -29,7 +30,10 @@ const BessDashboard = () => {
         </GridItem>
 
         <GridItem colSpan={1}>
-          <PCSLifetimeThroughput />
+          <Box display="flex" flexDirection="column" gap={2}>
+            <PCSLifetimeThroughput />
+            <SOCSummary />
+          </Box>
         </GridItem>
 
         <GridItem colSpan={1}>

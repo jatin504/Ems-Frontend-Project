@@ -48,15 +48,15 @@ const PowerCurve = () => {
   } = useTimeHandle(
     12,
     "hour",
-    "avg",
-    [1, "hour"],
+    "none",
+    [1, "minute"],
     60000,
     {
       timeRange: {
-        type: "last",
+        type: "relative",
         relativeType: "currentDaySoFar",
-        interval: 12,
-        intervalType: "hour",
+        interval: 1,
+        intervalType: "minute",
       },
     }
   );

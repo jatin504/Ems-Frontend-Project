@@ -27,7 +27,7 @@ import {
   CanvasRenderer,
 } from "echarts/renderers";
 
-import { Box, Button } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 
 import { EnlargeHeight } from "../../../Services/EnlargeWidget";
 import type { ExportFunctions } from "../../../types/graphExport/export";
@@ -78,7 +78,6 @@ const [isDark,setIsDark]=useState(false);
 
 const [selectedSeries,setSelectedSeries]=useState<number|null>(null);
 
-const [areAllHidden,setAreAllHidden]=useState(false);
 
 useEffect(() => {
   const detectTheme = () => {
@@ -131,8 +130,12 @@ const plotBands = xAxisProps.plotBands || [];
 const yAxisProps = Array.isArray(props?.yAxis)
   ? props.yAxis
   : [props?.yAxis || {}];
-const legendProps=props?.legend||{};
 const tooltipProps=props?.tooltip||{};
+const minimumLeftSpacing = 10;
+const gridLeft = Math.max(
+  Number(props?.chart?.spacingLeft ?? minimumLeftSpacing),
+  minimumLeftSpacing
+);
 
 return{
 
@@ -142,9 +145,9 @@ animation:false,
 
 grid:{
   top: props?.chart?.spacingTop ?? 20,
-  left: props?.chart?.spacingLeft ?? 45,
+  left: gridLeft,
   right: props?.chart?.spacingRight ?? 20,
-  bottom: props?.chart?.spacingBottom ?? (legendHeight + 40),
+  bottom: props?.chart?.spacingBottom ?? (legendHeight + 5),
 
   containLabel: true,
 },
@@ -153,15 +156,15 @@ legend: {
   show: true,
   type: "scroll",
   selectedMode: true,
-  bottom: 5,
+  bottom: 2,
 },
 
-tooltip: {
+  tooltip: {
   trigger: "axis",
 
   confine: false,
 
-  appendToBody: true,
+  appendToBody: false,
 
   backgroundColor:
     tooltipProps.backgroundColor || tooltipBg,
@@ -237,16 +240,27 @@ tooltip: {
 
 xAxis:{
 type:"time",
+useUTC:true,
 
 min:xAxisProps.min,
 
 max:xAxisProps.max,
 
-interval:xAxisInterval,
+interval:xAxisProps.tickInterval ?? xAxisInterval,
 
 axisLabel:{
 color:
-xAxisProps.labels?.style?.color || axisColor
+xAxisProps.labels?.style?.color || axisColor,
+formatter: (value: number) => {
+  console.log(
+    "Axis Label:",
+    value,
+    new Date(value).toISOString(),
+    new Date(value).toLocaleString()
+  );
+
+  return echarts.time.format(value, "{HH}:{mm}", true);
+},
 },
 
 axisLine:{
@@ -280,11 +294,11 @@ yAxis: yAxisProps.map((axis: any) => ({
       name: axis.title?.text,
 
       nameLocation: "middle",
-      nameGap: 45,
+      nameGap: 34,
 
       axisLabel: {
         color: axis.labels?.style?.color || axisColor,
-        margin: 10,
+        margin: 6,
         formatter: (v: any) => {
           if (typeof axis.labels?.formatter === "function") {
             return axis.labels.formatter.call({ value: v });
@@ -392,48 +406,9 @@ props,
 selectedSeries,
 isDark,
 height,
-legendHeight
+legendHeight,
+isFullscreen
 ]);
-
-/* ------------------- SHOW / HIDE ------------------- */
-
-const handleHideAll=()=>{
-
-const chart=chartRef.current?.getEchartsInstance();
-
-if(!chart) return;
-
-(apiData||[]).forEach((s:any)=>{
-
-chart.dispatchAction({
-type:"legendUnSelect",
-name:s.name
-});
-
-});
-
-setAreAllHidden(true);
-
-};
-
-const handleShowAll=()=>{
-
-const chart=chartRef.current?.getEchartsInstance();
-
-if(!chart) return;
-
-(apiData||[]).forEach((s:any)=>{
-
-chart.dispatchAction({
-type:"legendSelect",
-name:s.name
-});
-
-});
-
-setAreAllHidden(false);
-
-};
 
 /* ------------------- EVENTS ------------------- */
 
@@ -463,10 +438,6 @@ useEffect(() => {
 /* ------------------- EXPORT ------------------- */
 // Export registration moved to onChartReady to avoid repeated ref updates
 
-const legendOffset=12;
-
-
-const buttonOffset=40;
 return (
   <Box position="relative" width="100%" height="100%">
 

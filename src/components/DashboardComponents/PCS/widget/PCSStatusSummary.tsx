@@ -68,17 +68,37 @@ const createBand = (
   index: { charge: number; discharge: number }
 ) => {
   const isCharge = mode === "charge";
-  const label = `${isCharge ? "Charge" : "Discharge"} Event-${index[mode!]++}`;
+
+  const currentIndex = index[mode!]++;
+
+  // Short widget detect
+  const isCompact =
+    typeof window !== "undefined" && window.innerWidth < 900;
 
   return {
     from,
     to,
-    color: isCharge ? "rgba(0, 180, 0, 0.15)" : "rgba(220, 0, 0, 0.15)",
+    color: isCharge
+      ? "rgba(0,180,0,0.15)"
+      : "rgba(220,0,0,0.15)",
+
     label: {
-      text: label,
+      text: isCompact
+        ? (isCharge ? "Charge" : "Discharge")
+        : `${isCharge ? "Charge" : "Discharge"} Event-${currentIndex}`,
+
+      align: "center",
+      verticalAlign: "top",
+
+      y: isCompact
+        ? (currentIndex % 3) * 14 + 6
+        : 8,
+
       style: {
         fontWeight: "bold",
+        fontSize: isCompact ? "10px" : "11px",
         color: isCharge ? "#006400" : "#8B0000",
+        textOutline: "none",
       },
     },
   };
@@ -164,7 +184,28 @@ const PCSSoCGraph: React.FC<PCSSoCGraphProps> = ({ hideWrapper }) => {
     const socPoints = firstDevice?.[SOC_ALIAS] ?? [];
 
     if (!socPoints.length) return [];
-    return buildSocEvents(socPoints);
+
+    const isCompact = typeof window !== "undefined" && window.innerWidth < 900;
+
+    return buildSocEvents(socPoints).map((band, i) => ({
+      ...band,
+      label: {
+        ...band.label,
+        align: "center",
+        verticalAlign: "top",
+        y: isCompact ? (i % 2 === 0 ? 8 : 26) : 8,
+        style: {
+          ...band.label.style,
+          fontSize: isCompact ? "10px" : "11px",
+          textOutline: "none",
+        },
+        text: isCompact
+          ? band.label.text?.includes("Event")
+            ? band.label.text.replace(/ Event-\d+/g, "")
+            : band.label.text
+          : band.label.text,
+      },
+    }));
   }, [filteredData]);
 
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
@@ -379,7 +420,7 @@ const PCSSoCGraph: React.FC<PCSSoCGraphProps> = ({ hideWrapper }) => {
           </Select>
         </Box>
       }
-      width={["100%"]}
+      width={["730px"]}
       height={"300px"}
       fullScreen
       timeWindow={false}

@@ -4,7 +4,13 @@ import GraphLayout from "../../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout
 import { useTimeHandle } from "../../../../Services/TimeWindowSetting";
 import useTimeseriesData from "../../../../hooks/useTimeseriesData";
 import type { ExportFunctions } from "../../../../types/graphExport/export";
-import ColumnGraph from "../../../Graphs/RevampCharts/ColumnGraph";
+import type { TimeseriesDataSource } from "../../../../types/timeseries/datasource";
+import ColumnGraphNew from "../../../Graphs/RevampCharts/ColumnGraphNew";
+import WidgetTitle from "../../../Common/WidgetTitle";
+
+type TimeseriesKeyConfig = TimeseriesDataSource["keys"][number] & {
+  color: string;
+};
 
 const SolarGraph: React.FC = () => {
   const {
@@ -27,35 +33,32 @@ const SolarGraph: React.FC = () => {
     }
   );
 //CUF & PR
-  const fetchingToServerObj = {
+  const fetchingToServerObj: { dataSource: TimeseriesDataSource } = {
     dataSource: {
       devices: {
         patterns: [],
         ids: ["plant_1_plant_device"],
       },
       keys: [
-  {
-    key: "inv_total_power",
-    alias: "Aux",
-    keyType: "individual",
-    color: "#6DA2FF",
-  },
-  {
-    key: "inv_total_daily_ac_energy",
-    alias: "Daily Energy (kWh)",
-    keyType: "individual",
-    color: "#6EE7B7",
-  },
-  {
-    key: "total_inv_pr",
-    alias: "Gen. Loss (kWh)",
-    keyType: "individual",
-    color: "#e76ed9ff",
-  },
-],
+        {
+          key: "inv_total_power",
+          alias: "Aux",
+          keyType: "individual",
+        },
+        {
+          key: "inv_total_daily_ac_energy",
+          alias: "Daily Energy (kWh)",
+          keyType: "individual",
+        },
+        {
+          key: "total_inv_pr",
+          alias: "Gen. Loss (kWh)",
+          keyType: "individual",
+        },
+      ],
       aggregation: timeWindowCUF.aggregation,
       timeRange: timeWindowCUF.timeRange,
-      orderBy: 'ASC',
+      orderBy: "ASC",
     },
   };
 
@@ -89,14 +92,19 @@ const SolarGraph: React.FC = () => {
     if (!deviceData) return [];
 
     const series: any[] = [];
+    const chartColors: Record<string, string> = {
+      Aux: "#6DA2FF",
+      "Daily Energy (kWh)": "#6EE7B7",
+      "Gen. Loss (kWh)": "#e76ed9ff",
+    };
 
-    fetchingToServerObj.dataSource.keys.forEach((cfg) => {
+    (fetchingToServerObj.dataSource.keys as TimeseriesKeyConfig[]).forEach((cfg) => {
       const points = deviceData[cfg.alias];
       if (Array.isArray(points) && points.length > 0) {
         series.push({
           type: "column",
           name: cfg.alias,
-          color: cfg.color,
+          color: chartColors[cfg.alias] ?? "#6DA2FF",
           yAxis: cfg.alias === "Gen. Loss (kWh)" ? 1 : 0,
           data: points.map((p: any) => [p.ts, p.value]),
         });
@@ -108,7 +116,7 @@ const SolarGraph: React.FC = () => {
 
   return (
     <GraphLayout
-      title="Solar"
+      title={<WidgetTitle color={textColor}>Solar</WidgetTitle>}
       width={["578px"]}
       height="344px"
       fullScreen
@@ -117,82 +125,20 @@ const SolarGraph: React.FC = () => {
       onReset={CUFHandleReset}
       onExport={exportFunctions}
     >
-      <ColumnGraph
+      <ColumnGraphNew
         apiData={seriesForChart}
-        height={280}
+        height={250}
         onExportReady={setExportFunctions}
-        props={{
-          plotOptions: {
-            column: {
-              dataLabels: { enabled: false },
-              borderWidth: 0,
-              pointWidth: 7,
-              borderRadius: 0,
-              groupPadding: 0,
-              pointPadding: 3,
-            },
-          },
-          tooltip: {
-            shared: true,
-            backgroundColor: useColorModeValue(
-              "#fff",
-              "rgba(24,24,27,0.95)"
-            ),
-            style: { color: textColor },
-          },
-          xAxis: {
-            type: "datetime",
-            labels: { style: { color: textColor, fontSize: "11px" } },
-            lineColor: axisLineColor,
-            gridLineWidth: 1,
-            gridLineDashStyle: "ShortDot",
-            gridLineColor: gridColor,
-          },
-          yAxis: [
-            {
-              title: { text: "" },
-              gridLineWidth: 1,
-              gridLineDashStyle: "ShortDot",
-              gridLineColor: gridColor,
-              labels: {
-                style: {
-                  color: textColor,
-                  fontSize: "11px",
-                },
-              },
-            },
-            {
-              title: { text: "" },
-              opposite: true,
-              gridLineWidth: 0,
-              labels: {
-                style: {
-                  color: textColor,
-                  fontSize: "11px",
-                },
-              },
-            },
-          ],
-          legend: {
-            enabled: true,
-            align: "center",
-            verticalAlign: "bottom",
-            useHTML: true,
-            itemStyle: {
-              overflow: "auto",
-              color: textColor,
-              fontSize: "12px",
-            },
-            labelFormatter: function (this: any) {
-              return (
-                '<span style="width:10px;height:10px;display:inline-block;background-color:' +
-                this.color +
-                ';border-radius:0;"></span> ' +
-                this.name
-              );
-            },
-          },
-        }}
+        axisLabelColor={textColor}
+        gridColor={gridColor}
+        lineColor={axisLineColor}
+        tooltipBg={useColorModeValue("#fff", "rgba(24,24,27,0.95)")}
+        tooltipColor={textColor}
+        legendColor={textColor}
+        barWidth={10}
+        barGap="0%"
+        barCategoryGap="20%"
+        borderRadius={0}
       />
     </GraphLayout>
   );

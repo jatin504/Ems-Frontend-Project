@@ -1,6 +1,7 @@
 import React, { useEffect, useState, type ReactNode, useRef } from "react";
-import { getWMSStatus } from "../Services/dashboard";
 import { useEmsStatus } from "../hooks/useEmsStatus";
+import useTimeseriesData from "../hooks/useTimeseriesData";
+import type { TimeseriesDataSource } from "../types/timeseries/datasource";
 import NotificationBell from "./NotificationBell";
 import {
   Box, HStack, VStack, Text, Tooltip, Icon, Flex, IconButton, Avatar,
@@ -10,10 +11,11 @@ import {
   Menu, MenuButton, MenuList, MenuItem, MenuGroup, Button, Portal
 } from "@chakra-ui/react";
 import {
-  FiZap, FiBatteryCharging, FiTrendingUp, FiActivity, FiCpu, FiBell, FiInfo,
+  FiZap, FiBatteryCharging, FiTrendingUp, FiActivity, FiBell, FiInfo,
   FiSun, FiMoon
 } from "react-icons/fi";
 import imgPlant from "../assets/OIP.jpeg";
+import logoNew from "../assets/LOGO_NEW.png";
 
 type PlantDetails = {
   name: string; location: string; date: string; energySystem: string;
@@ -30,8 +32,8 @@ type Props = {
 };
 
 /* ========= SIZES ========= */
-const VAL_SIZE = "12px"; // number + unit
-const LAB_SIZE = { base: "10px", md: "11px" };
+const VAL_SIZE = "14px"; // number + unit
+const LAB_SIZE = { base: "11px", md: "12px" };
 
 /* ========= TYPO ========= */
 const ValueText = (props: any) => (
@@ -81,8 +83,9 @@ const MetricDivider = (props: any) => (
     role="separator"
     aria-hidden="true"
     w="1px"
-    h="22px"
-    bg={useColorModeValue("#222", "white")}
+    h="18px"
+    bg={useColorModeValue("#CBD5E1", "#475569")}
+    opacity={0.65}
     flexShrink={0}
     {...props}
   />
@@ -91,7 +94,7 @@ const MetricDivider = (props: any) => (
 /* ========= PILL ========= */
 const Pill = ({
   icon, colorBg = "teal.300", label, children, tooltip,
-  minW = "120px", h = "42px", gap = "6px",
+  minW = "105px", h = "42px", gap = "6px",
 }: {
   icon: any; colorBg?: string; label: string; children: React.ReactNode; tooltip?: string;
   minW?: string | number; h?: string | number; gap?: string | number;
@@ -111,18 +114,28 @@ const Pill = ({
 );
 
 /* ========= LIVE POWER ========= */
-const LivePowerItem = ({ kw, updatedAt }: { kw: number; updatedAt?: string }) => (
+const LivePowerItem = ({ kw, qKvar, updatedAt }: { kw: number; qKvar: number | null; updatedAt?: string }) => (
   <Tooltip label={`Real-time active power${updatedAt ? ` • Updated ${updatedAt}` : ""}`} hasArrow>
     <HStack minW="120px" h="42px" spacing="8px" align="center" flex="0 0 auto">
 
       <SquareIcon as={FiZap} bg="yellow.300" />
       <VStack align="start" spacing="6px" minW={0}>
-        <Text fontSize={LAB_SIZE} color={useColorModeValue("#00000080", "gray.300")} lineHeight="1" noOfLines={1}>
-          Live Power
+        <Text
+          w="full"
+          textAlign="center"
+          fontSize={LAB_SIZE}
+          color={useColorModeValue("#00000080", "gray.300")}
+          lineHeight="1"
+          noOfLines={1}
+        >
+          P / Q
         </Text>
         <ValueRow>
           <BigNum v={kw} />
           <Unit u="kW" />
+          <Sep />
+          <ValueText>{qKvar === null || Number.isNaN(qKvar) ? "--" : qKvar.toFixed(2)}</ValueText>
+          <Unit u="kVAr" />
         </ValueRow>
       </VStack>
     </HStack>
@@ -153,21 +166,34 @@ const ConnBubble = ({ healthy }: { healthy: boolean }) => (
 const ConnectionsGroup = ({
   dbHealthy, commHealthy,
 }: { dbHealthy: boolean; commHealthy: boolean }) => {
-  const tooltip = dbHealthy ? "DB Connection healthy" : "DB Connection not healthy";
   return (
-    <Tooltip label={tooltip} hasArrow>
+    <Tooltip label="Link Status" hasArrow>
       <HStack
-        w={{ base: "clamp(140px, 38vw, 160px)", xl: "160px" }}
+        w={{ base: "125px", xl: "140px" }}
         h="56px"
-        spacing="10px"
+        spacing="2px"
         align="center"
         flex="0 0 auto"
+        ml="0px"
       >
-        <HStack align="start" mt={10} spacing="15px" w="full" h="full">
-          <Text fontSize="14px" fontWeight={600} mt={"2px"} color={useColorModeValue("#00000080", "gray.300")} lineHeight="1">
-            Link
+        <VStack
+          align="start"
+          spacing="5px"
+          w="full"
+          h="full"
+          justify="center"
+          pl="0px"
+        >
+          <Text
+            fontSize="11px"
+            ml={"60px"}
+            fontWeight={600}
+            color={useColorModeValue("#00000080", "gray.300")}
+            lineHeight="1"
+          >
+            Link Status
           </Text>
-          <HStack w="full" spacing="20px" align="center">
+          <HStack w="full" spacing="2px" align="center" pl="58px">
             <ConnBubble healthy={commHealthy} />
             <Tooltip label={dbHealthy ? "DB connection healthy" : "DB connection not healthy"} hasArrow>
               <Box
@@ -179,7 +205,7 @@ const ConnectionsGroup = ({
               </Box>
             </Tooltip>
           </HStack>
-        </HStack>
+        </VStack>
       </HStack>
     </Tooltip>
   );
@@ -199,6 +225,290 @@ function useClock(tz?: string) {
   return { prettyDate, time: timeFmt.format(now), timeZone };
 }
 
+/* ========= BESS CONTROL SUMMARY ========= */
+const BessControlSummary = () => {
+  const labelColor = useColorModeValue("#64748B", "#8E9AA3");
+  const valueColor = useColorModeValue("#0F172A", "#F1F5F9");
+
+  const panelBg = useColorModeValue(
+    "linear-gradient(180deg, #FFFFFF 0%, #F3F6F8 100%)",
+    "linear-gradient(180deg, #20272B 0%, #171C1F 100%)"
+  );
+
+  const panelBorder = useColorModeValue("#D9E1E5", "#30383D");
+
+  const shadow = useColorModeValue(
+    "0 2px 5px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.9)",
+    "0 2px 7px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)"
+  );
+
+  const DEVICE_ID = "plant_1_plant_device";
+
+  const { data, fetchData } = useTimeseriesData();
+
+  const fetchingToServerObj: { dataSource: TimeseriesDataSource } = {
+    dataSource: {
+      devices: {
+        ids: [DEVICE_ID],
+        patterns: [],
+      },
+
+      keys: [
+        {
+          key: "ess_total_soc",
+          alias: "SOC",
+          keyType: "number",
+        },
+        {
+          key: "soh",
+          alias: "SOH",
+          keyType: "number",
+        },
+        {
+          key: "inv_total_power",
+          alias: "P",
+          keyType: "number",
+        },
+        {
+          key: "reactive_power",
+          alias: "Q",
+          keyType: "number",
+        },
+        {
+          key: "plant_frequency",
+          alias: "Frequency",
+          keyType: "number",
+        },
+        {
+          key: "cuf_ac",
+          alias: "CUF AC",
+          keyType: "number",
+        },
+        {
+          key: "cuf_dc",
+          alias: "CUF DC",
+          keyType: "number",
+        },
+      ],
+
+      aggregation: {
+        func: "none",
+        interval: 1,
+        intervalType: "minute",
+      },
+
+      timeRange: {
+        type: "relative",
+        relativeType: "currentDaySoFar",
+      },
+
+      orderBy: "DESC",
+    },
+  };
+
+  useEffect(() => {
+    fetchData(fetchingToServerObj.dataSource);
+
+    const interval = setInterval(() => {
+      fetchData(fetchingToServerObj.dataSource);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const getLatestValue = (alias: string) => {
+    const root = (data as any)?.data ?? data;
+    const deviceData = root?.[DEVICE_ID];
+
+    const series = deviceData?.[alias];
+
+    if (!Array.isArray(series) || series.length === 0) {
+      return null;
+    }
+
+    return Number(series[0]?.value);
+  };
+
+  const formatValue = (
+    alias: string,
+    decimals = 2,
+    unit = ""
+  ) => {
+    const value = getLatestValue(alias);
+
+    if (value === null || Number.isNaN(value)) {
+      return "--";
+    }
+
+    return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
+  };
+
+  const soc = formatValue("SOC", 1, "%");
+  const soh = formatValue("SOH", 1, "%");
+
+  const pValue = getLatestValue("P");
+  const qValue = getLatestValue("Q");
+
+  const p =
+    pValue === null || Number.isNaN(pValue)
+      ? "--"
+      : `${pValue >= 0 ? "+" : ""}${(pValue / 1000).toFixed(1)} MW`;
+
+  const q =
+    qValue === null || Number.isNaN(qValue)
+      ? "--"
+      : `${qValue >= 0 ? "+" : ""}${(qValue / 1000).toFixed(1)} MVAr`;
+
+  const frequency = formatValue("Frequency", 2, "Hz");
+  const cufAc = formatValue("CUF AC", 1, "%");
+  const cufDc = formatValue("CUF DC", 1, "%");
+
+  const items = [
+    ["EMS", "REMOTE"],
+    ["Grid", "CONNECTED"],
+    ["Plant State", "RUNNING"],
+    ["Battery State", "IDLE"],
+    ["Mode", "GFL / PQ"],
+    ["BMS", "46/46"],
+    ["PCS", "46/46"],
+    ["SOC", soc],
+    ["SOH", soh],
+    ["Frequency", frequency],
+    
+    ["CUF AC", cufAc],
+    ["CUF DC", cufDc],
+    ["P Setpoint", p],
+    ["Q Setpoint", q],
+
+    
+  ];
+
+  return (
+    <Box
+      w="full"
+      px="20px"
+      py="2px"
+      overflow="hidden"
+    >
+      <Flex
+        w="full"
+        align="center"
+        justify="space-between"
+        gap="8px"
+        flexWrap="nowrap"
+        whiteSpace="nowrap"
+        overflow="hidden"
+      >
+        {items.map(([label, value], index) => {
+          const isPower = label === "P" || label === "Q";
+          const isAlarm = label === "Critical Alarm";
+          const isHealthy = label === "BMS" || label === "PCS";
+
+          return (
+            <React.Fragment key={label}>
+              {index > 0 && (
+                <Box
+                  w="1px"
+                  h="20px"
+                  flexShrink={0}
+                  bg={useColorModeValue(
+                    "#CBD5E1",
+                    "#3B454B"
+                  )}
+                />
+              )}
+
+              <Box
+                position="relative"
+                minW="fit-content"
+                px="5px"
+                py="3px"
+                borderRadius="4px"
+                bg={panelBg}
+                border="1px solid"
+                borderColor={panelBorder}
+                boxShadow={shadow}
+                transition="all 0.22s ease"
+                _hover={{
+                  transform: "translateY(-1px)",
+                }}
+              >
+                <HStack spacing="4px">
+                  {index < 4 && (
+  <Box
+    w="7px"
+    h="7px"
+    borderRadius="full"
+    bg={
+      label === "Battery State"
+        ? "linear-gradient(145deg, #FDBA74, #F97316)"
+        : "linear-gradient(145deg, #86EFAC, #16A34A)"
+    }
+    boxShadow={
+      label === "Battery State"
+        ? "0 0 5px rgba(249,115,22,0.55)"
+        : "0 0 5px rgba(34,197,94,0.55)"
+    }
+    flexShrink={0}
+  />
+)}
+
+                  <Text
+                    fontSize="8px"
+                    color={labelColor}
+                    fontWeight="500"
+                    lineHeight="1"
+                  >
+                    {label}
+                  </Text>
+
+                  {isHealthy && (
+                    <Box
+                      w="5px"
+                      h="5px"
+                      borderRadius="full"
+                      bg="linear-gradient(145deg, #86EFAC, #16A34A)"
+                      boxShadow="0 0 5px rgba(34,197,94,0.45)"
+                    />
+                  )}
+
+                  <Text
+                    fontSize={isPower ? "9px" : "8.5px"}
+                    fontWeight="700"
+                    color={
+                      isAlarm
+                        ? "#22C55E"
+                        : valueColor
+                    }
+                    lineHeight="1"
+                  >
+                    {value}
+                  </Text>
+                </HStack>
+
+                {isPower && (
+                  <Box
+                    position="absolute"
+                    bottom="1px"
+                    left="5px"
+                    right="5px"
+                    h="1px"
+                    bg={
+                      label === "P"
+                        ? "#F59E0B"
+                        : "#38BDF8"
+                    }
+                    opacity={0.65}
+                  />
+                )}
+              </Box>
+            </React.Fragment>
+          );
+        })}
+      </Flex>
+    </Box>
+  );
+};
 /* ========= RIGHT CONTROLS ========= */
 const RightCornerControls = ({
   eventCount = 0, plantInfo = "Plant information not available",
@@ -217,8 +527,8 @@ const RightCornerControls = ({
   const isLight = colorMode === "light";
 
   return (
-    <Box w={{ base: "230px", md: "283px" }} h="58px" display="flex" flexDirection="column" alignItems="flex-end" justifyContent="flex-start" gap="6px" flex="0 0 auto">
-      <HStack spacing="6px" align="center" justify="flex-end" w="100%">
+    <Box w="310px" minW="310px" maxW="310px" h="58px" flex="0 0 310px" display="flex" flexDirection="column" alignItems="flex-start" justifyContent="flex-start" gap="6px" overflow="visible" pl="0" pr="12px">
+      <HStack spacing="6px" align="center" justify="flex-end" w="100%" flexShrink={0}>
         <HStack spacing="0" bg={chipBg} borderRadius="16px" p="2px" w="72px" h="28px" justify="space-between">
           <IconButton aria-label="Light mode" icon={<FiSun />} size="xs" onClick={() => (isLight ? null : toggleColorMode())} bg={isLight ? activeBg : "transparent"} color={iconClr} _hover={{ bg: isLight ? activeBg : "transparent" }} borderRadius="14px" />
           <IconButton aria-label="Dark mode" icon={<FiMoon />} size="xs" onClick={() => (isLight ? toggleColorMode() : null)} bg={!isLight ? activeBg : "transparent"} color={iconClr} _hover={{ bg: !isLight ? activeBg : "transparent" }} borderRadius="14px" />
@@ -249,9 +559,17 @@ const RightCornerControls = ({
           <IconButton aria-label="Login" variant="ghost" p={0} minW={0} borderRadius="full" onClick={() => navigate && navigate("/login")} _hover={{ bg: "transparent" }} icon={<Avatar size="sm" />} />
         )}
       </HStack>
-      <Text fontSize="12px" color={useColorModeValue("gray.700", "gray.300")} lineHeight="1" textAlign="right">
-        {prettyDate} &nbsp; {time} &nbsp; ({tz})
-      </Text>
+      <HStack w="100%" justify="flex-start" spacing="6px" flexShrink={0} whiteSpace="nowrap" pl="95px">
+        <Text fontSize="11px" color={useColorModeValue("gray.700", "gray.300")} lineHeight="1">
+          {prettyDate}
+        </Text>
+        <Text fontSize="11px" color={useColorModeValue("gray.700", "gray.300")} lineHeight="1">
+          {time}
+        </Text>
+        <Text fontSize="11px" color={useColorModeValue("gray.700", "gray.300")} lineHeight="1">
+          ({tz})
+        </Text>
+      </HStack>
     </Box>
   );
 };
@@ -292,36 +610,63 @@ export default function TopRibbonBESS({
   const dbHealthy = flags ? (flags.is_db_healthy ?? 0) > 0 : false;
   const commHealthy = flags ? (flags.is_protocol_healthy ?? 0) > 0 : false;
 
-  // Inverter online/total mapping (like WMSStatusCard)
-  const [onlineInverters, setOnlineInverters] = useState(0);
-  const [totalInverters, setTotalInverters] = useState(0);
+  const { data: powerData, fetchData: fetchPowerData } = useTimeseriesData();
+  const [qKvar, setQKvar] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchInverterStatus = async () => {
-      try {
-        const res = await getWMSStatus({
-          pattern: "_inverter_inverter", // inverter pattern, adjust as needed
-          column: "active_power",
-        });
-        const data = res.data;
-        setOnlineInverters(data.active);               // Running Inverters
-setTotalInverters(data.device_list?.length || 0); // Total Installed Inverters
-      } catch (err) {
-        setOnlineInverters(0);
-        setTotalInverters(0);
-      }
+    const dataSource: TimeseriesDataSource = {
+      devices: { ids: ["plant_1_plant_device"], patterns: [] },
+      keys: [{ key: "reactive_power", alias: "Q", keyType: "number" }],
+      aggregation: { func: "none", interval: 1, intervalType: "minute" },
+      timeRange: { type: "relative", relativeType: "currentDaySoFar" },
+      orderBy: "DESC",
     };
-    fetchInverterStatus();
+
+    fetchPowerData(dataSource);
+    const interval = setInterval(() => fetchPowerData(dataSource), 60000);
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const root = (powerData as any)?.data ?? powerData;
+    const series = root?.["plant_1_plant_device"]?.Q;
+    const latestValue = Array.isArray(series) && series.length > 0
+      ? Number(series[0]?.value)
+      : null;
+    setQKvar(latestValue !== null && !Number.isNaN(latestValue) ? latestValue : null);
+  }, [powerData]);
 
   const { containerRef, contentRef, scale, naturalWidth } = useScaleToFit();
 
   return (
-    <Box bg={useColorModeValue("white", "#161B1B")} borderBottom="1px solid" borderColor="green.700" w="full" minH="96px" px={0} py={{ base: 2, md: 3, xl: 4 }} position="relative" zIndex={1200}>
-      <Flex align="center" justify="space-between" direction="row" gap={{ base: 2, md: 4, xl: 8 }}>
+    <Box bg={useColorModeValue("white", "#161B1B")}borderBottom="none" w="full" minH="50px" px={0} py={0} mt={0} position="relative" zIndex={1200}>
+      <Flex position="relative" align="center" justify="space-between" direction="row" gap={{ base: 2, md: 4, xl: 8 }} w="full" minW={0} overflow="hidden">
         {/* LEFT */}
-        <Flex align="center" gap={{ base: 2, md: 3 }} flex="1 1 auto" minW={0}>
-          {leftSlot && <HStack flexShrink={0} pr={2}>{leftSlot}</HStack>}
+        <Flex align="center" gap="0px" flex="1 1 auto" minW={0} overflow="hidden">
+          {/* COGNETA LOGO */}
+          <Box
+            minW="68px"
+            w="68px"
+            h="46px"
+            flex="0 0 68px"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            overflow="visible"
+          >
+            <Image
+              src={logoNew}
+              alt="Cogneta Green Solutions"
+              maxW="68px"
+              maxH="42px"
+              objectFit="contain"
+            />
+          </Box>
+          {leftSlot && (
+            <HStack flexShrink={0} pr="0" ml="-18px">
+              {leftSlot}
+            </HStack>
+          )}
 
           {/* Metrics rail: single row, auto-scales to fit; no scrollbar/overlap */}
           <Box
@@ -341,57 +686,94 @@ setTotalInverters(data.device_list?.length || 0); // Total Installed Inverters
                 wrap="nowrap"
                 justify="space-between"
                 align="center"
-                gap={{ base: 3, lg: 6 }}
+                gap="1px"
                 minW={0}
                 w="max-content"   // intrinsic width so spacing stays Figma-like
               >
                 <ConnectionsGroup dbHealthy={dbHealthy} commHealthy={commHealthy} />
 
-                <MetricDivider display={{ base: "none", md: "block" }} />
+                <MetricDivider display={{ base: "none", md: "block" }} mx="12px" />
 
-                <LivePowerItem kw={livePowerKw} updatedAt={updatedAt} />
+                <LivePowerItem kw={livePowerKw} qKvar={qKvar} updatedAt={updatedAt} />
 
-                <MetricDivider display={{ base: "none", md: "block" }} />
+                <MetricDivider display={{ base: "none", md: "block" }} mx="12px" />
 
-                <Pill icon={FiBatteryCharging} colorBg="cyan.300" label="Lifetime Charge / Discharge" tooltip="Cumulative energy since commissioning" minW="120px" h="42px">
+                <Pill icon={FiBatteryCharging} colorBg="cyan.300" label="Lifetime Charge / Discharge" tooltip="Cumulative energy since commissioning" minW="105px" h="42px">
                   <BigNum v={lifeChargeMWh} />
                   <Sep />
                   <BigNum v={lifeDischargeMWh} />
                   <Unit u="MWh" />
                 </Pill>
 
-                <MetricDivider display={{ base: "none", md: "block" }} />
+                <MetricDivider display={{ base: "none", md: "block" }} mx="12px" />
 
-                <Pill icon={FiTrendingUp} colorBg="purple.300" label="Daily Charge / Discharge" tooltip="Energy for today" minW="120px" h="42px">
+                <Pill icon={FiTrendingUp} colorBg="purple.300" label="Daily Charge / Discharge" tooltip="Energy for today" minW="105px" h="42px">
                   <BigNum v={dailyChargeMWh} />
                   <Sep />
                   <BigNum v={dailyDischargeMWh} />
                   <Unit u="MWh" />
                 </Pill>
 
-                <MetricDivider display={{ base: "none", md: "block" }} />
+                <MetricDivider display={{ base: "none", md: "block" }} mx="12px"/>
 
-                <Pill icon={FiActivity} colorBg="orange.300" label="CUF (AC / DC)" tooltip="Capacity Utilization Factor" minW="120px" h="42px">
-                  <ValueText>{cufAcPct.toFixed(2)}%</ValueText>
+                <Pill icon={FiActivity} colorBg="orange.300" label="Available Charge / Discharge" tooltip="Available charge and discharge capacity" minW="105px" h="42px">
+                  <ValueText>98 MW</ValueText>
                   <Sep />
-                  <ValueText>{cufDcPct.toFixed(2)}%</ValueText>
+                  <ValueText>96 MW</ValueText>
                 </Pill>
 
-                <MetricDivider display={{ base: "none", md: "block" }} />
+                <MetricDivider display={{ base: "none", md: "block" }} mx="12px" />
 
-                <Pill icon={FiCpu} colorBg="green.300" label="Inverters Online" tooltip="Operational inverters / total installed" minW="120px" h="42px">
-                  <BigNumInt v={onlineInverters} />
+                <Pill icon={FiZap} colorBg="blue.300" label="Import / Export" tooltip="Grid Import / Export" minW="105px" h="42px">
+                  <ValueText>0 MW</ValueText>
                   <Sep />
-                  <BigNumInt v={totalInverters} />
+                  <ValueText>23.5 MW</ValueText>
                 </Pill>
+
+                <MetricDivider display={{ base: "none", md: "block" }} mx="12px" />
+
+                <Pill icon={FiActivity} colorBg="green.300" label="POI Voltage" tooltip="Point of interconnection voltage" minW="105px" h="42px">
+                  <ValueText>-- kV</ValueText>
+                </Pill>
+
               </Flex>
             </Box>
           </Box>
         </Flex>
 
+        {/* FUTURE LOGO PLACEHOLDER */}
+        <Box
+          position="absolute"
+          right="230px"
+          top="60%"
+          transform="translateY(-50%)"
+          w="110px"
+          h="40px"
+          border="1px solid"
+          borderColor={useColorModeValue("#CBD5E1", "#475569")}
+          borderRadius="4px"
+          bg={useColorModeValue("#FFFFFF", "#1E2529")}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          overflow="hidden"
+          zIndex={2}
+          pointerEvents="none"
+        >
+          <Text fontSize="8px" fontWeight="600" color={useColorModeValue("#64748B", "#CBD5E1")}>
+            CLIENT-LOGO
+          </Text>
+        </Box>
+
         {/* RIGHT */}
         <RightCornerControls eventCount={eventCount} plantInfo={plantInfo} onOpenNotif={() => {}} onOpenInfo={() => {}} avatarUrl={avatarUrl} timeZone={timeZone} isLoggedIn={isLoggedIn} displayName={displayName} handleLogout={handleLogout} navigate={navigate} />
       </Flex>
+      {/* Space above divider */}
+      <Box h="5px" w="full" />
+      {/* Space below divider */}
+      <Box h="5px" w="full" />
+      {/* BESS CONTROL SUMMARY - SINGLE ROW */}
+      <BessControlSummary />
     </Box>
   );
 }
