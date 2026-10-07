@@ -1,6 +1,7 @@
 import React, {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -10,6 +11,7 @@ import {
   HStack,
   VStack,
   Badge,
+  IconButton,
   Progress,
   Icon,
   Table,
@@ -31,6 +33,7 @@ import {
   FiRefreshCw,
   FiGrid,
 } from "react-icons/fi";
+import { ExpandIcon, SqeezIcon } from "../../../assets/Icons";
 const emsScheduleUrl = new URL(import.meta.env.VITE_API_BASE);
 emsScheduleUrl.port = import.meta.env.VITE_API_PORT;
 emsScheduleUrl.pathname = "/api/ems-schedule";
@@ -112,10 +115,13 @@ const mapApiSchedule = (item: ApiSchedule): ScheduleItem => ({
    COMPONENT
 ========================================================= */
 const NextDaySchedule: React.FC = () => {
+  const widgetRef = useRef<HTMLDivElement>(null);
   const [schedules, setSchedules] =
     useState<ScheduleItem[]>([]);
   const [selectedIndex, setSelectedIndex] =
     useState(0);
+  const [isFullscreen, setIsFullscreen] =
+    useState(false);
   useEffect(() => {
     let mounted = true;
     const fetchSchedule = async () => {
@@ -162,6 +168,30 @@ const NextDaySchedule: React.FC = () => {
     schedules.length > 0
       ? schedules[Math.min(selectedIndex, schedules.length - 1)]
       : null;
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === widgetRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    const widget = widgetRef.current;
+    if (!widget) return;
+
+    try {
+      if (document.fullscreenElement === widget) {
+        await document.exitFullscreen();
+      } else {
+        await widget.requestFullscreen();
+      }
+    } catch (error) {
+      console.error("Failed to toggle schedule fullscreen:", error);
+    }
+  };
   /* =========================================================
      SUMMARY
   ========================================================= */
@@ -279,11 +309,17 @@ const NextDaySchedule: React.FC = () => {
   ========================================================= */
   return (
     <Box
-      width="100%"
-      height="100%"
+      ref={widgetRef}
+      width={isFullscreen ? "100vw" : "100%"}
+      height={isFullscreen ? "100vh" : "100%"}
       minHeight="0"
+      position={isFullscreen ? "fixed" : "relative"}
+      top={isFullscreen ? 0 : "auto"}
+      left={isFullscreen ? 0 : "auto"}
+      right={isFullscreen ? 0 : "auto"}
+      bottom={isFullscreen ? 0 : "auto"}
       bg="#FFFFFF"
-      borderRadius="16px"
+      borderRadius={isFullscreen ? 0 : "16px"}
       border="1px solid #E4EAF1"
       overflow="hidden"
       boxShadow="0 3px 14px rgba(20, 40, 70, 0.05)"
@@ -407,6 +443,22 @@ const NextDaySchedule: React.FC = () => {
               summary.grid,
               1
             )} MWh`}
+          />
+          <IconButton
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            icon={isFullscreen ? <SqeezIcon /> : <ExpandIcon />}
+            size="xs"
+            w="32px"
+            h="32px"
+            minW="32px"
+            borderRadius="4px"
+            variant="outline"
+            borderColor="#D7E0EA"
+            bg="white"
+            color="#243552"
+            _hover={{ bg: "#E8F1FD", color: "#1769D2" }}
+            onClick={toggleFullscreen}
           />
         </HStack>
       </Flex>
