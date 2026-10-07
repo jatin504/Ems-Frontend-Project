@@ -1,5 +1,5 @@
-import React from "react";
-import { Box, Grid, GridItem } from "@chakra-ui/react";
+import React, { useEffect } from "react";
+import { Box, HStack, VStack } from "@chakra-ui/react";
 
 import PlantCard from "../components/DashboardComponents/BessOverview/PlantCard";
 import MeterCard from "../components/DashboardComponents/BessOverview/MeterCard";
@@ -9,69 +9,179 @@ import PCSOverview from "../components/DashboardComponents/BessOverview/PCSOverv
 import EnergyOverview from "../components/DashboardComponents/BessOverview/EnergyOverview";
 import Banksummary from "../components/DashboardComponents/BessOverview/Banksummary";
 import EnergyPowerTrend from "../components/DashboardComponents/BessOverview/EnergyPowerTrend";
-import MeterWidget from "../components/DashboardComponents/BessOverview/MeterWidget";
 import Flow from "../components/DashboardComponents/BessOverview/Flow";
+import MeterWidget from "../components/DashboardComponents/BessOverview/MeterWidget";
+// import MeterWidget from "./SolarviewDashboard/Widgets/MeterWidget";
 
 const BessDashboard = () => {
+  useEffect(() => {
+    const logLayout = () => {
+      const getBox = (id: string) => {
+        const el = document.getElementById(id);
+
+        if (!el) {
+          console.log(`${id}: NOT FOUND`);
+          return;
+        }
+
+        const rect = el.getBoundingClientRect();
+
+        console.log(`${id}:`, {
+          width: rect.width,
+          height: rect.height,
+          top: rect.top,
+          left: rect.left,
+          bottom: rect.bottom,
+          right: rect.right,
+        });
+      };
+
+      console.log("========== BESS DASHBOARD ==========");
+      console.log("Window:", {
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+      });
+
+      console.log("Document:", {
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        clientWidth: document.documentElement.clientWidth,
+        clientHeight: document.documentElement.clientHeight,
+      });
+
+      getBox("bess-dashboard");
+      getBox("bess-first-row");
+      getBox("bess-second-row");
+      getBox("bess-left-column");
+      getBox("bess-center-column");
+      getBox("bess-right-column");
+
+      console.log("====================================");
+    };
+
+    logLayout();
+
+    window.addEventListener("resize", logLayout);
+
+    return () => {
+      window.removeEventListener("resize", logLayout);
+    };
+  }, []);
+
   return (
-    <Box ml="-8px" pl={0} pr={1} pt={1} pb={1} w="100%">
-      <Grid
-        templateColumns="280px 280px 620px 650px"
-        templateRows="auto auto auto"
-        gap={2}
+    <Box
+      id="bess-dashboard"
+      w="100%"
+      maxW="100%"
+      overflowX="hidden"
+      overflowY="visible"
+      bg="#F3F6F9"
+    >
+      {/* FIRST ROW */}
+      <HStack
+        id="bess-first-row"
+        spacing={2}
+        align="flex-start"
+        h="fit-content"
+        minH="0"
+        flex="none"
       >
-        {/* Row 1 */}
-        <GridItem colSpan={1}>
+        <Box w="280px" flex="none">
           <PlantCard />
-        </GridItem>
+        </Box>
 
-        <GridItem colSpan={1}>
+        <Box w="280px" flex="none">
           <MeterCard />
-        </GridItem>
+        </Box>
 
-        <GridItem colSpan={1}>
-          <Box display="flex" flexDirection="column" gap={2}>
-            <PCSLifetimeThroughput />
-            <SOCSummary />
-          </Box>
-        </GridItem>
+        <Box w="280px" flex="none" mt={-5}>
+          <MeterWidget />
+        </Box>
 
-        <GridItem colSpan={1}>
+        <Box
+          w="calc(100% - 860px)"
+          minW="0"
+          flex="1"
+          ml={310}
+          mt={-2}
+        >
           <PCSOverview />
-        </GridItem>
+        </Box>
+      </HStack>
 
-        {/* Row 2 */}
-        <GridItem colSpan={2}>
+      {/* SECOND ROW */}
+      <HStack
+        id="bess-second-row"
+        spacing={2}
+        align="flex-start"
+        mt={2}
+        w="100%"
+        maxW="100%"
+        overflow="hidden"
+      >
+        {/* LEFT COLUMN */}
+        <VStack
+          id="bess-left-column"
+          spacing={2}
+          align="stretch"
+          w="38%"
+          minW="0"
+          h="fit-content"
+          flexShrink={1}
+        >
+          {/* System Topology */}
           <Box
             w="100%"
-            h="320px"
-            bg="white"
-            borderRadius="12px"
-            border="1px solid"
-            borderColor="gray.200"
+            h="330px"
+            flexShrink={0}
           >
             <Flow />
           </Box>
-        </GridItem>
 
-        <GridItem alignSelf="start" mt="-16px">
-          <EnergyOverview />
-        </GridItem>
+          {/* Meter Widget replaced by lifetime throughput + SOC summary */}
+          <VStack
+            w="560px"
+            spacing={2}
+            align="stretch"
+            flexShrink={0}
+            mt={0}
+          >
+            <PCSLifetimeThroughput />
+            <SOCSummary />
+          </VStack>
+        </VStack>
 
-        {/* Banks Summary (Row 2 + Row 3) */}
-        <GridItem rowSpan={2}>
+        {/* CENTER COLUMN */}
+        <VStack
+          id="bess-center-column"
+          spacing={2}
+          align="stretch"
+          w="42%"
+          minW="0"
+          flexShrink={1}
+        >
+          {/* Energy Overview */}
+          <Box mt="-16px" ml={-120} flexShrink={0}>
+            <EnergyOverview />
+          </Box>
+
+          {/* Energy Power Trend - Meter Widget ke right */}
+          <Box mt="-18px" ml={-120} flexShrink={0}>
+            <EnergyPowerTrend />
+          </Box>
+        </VStack>
+
+        {/* RIGHT */}
+        <Box
+          id="bess-right-column"
+          w="20%"
+          minW="0"
+          flexShrink={1}
+          ml={-290}
+        >
           <Banksummary />
-        </GridItem>
-
-        {/* Row 3 */}
-        <GridItem colSpan={2} mt={-4}>
-          <MeterWidget />
-        </GridItem>
-
-        <GridItem mt={-4}>
-          <EnergyPowerTrend />
-        </GridItem>
-      </Grid>
+        </Box>
+      </HStack>
     </Box>
   );
 };

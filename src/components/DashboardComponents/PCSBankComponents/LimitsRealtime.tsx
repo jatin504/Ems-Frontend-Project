@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Box,
   Divider,
@@ -8,39 +8,86 @@ import {
 } from "@chakra-ui/react";
 import { InfoOutlineIcon } from "@chakra-ui/icons";
 import WidgetTitle from "../../Common/WidgetTitle";
+import useTimeseriesData from "../../../hooks/useTimeseriesData";
 
-const LimitsRealtime: React.FC = () => {
+interface Props {
+  selectedDevice?: string;
+}
+
+const LimitsRealtime: React.FC<Props> = ({ selectedDevice }) => {
   const bg = useColorModeValue("#FFFFFF", "#101820");
   const border = useColorModeValue("#E2E8F0", "#243244");
   const title = useColorModeValue("#1E293B", "#F8FAFC");
   const text = useColorModeValue("#64748B", "#CBD5E1");
 
-  const data = [
-    {
-      label: "Max Charge Current",
-      value: "200.00 A",
-    },
-    {
-      label: "Max Discharge Current",
-      value: "200.00 A",
-    },
-    {
-      label: "Max Charge Power",
-      value: "160.00 kW",
-    },
-    {
-      label: "Max Discharge Power",
-      value: "160.00 kW",
-    },
-    {
-      label: "Current Limit Reason",
-      value: "None",
-    },
+  const { data: timeseriesData, fetchData } = useTimeseriesData();
+
+  const metrics = [
+    { key: "max_charge_current", alias: "MaxChargeCurrent", unit: "A" },
+    { key: "max_discharge_current", alias: "MaxDischargeCurrent", unit: "A" },
+    { key: "max_charge_power", alias: "MaxChargePower", unit: "kW" },
+    { key: "max discharge_power", alias: "MaxDischargePower", unit: "kW" },
+    { key: "current_limit_reason", alias: "CurrentLimitReason", unit: "" },
   ];
+
+  useEffect(() => {
+    if (!selectedDevice) return;
+
+    fetchData({
+      devices: {
+        patterns: [],
+        ids: [selectedDevice],
+      },
+      keys: metrics.map(({ key, alias }) => ({
+        key,
+        alias,
+        keyType: "common",
+      })),
+      aggregation: {
+        func: "last",
+        interval: 1,
+        intervalType: "minute",
+      },
+      timeRange: {
+        type: "last",
+        interval: 1,
+        intervalType: "day",
+      },
+      orderBy: "ASC",
+    } as any);
+  }, [selectedDevice]);
+
+  const data = useMemo(() => {
+    const deviceData = selectedDevice
+      ? (timeseriesData as Record<string, any> | undefined)?.[selectedDevice]
+      : undefined;
+
+    const latest = (alias: string, unit: string) => {
+      const points = deviceData?.[alias];
+      if (!Array.isArray(points) || points.length === 0) return "--";
+
+      const value = points[points.length - 1]?.value;
+      if (value === undefined || value === null || value === "") return "--";
+      if (!unit) return String(value);
+
+      const numericValue = Number(value);
+      return Number.isFinite(numericValue)
+        ? `${numericValue.toFixed(2)} ${unit}`
+        : `${value} ${unit}`;
+    };
+
+    return [
+      { label: "Max Charge Current", value: latest("MaxChargeCurrent", "A") },
+      { label: "Max Discharge Current", value: latest("MaxDischargeCurrent", "A") },
+      { label: "Max Charge Power", value: latest("MaxChargePower", "kW") },
+      { label: "Max Discharge Power", value: latest("MaxDischargePower", "kW") },
+      { label: "Current Limit Reason", value: latest("CurrentLimitReason", "") },
+    ];
+  }, [timeseriesData, selectedDevice]);
 
   return (
     <Box
-      w="315px"
+      w="260px"
       h="300px"
       bg={bg}
       border="1px solid"

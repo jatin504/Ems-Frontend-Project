@@ -88,7 +88,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
 
         {status ? (
           <Text
-            fontSize="20px"
+            fontSize="16px"
             fontWeight="700"
             color={color}
             lineHeight="22px"
@@ -98,7 +98,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
         ) : (
           <HStack spacing="4px" align="baseline">
             <Text
-              fontSize="24px"
+              fontSize="18px"
               fontWeight="700"
               color={valueColor}
               lineHeight="24px"
@@ -108,7 +108,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
 
             {unit && (
               <Text
-                fontSize="14px"
+                fontSize="11px"
                 color={valueColor}
                 fontWeight="600"
               >
@@ -138,11 +138,11 @@ const BankTopSummary: React.FC<Props> = ({ selectedDevice }) => {
         ids: [selectedDevice],
       },
       keys: [
-        { key: "phase_a_voltage", alias: "BankVoltage", keyType: "common" },
-        { key: "dc_bus_current", alias: "BankCurrent", keyType: "common" },
-        { key: "bcu_1_soc", alias: "SOC", keyType: "common" },
-        { key: "bcu_1_soe", alias: "SOE", keyType: "common" },
-        { key: "bcu_1_soh", alias: "SOH", keyType: "common" },
+        { key: "voltage", alias: "BankVoltage", keyType: "common" },
+        { key: "current", alias: "BankCurrent", keyType: "common" },
+        { key: "soc", alias: "SOC", keyType: "common" },
+        { key: "", alias: "SOE", keyType: "common" },
+        { key: "", alias: "SOH", keyType: "common" },
         { key: "energy_charged_today", alias: "AvailableEnergy", keyType: "common" },
         { key: "active_power", alias: "BankPower", keyType: "common" },
         { key: "", alias: "Status", keyType: "common" },
@@ -162,10 +162,15 @@ const BankTopSummary: React.FC<Props> = ({ selectedDevice }) => {
 
   const deviceData = (data as any)?.[selectedDevice];
 
-  const latest = (alias: string) =>
-    String(
-      deviceData?.[alias]?.[(deviceData?.[alias]?.length || 1) - 1]?.value ?? "--"
-    );
+  const latest = (alias: string) => {
+    const value = deviceData?.[alias]?.[(deviceData?.[alias]?.length || 1) - 1]?.value;
+    if (value === undefined || value === null || value === "") return "--";
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue)
+      ? numericValue.toFixed(2)
+      : String(value);
+  };
 
   const powerValue = Number(latest("BankPower"));
   const statusValue = Number.isFinite(powerValue) && powerValue > 0 ? "Normal" : "Offline";

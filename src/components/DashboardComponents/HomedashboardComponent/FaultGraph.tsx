@@ -87,7 +87,7 @@ const PRGraph: React.FC = () => {
     <div className="fault-graph-wrapper">
       <GraphLayout
         title="Faults"
-        width={["450px"]}
+        width={["435px"]}
         height={"250px"}
         fullScreen
         onExport={exportFunctions}

@@ -3,7 +3,12 @@ import { useTimeHandle } from "../../../Services/TimeWindowSetting";
 import SplineGraph from "../../Graphs/RevampCharts/SplineGraph";
 import GraphLayout from "../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 import useTimeseriesData from "../../../hooks/useTimeseriesData";
-import { useColorModeValue, Box } from "@chakra-ui/react";
+import { Box, Flex, HStack, Text, Icon } from "@chakra-ui/react";
+import {
+  FiZap,
+  FiCalendar,
+  FiActivity,
+} from "react-icons/fi";
 import type { ExportFunctions } from "../../../types/graphExport/export";
 
 const MeterWidget = () => {
@@ -15,15 +20,15 @@ const MeterWidget = () => {
   } = useTimeHandle(
     12,
     "hour",
-    "avg",
-    [1, "hour"],
+    "none",
+    [1, "minute"],
     60000,
     {
       timeRange: {
-        type: "last",
+        type: "relative",
         relativeType: "currentDaySoFar",
-        interval: 12,
-        intervalType: "hour",
+        interval: 1,
+        intervalType: "minute",
       },
     }
   );
@@ -36,22 +41,12 @@ const MeterWidget = () => {
 
   /*  DATE STATE */
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isFullScreen, setIsFullScreen] = useState(false);
-
-  useEffect(() => {
-    const handleFs = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFs);
-    return () => document.removeEventListener("fullscreenchange", handleFs);
-  }, []);
 
   useEffect(() => {
     const tw = timeWindow.timeRange;
 
     if (tw.type === "absolute") {
-      setCurrentDate(new Date(tw.startTs));
+      setCurrentDate(new Date(tw.startTs ?? Date.now()));
     }
 
     if (tw.type === "relative") {
@@ -93,7 +88,7 @@ const MeterWidget = () => {
     end.setHours(23, 59, 59, 999);
 
     handleTimeWindowChange({
-      aggregation: timeWindowRef.current.aggregation,
+       aggregation: timeWindow.aggregation,
       orderBy: "ASC",
       timeRange: {
         type: "absolute",
@@ -145,128 +140,602 @@ const MeterWidget = () => {
 
   };
 
-  const fetchingToServerObj = {
-    dataSource: {
-      devices: {
-        patterns: [],
-        ids: ["plant_1_pcs_2_bank_bank_1"],
-      },
-      keys: [
-        { key: "active_power", alias: "Active Power", keyType: "common" },
-        { key: "reactive_power", alias: "Reactive Power", keyType: "common" },
-        { key: "apparent_power", alias: "Apparent Power", keyType: "common" },
-      ],
-      aggregation: timeWindow.aggregation,
-      timeRange: timeWindow.timeRange,
-      orderBy: timeWindow.orderBy,
-    },
-  };
+  // removed memoized fetching payload; we'll construct request in the effect below
 
   const { data, fetchData } = useTimeseriesData();
+  const { fetchData: fetchMeterStats } = useTimeseriesData();
 
   useEffect(() => {
-    fetchData(fetchingToServerObj.dataSource);
+    const loadData = () => {
+      fetchData({
+        devices: {
+          patterns: [],
+          ids: ["plant_1_ht_outgoing_meter_1"],
+        },
+        keys: [
+          {
+            key: "total_active_power",
+            alias: "Power (kW)",
+            keyType: "common",
+            type: "spline",
+          },
+          {
+            key: "total_reactive_power",
+            alias: "Power (kVAR)",
+            keyType: "common",
+            type: "spline",
+          },
+          {
+            key: "total_apparent_power",
+            alias: "Power (KVA)",
+            keyType: "common",
+            type: "spline",
+          },
+        ],
+        aggregation: timeWindow.aggregation,
+        timeRange: timeWindow.timeRange,
+        orderBy: "ASC",
+      } as any);
+    };
+
+    loadData();
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [timeWindow]);
+
+  useEffect(() => {
+    const loadMeterStats = () => {
+      fetchMeterStats({
+        devices: {
+          patterns: [],
+          ids: ["plant_1_ht_outgoing_meter_1"],
+        },
+        keys: [
+          {
+            key: "total_active_power",
+            alias: "Active Power",
+            keyType: "common",
+          },
+          {
+            key: "daily_active_energy_import",
+            alias: "Daily Energy",
+            keyType: "common",
+          },
+          {
+            key: "frequency",
+            alias: "Frequency",
+            keyType: "common",
+          },
+          {
+            key: "avg_voltage_l",
+            alias: "Voltage",
+            keyType: "common",
+          },
+          {
+            key: "avg_current_l",
+            alias: "Current",
+            keyType: "common",
+          },
+        ],
+        aggregation: {
+          func: "none",
+          interval: 1,
+          intervalType: "minute",
+        },
+        timeRange: {
+          type: "last",
+          interval: 10,
+          intervalType: "minute",
+        },
+        orderBy: "ASC",
+      } as any);
+    };
+
+    loadMeterStats();
+
+    const interval = setInterval(loadMeterStats, 60000);
+
+    return () => clearInterval(interval);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const seriesForChart = useMemo(() => {
 
-    if (!data) return [];
+    if (!data || typeof data !== "object") return [];
 
     const s: any[] = [];
 
     Object.values(data).forEach((deviceObj: any) => {
+
+      if (!deviceObj) return;
+
       Object.entries(deviceObj).forEach(([metric, pts]: any) => {
+
         if (Array.isArray(pts)) {
+
           s.push({
             type: "spline",
             name: metric,
-            data: pts.map((p: any) => [p.ts, p.value]),
-            marker: { enabled: true },
+
+            data: pts
+              .filter(
+                (p: any) =>
+                  p &&
+                  p.ts &&
+                  p.value !== null &&
+                  p.value !== undefined &&
+                  !isNaN(Number(p.value))
+              )
+              .map((p: any) => [Number(p.ts), Number(p.value)])
+              .sort((a: any, b: any) => a[0] - b[0]),
+
+            marker: {
+              enabled: false,
+            },
           });
+
         }
+
       });
+
     });
 
-    return s;
+    return s.length ? s : [{}];
 
   }, [data]);
 
-  const textColor = useColorModeValue("#1A202C", "#E6E6E6");
-  const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
-  const gridColor = useColorModeValue(
-    "rgba(0,0,0,0.10)",
-    "rgba(255,255,255,0.08)"
-  );
-  const axisLineColor = useColorModeValue(
-    "rgba(0,0,0,0.16)",
-    "rgba(255,255,255,0.06)"
-  );
+  const textColor = "#1A202C";
+  const subTextColor = "#718096";
+
+  const dashboardBg = "#FFFFFF";
+  const panelBg = "#F7FAFC";
+  const borderColor = "#D9E2EC";
+
+  const blueGlow = "#1890FF";
+  const greenGlow = "#20B26B";
+
+  const gridColor = "rgba(0,0,0,0.08)";
+  const axisLineColor = "rgba(0,0,0,0.15)";
 
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullscreenChange
+      );
+    };
+  }, []);
 
   return (
     <GraphLayout
       title={
-        <Box display="flex" alignItems="center" w="100%">
-          <Box fontWeight="600">Meter Data</Box>
-
-          <Box
-            ml={isFullScreen ? "900px" : "130px"}
-            display="flex"
-            alignItems="center"
-            bg={useColorModeValue("gray.100", "gray.700")}
-            borderRadius="6px"
-            px={2}
-            height="22px"
-            gap={2}
-          >
-            <Box cursor="pointer" fontSize="12px" onClick={goPrevDay}>‹</Box>
-
-            <Box fontSize="11px" fontWeight="600" minW="78px" textAlign="center">
-              {formattedDate}
-            </Box>
-
+        <Flex
+          w="100%"
+          h="42px"
+          align="center"
+          justify="space-between"
+          px="10px"
+          bg={dashboardBg}
+          color={textColor}
+        >
+          <HStack spacing="8px">
             <Box
-              cursor={isToday ? "not-allowed" : "pointer"}
-              opacity={isToday ? 0.35 : 1}
-              fontSize="12px"
-              onClick={goNextDay}
+              w="28px"
+              h="28px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              borderRadius="8px"
+              bg="rgba(24,144,255,0.08)"
             >
-              ›
+              <Icon as={FiZap} boxSize="18px" color={blueGlow} />
             </Box>
-          </Box>
-        </Box>
+
+            <Box>
+              <Text fontSize="15px" fontWeight="700" lineHeight="15px">
+                Meter Data
+              </Text>
+
+              <Text fontSize="8px" color={subTextColor} mt="2px">
+                Real-time Power Monitoring & Energy Insights
+              </Text>
+            </Box>
+          </HStack>
+
+          <HStack spacing="8px" ml="auto">
+            <HStack
+              h="26px"
+              px="8px"
+              borderRadius="6px"
+              bg="#F3F8FF"
+              border="1px solid"
+              borderColor={borderColor}
+              spacing="6px"
+              ml="8px"
+            >
+              <Icon as={FiCalendar} boxSize="12px" />
+
+              <Text fontSize="10px" fontWeight="600">
+                {formattedDate}
+              </Text>
+
+              <Text cursor="pointer" onClick={goPrevDay} fontSize="14px">
+                ‹
+              </Text>
+
+              <Text
+                cursor={isToday ? "not-allowed" : "pointer"}
+                opacity={isToday ? 0.35 : 1}
+                onClick={goNextDay}
+                fontSize="14px"
+              >
+                ›
+              </Text>
+            </HStack>
+
+            {/* <Icon as={FiMaximize2} boxSize="14px" color={subTextColor} />
+            <Icon as={FiClock} boxSize="14px" color={subTextColor} />
+            <Icon as={FiMoreVertical} boxSize="14px" color={subTextColor} /> */}
+          </HStack>
+        </Flex>
       }
-      width={["100%"]}
-      height="344px"
-      mt={0}
+      width="590px"
+      height="280px"
       fullScreen
-      timeWindow
+      timeWindow={!isFullscreen}
       onTimeWindowChange={handleTimeWindowChange}
       onReset={handleReset}
       onExport={exportFunctions}
     >
-      <SplineGraph
-        apiData={seriesForChart}
-        height={280}
-        onExportReady={setExportFunctions}
-        props={{
-          yAxis: {
-            tickAmount: 6,
-            labels: { style: { color: textColor } },
-            gridLineColor: gridColor,
-          },
-          xAxis: {
-            type: "datetime",
-            labels: { style: { color: subTextColor } },
-            lineColor: axisLineColor,
-            gridLineColor: gridColor,
-          },
-          tooltip: { shared: true },
-          legend: { align: "center", verticalAlign: "bottom" },
-        }}
-      />
+      <Box
+        w="100%"
+        h={isFullscreen ? "calc(100vh - 60px)" : "248px"}
+        bg={dashboardBg}
+        px="7px"
+        pb="5px"
+        display="flex"
+        flexDirection="column"
+        gap="4px"
+        overflow="hidden"
+      >
+        <Box
+          w="100%"
+          h="238px"
+          minH="0"
+          display="flex"
+          gap="6px"
+          minW="0"
+        >
+          <Box
+            flex="1"
+            minW="0"
+            h="238px"
+            minH="0"
+            bg={panelBg}
+            border="1px solid"
+            borderColor={borderColor}
+            borderRadius="8px"
+            p="4px"
+          >
+            <SplineGraph
+              apiData={seriesForChart}
+              height={isFullscreen ? window.innerHeight - 120 : 223}
+              onExportReady={setExportFunctions}
+              props={{
+                yAxis: {
+                  tickAmount: 5,
+                  labels: {
+                    style: {
+                      color: textColor,
+                      fontSize: "8px",
+                    },
+                  },
+                  gridLineColor: gridColor,
+                },
+
+                xAxis: {
+                  type: "datetime",
+                  labels: {
+                    style: {
+                      color: subTextColor,
+                      fontSize: "8px",
+                    },
+                  },
+                  lineColor: axisLineColor,
+                  gridLineColor: gridColor,
+                },
+
+                plotOptions: {
+                  series: {
+                    connectNulls: false,
+                    turboThreshold: 5000,
+                  },
+
+                  spline: {
+                    lineWidth: 2,
+                    marker: {
+                      enabled: false,
+                    },
+                  },
+                },
+
+                tooltip: {
+                  shared: true,
+                },
+
+                legend: {
+                  align: "center",
+                  verticalAlign: "top",
+                  y: 0,
+                  itemStyle: {
+                    color: textColor,
+                    fontSize: "8px",
+                    fontWeight: "500",
+                  },
+                  itemDistance: 8,
+                },
+              }}
+            />
+          </Box>
+
+          {!isFullscreen && (
+            <Box
+              w="180px"
+              minW="180px"
+              h="238px"
+              minH="0"
+              display="flex"
+              flexDirection="column"
+              gap="3px"
+              overflow="hidden"
+            >
+              <Box
+                flex="1"
+                minH="0"
+                px="8px"
+                py="3px"
+                borderRadius="8px"
+                bg="#F4FAFF"
+                border="1px solid #B9DDF4"
+                borderLeft="3px solid #1890FF"
+                color={textColor}
+                overflow="hidden"
+                transition="transform 180ms ease, box-shadow 180ms ease"
+                _hover={{
+                  transform: "translateX(-3px)",
+                  boxShadow: "0 5px 14px rgba(24,144,255,0.18)",
+                }}
+              >
+                <HStack justify="space-between" spacing="3px" align="flex-start">
+                  <HStack spacing="5px" minW="0" flex="1">
+                    <Icon as={FiZap} boxSize="21px" flexShrink={0} color={blueGlow} />
+                    <Text fontSize="8px" fontWeight="600" whiteSpace="nowrap">
+                      Instantaneous Power
+                    </Text>
+                  </HStack>
+
+                  <Text fontSize="12px" fontWeight="700" color={blueGlow} whiteSpace="nowrap">
+                    2512.5
+                    <Text as="span" fontSize="6px" ml="2px">
+                      kVA
+                    </Text>
+                  </Text>
+                </HStack>
+
+                <HStack mt="1px" justify="space-between" spacing="3px">
+                  <Text fontSize="7px" color={subTextColor}>
+                    kVA: <b>2512.5</b>
+                  </Text>
+                  <Text fontSize="7px" color={subTextColor}>
+                    kVAR: <b>0.00</b>
+                  </Text>
+                  <Text fontSize="7px" color={subTextColor}>
+                    kW: <b>2512.5</b>
+                  </Text>
+                </HStack>
+              </Box>
+
+              <Box
+                flex="1"
+                minH="0"
+                px="8px"
+                py="3px"
+                borderRadius="8px"
+                bg="#F3FFF9"
+                border="1px solid #B9E9D2"
+                borderLeft="3px solid #20B26B"
+                color={textColor}
+                position="relative"
+                overflow="hidden"
+                transition="transform 180ms ease, box-shadow 180ms ease"
+                _hover={{
+                  transform: "translateX(-3px)",
+                  boxShadow: "0 5px 14px rgba(32,178,107,0.18)",
+                }}
+              >
+                <HStack justify="space-between" align="flex-start" spacing="3px">
+                  <HStack spacing="5px">
+                    <Box
+                      w="27px"
+                      h="27px"
+                      borderRadius="7px"
+                      bg="#DDF8E9"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Icon as={FiActivity} boxSize="17px" color={greenGlow} />
+                    </Box>
+                    <Box>
+                      <Text fontSize="8px" fontWeight="600" lineHeight="10px">
+                        Daily Energy
+                      </Text>
+                      <Text fontSize="15px" fontWeight="700" color={greenGlow} lineHeight="17px">
+                        7032
+                        <Text as="span" fontSize="7px" ml="3px" color={subTextColor}>
+                          kWh
+                        </Text>
+                      </Text>
+                    </Box>
+                  </HStack>
+
+                </HStack>
+
+                <HStack mt="1px" justify="space-between" spacing="5px" px="2px">
+                  <Text fontSize="6px" color={subTextColor} whiteSpace="nowrap">
+                    Import <b>7032 kWh</b>
+                  </Text>
+                  <Text fontSize="6px" color={subTextColor} whiteSpace="nowrap">
+                    Export <b>0.00 kWh</b>
+                  </Text>
+                </HStack>
+              </Box>
+
+              <Box
+                flex="1"
+                minH="0"
+                px="8px"
+                py="3px"
+                borderRadius="8px"
+                bg="#F5F9FF"
+                border="1px solid #BBD5F5"
+                borderLeft="3px solid #4A90E2"
+                color={textColor}
+                overflow="hidden"
+                transition="transform 180ms ease, box-shadow 180ms ease"
+                _hover={{
+                  transform: "translateX(-3px)",
+                  boxShadow: "0 5px 14px rgba(74,144,226,0.18)",
+                }}
+              >
+                <HStack justify="space-between" h="100%" spacing="3px" align="center">
+                  <HStack spacing="5px" flexShrink={0}>
+                    <Box
+                      w="27px"
+                      h="27px"
+                      borderRadius="7px"
+                      bg="#DDEBFF"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Icon as={FiActivity} boxSize="18px" color={blueGlow} />
+                    </Box>
+                    <Box>
+                      <Text fontSize="8px" fontWeight="600" lineHeight="10px">Frequency</Text>
+                      <Text fontSize="15px" fontWeight="700" lineHeight="16px" color={blueGlow}>
+                        49.81
+                        <Text as="span" fontSize="7px" ml="3px" color={subTextColor}>Hz</Text>
+                      </Text>
+                    </Box>
+                  </HStack>
+
+                </HStack>
+              </Box>
+
+              <Box
+                flex="1"
+                minH="0"
+                px="8px"
+                py="3px"
+                borderRadius="8px"
+                bg="#FAFCFF"
+                border="1px solid #C7D7E8"
+                borderLeft="3px solid #6B8EAD"
+                color={textColor}
+                overflow="hidden"
+                transition="transform 180ms ease, box-shadow 180ms ease"
+                _hover={{
+                  transform: "translateX(-3px)",
+                  boxShadow: "0 5px 14px rgba(75,105,135,0.16)",
+                }}
+              >
+                <HStack justify="space-between" spacing="3px">
+                  <HStack spacing="5px">
+                    <Text fontSize="18px" lineHeight="18px">⚡</Text>
+                    <Text fontSize="8px" fontWeight="600" whiteSpace="nowrap">Voltage (L-L)</Text>
+                  </HStack>
+
+                  <Text fontSize="13px" fontWeight="700" whiteSpace="nowrap">231.13 V</Text>
+                </HStack>
+
+                <HStack mt="2px" spacing="0" w="100%">
+                  <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
+                    <Text fontSize="7px" fontWeight="600">231.13 V</Text>
+                    <Text fontSize="6px" color={subTextColor}>L1</Text>
+                  </Box>
+                  <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
+                    <Text fontSize="7px" fontWeight="600">230.85 V</Text>
+                    <Text fontSize="6px" color={subTextColor}>L2</Text>
+                  </Box>
+                  <Box w="33.33%" textAlign="center">
+                    <Text fontSize="7px" fontWeight="600">231.42 V</Text>
+                    <Text fontSize="6px" color={subTextColor}>L3</Text>
+                  </Box>
+                </HStack>
+              </Box>
+
+              <Box
+                flex="1"
+                minH="0"
+                px="8px"
+                py="3px"
+                borderRadius="8px"
+                bg="#FFFCF5"
+                border="1px solid #F1DDAE"
+                borderLeft="3px solid #F5A623"
+                color={textColor}
+                overflow="hidden"
+                transition="transform 180ms ease, box-shadow 180ms ease"
+                _hover={{
+                  transform: "translateX(-3px)",
+                  boxShadow: "0 5px 14px rgba(245,166,35,0.18)",
+                }}
+              >
+                <HStack justify="space-between" spacing="3px">
+                  <HStack spacing="5px">
+                    <Text fontSize="18px" color="#FFB72B" lineHeight="18px">〽</Text>
+                    <Text fontSize="8px" fontWeight="600">Current</Text>
+                  </HStack>
+
+                  <Text fontSize="13px" fontWeight="700" color="#FFD166" whiteSpace="nowrap">978.05 A</Text>
+                </HStack>
+
+                <HStack mt="2px" spacing="0" w="100%">
+                  <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
+                    <Text fontSize="7px" fontWeight="600">978.05 A</Text>
+                    <Text fontSize="6px" color={subTextColor}>L1</Text>
+                  </Box>
+                  <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
+                    <Text fontSize="7px" fontWeight="600">977.82 A</Text>
+                    <Text fontSize="6px" color={subTextColor}>L2</Text>
+                  </Box>
+                  <Box w="33.33%" textAlign="center">
+                    <Text fontSize="7px" fontWeight="600">978.31 A</Text>
+                    <Text fontSize="6px" color={subTextColor}>L3</Text>
+                  </Box>
+                </HStack>
+              </Box>
+            </Box>
+          )}
+        </Box>
+
+      </Box>
     </GraphLayout>
   );
 };

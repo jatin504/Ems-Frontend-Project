@@ -192,7 +192,7 @@ const Flow = () => {
 
   return (
     <Box
-      w="100%"
+      w="570px"
       h="100%"
       bg={bg}
       borderRadius="12px"

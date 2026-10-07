@@ -4,7 +4,6 @@ import {
   Flex,
   HStack,
   Text,
-  Switch,
   Button,
   Menu,
   MenuButton,
@@ -14,7 +13,7 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react";
 import { ChevronDownIcon } from "@chakra-ui/icons";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useDevices } from "../../hooks/useDevices";
 
 import BankTopSummary from "../../components/DashboardComponents/PCSBankComponents/BankTopSummary";
@@ -37,44 +36,59 @@ const PCSBankDashboard: React.FC = () => {
     "1px solid #17334c"
   );
   const titleColor = useColorModeValue("#1A202C", "white");
-  const infoColor = useColorModeValue("#4A5568", "#D4DDE6");
-  const textColor = useColorModeValue("#1A202C", "white");
-  const dividerColor = useColorModeValue("#CBD5E0", "#35506A");
 
   const { devices, loading } = useDevices();
   const location = useLocation();
+  const navigate = useNavigate();
   const incomingBank = (location.state as { currentBank?: string })?.currentBank;
   const [selectedDevice, setSelectedDevice] = useState("");
 
-  const deviceOptions = useMemo(
-    () =>
-      devices
-        ? devices
-            .filter(
-              (device) =>
-                device.deviceType === "bank" &&
-                /^plant_1_pcs_\d+_bank_bank_\d+$/.test(device.device_id)
-            )
-            .map((device) => ({
-              id: device.device_id,
-              label: device.device_id,
-            }))
-        : [],
-    [devices]
-  );
+  const deviceOptions = useMemo(() => {
+    console.log("All devices from useDevices:", devices);
+
+    const options = devices
+      ? devices
+          .filter((device) => /_bank_bank_\d+$/i.test(device.device_id))
+          .map((device) => ({
+            id: device.device_id,
+            label: device.device_id.replace(
+              /^plant_\d+_pcs_\d+_/i,
+              ""
+            ),
+          }))
+      : [];
+
+    console.log("Filtered bank device options:", options);
+    console.log(
+      "Device IDs:",
+      options.map((option) => option.id)
+    );
+
+    return options;
+  }, [devices]);
+
+  const rackDevices = useMemo(() => {
+    return (
+      devices?.filter(
+        (device) => device.deviceType === "rack"
+      ) || []
+    );
+  }, [devices]);
 
   useEffect(() => {
     if (deviceOptions.length === 0) return;
 
-    if (
+    const bank =
       incomingBank &&
       deviceOptions.some((d) => d.id === incomingBank)
-    ) {
-      setSelectedDevice(incomingBank);
-    } else {
-      setSelectedDevice(deviceOptions[0].id);
-    }
-  }, [incomingBank, deviceOptions, location.key]);
+        ? incomingBank
+        : deviceOptions[0].id;
+
+    setSelectedDevice((prev) => {
+      if (prev === bank) return prev;
+      return bank;
+    });
+  }, [incomingBank, deviceOptions]);
 
   return (
     <Box w="100%" minH="100vh" bg={bg}>
@@ -169,120 +183,84 @@ const PCSBankDashboard: React.FC = () => {
           </HStack>
         </HStack>
 
-        <HStack spacing="10px">
-          <Text color={infoColor} fontSize="13px">
-            Auto Refresh
-          </Text>
-
-          <Switch
-            size="sm"
-            colorScheme="green"
-            defaultChecked
-          />
-
-          <Text
-            color={textColor}
-            fontSize="13px"
-            fontWeight="600"
-          >
-            ON
-          </Text>
-
-          <Box
-            w="1px"
-            h="16px"
-            bg={dividerColor}
-          />
-
-          <Text color={infoColor} fontSize="13px">
-            Last Update:
-          </Text>
-
-          <Text
-            color={textColor}
-            fontSize="13px"
-            fontWeight="500"
-          >
-            11:28:40
-          </Text>
-
-          <Text
-            color={textColor}
-            fontSize="16px"
-            cursor="pointer"
-          >
-            ⛶
-          </Text>
-        </HStack>
       </Flex>
 
-      {/* Top Summary */}
       <Box px="12px" pt="12px">
         <BankTopSummary selectedDevice={selectedDevice} />
       </Box>
 
-      {/* First Row */}
-      <Box px="12px" mt="12px">
-        <HStack
-          spacing="16px"
-          align="stretch"
-          w="1896px"
-        >
-          <Box w="430px" mt="-20px">
-            <BankHealthSummary selectedDevice={selectedDevice} />
-          </Box>
+      <>
+        {/* First Row */}
+        <Box px="12px" mt="12px">
+          <HStack
+            spacing="16px"
+            align="stretch"
+            w="1896px"
+          >
+            <Box w="430px" mt="-20px">
+              <BankHealthSummary selectedDevice={selectedDevice} />
+            </Box>
 
-          <Box w="525px">
-            <BatteryHealthOverview selectedDevice={selectedDevice} />
-          </Box>
+            <Box w="525px">
+              <BatteryHealthOverview selectedDevice={selectedDevice} />
+            </Box>
 
-          <Box w="880px">
-            <StringsSummary selectedDevice={selectedDevice} />
-          </Box>
-        </HStack>
-      </Box>
+            <Box w="880px">
+              <StringsSummary
+                selectedDevice={selectedDevice}
+                rackDevices={rackDevices}
+                onRackSelect={(rackId) =>
+                  navigate("/batteryrackk", {
+                    state: { currentRack: rackId },
+                  })
+                }
+              />
+            </Box>
+          </HStack>
+        </Box>
 
-      {/* Second Row */}
-      <Box px="12px" mt="16px">
-        <HStack
-          spacing="16px"
-          align="stretch"
-          w="1896px"
-        >
-          <Box w="662px" mt="-20px">
-            <Powergraph selectedDevice={selectedDevice} />
-          </Box>
+        {/* Second Row */}
+        <Box px="12px" mt="16px">
+          <HStack
+            spacing="16px"
+            align="stretch"
+            w="1896px"
+          >
+            <Box w="662px" mt="-20px">
+              <Powergraph selectedDevice={selectedDevice} />
+            </Box>
 
-          <Box w="522px" mt="-18px" ml="-26px">
-            <PowerEnergyTrend selectedDevice={selectedDevice} />
-          </Box>
+            <Box w="522px" mt="-18px" ml="-26px">
+              <PowerEnergyTrend selectedDevice={selectedDevice} />
+            </Box>
 
-          <Box w="342px">
-            <BankStatus />
-          </Box>
+            <Box w="342px">
+              <BankStatus />
+            </Box>
 
-          <Box w="322px">
-            <LimitsRealtime />
-          </Box>
-        </HStack>
-      </Box>
+            <Box w="322px">
+              <LimitsRealtime selectedDevice={selectedDevice} />
+            </Box>
+          </HStack>
+        </Box>
 
-      {/* Third Row */}
-      <Box px="12px" mt="16px">
-        <HStack spacing="16px" align="stretch" w="1896px">
-          <Box w="620px" mt="-16px">
-            <SocGraph selectedDevice={selectedDevice} />
-          </Box>
+        {/* Third Row */}
+        <Box px="12px" mt="16px">
+          <HStack spacing="16px" align="stretch" w="1896px">
+            <Box w="620px" mt="-16px">
+              <SocGraph selectedDevice={selectedDevice} />
+            </Box>
 
-          <Box w="620px" mt="-16px">
-            <VoltageCurrentGraph selectedDevice={selectedDevice} />
-          </Box>
+            <Box w="620px" mt="-16px">
+              <VoltageCurrentGraph selectedDevice={selectedDevice} />
+            </Box>
 
-          <Box w="590px">
-            <EnvironmentCooling />
-          </Box>
-        </HStack>
-      </Box>
+            <Box w="590px">
+              <EnvironmentCooling />
+            </Box>
+          </HStack>
+        </Box>
+      </>
 
       
     </Box>

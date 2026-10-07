@@ -7,9 +7,8 @@ import LoadBreakdown from "../components/DashboardComponents/Dashboard/LoadBreak
 import LoadForecastChart from "../components/DashboardComponents/Dashboard/LoadForecastChart";
 import LoadVsBESSChart from "../components/DashboardComponents/Dashboard/LoadVsBESSChart";
 import ControllableLoads from "../components/DashboardComponents/Dashboard/ControllableLoads";
-import ModelHealth from "../components/DashboardComponents/Dashboard/ModelHealth";
-import MonthlyTrend from "../components/DashboardComponents/Dashboard/MonthlyTrend";
-import OptimizationSchedule from "../components/DashboardComponents/Dashboard/OptimizationSchedule";
+import EMSRecommendation from "../components/DashboardComponents/Dashboard/EMSRecommendation";
+import NextDaySchedule from "../components/DashboardComponents/Dashboard/NextDaySchedule";
 
 const ControlNewDashboard = () => {
   const bg = useColorModeValue("#F7F9FC", "#05121F");
@@ -17,10 +16,10 @@ const ControlNewDashboard = () => {
 
   return (
     <Box p={3} pt={1} bg={bg} minH="100vh" color={textColor}>
-      <VStack spacing={5} align="stretch">
+      <VStack spacing={2.5} align="stretch">
         <ControlSummaryRibbon />
 
-        <Grid templateColumns={{ base: "1fr", xl: "repeat(3, 1fr)" }} gap={5} mt={-2}>
+        <Grid templateColumns={{ base: "1fr", xl: "repeat(3, 1fr)" }} gap={2.5} mt={-2}>
           <GridItem mt={-4}>
             <LoadForecastChart />
           </GridItem>
@@ -35,11 +34,11 @@ const ControlNewDashboard = () => {
         </Grid>
 
         <Grid
-          templateColumns={{ base: "1fr", xl: "2fr 1.3fr 1fr" }}
-          gap={5}
+          templateColumns={{ base: "1fr", xl: "1.2fr 1.3fr 1fr" }}
+          gap={2.5}
           mt={-1}
         >
-          <GridItem mt={0} minW={0} maxW="960px">
+          <GridItem mt={0} minW={0} maxW="700px">
             <ControllableLoads />
           </GridItem>
 
@@ -47,18 +46,15 @@ const ControlNewDashboard = () => {
             <LoadVsBESSChart />
           </GridItem>
 
-          <GridItem>
-            <OptimizationSchedule />
+          <GridItem transform={{ xl: "translateX(-12px)" }}>
+            <EMSRecommendation />
           </GridItem>
         </Grid>
 
         <Grid
-          templateColumns={{
-            base: "1fr",
-            md: "repeat(2, 1fr)",
-            xl: "repeat(4, 1fr)",
-          }}
-          gap={5}
+          templateColumns={{ base: "1fr", xl: "1fr 1fr 2fr" }}
+          gap={2.5}
+          alignItems="start"
         >
           <GridItem h="220px">
             <DSMSummaryToday />
@@ -68,12 +64,8 @@ const ControlNewDashboard = () => {
             <CostImpactToday />
           </GridItem>
 
-          <GridItem mt = {-5} h="220px">
-            <MonthlyTrend />
-          </GridItem>
-
           <GridItem h="220px">
-            <ModelHealth />
+            <NextDaySchedule data={{ schedule: [] }} />
           </GridItem>
         </Grid>
       </VStack>

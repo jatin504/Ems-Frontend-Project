@@ -92,7 +92,7 @@ const PCSLifetimeThroughput = () => {
       borderRadius="12px"
       p={3}
       border={outerBorder}
-      w="100%"
+      w="570px"
       h="180px"
       overflow="hidden"
     >

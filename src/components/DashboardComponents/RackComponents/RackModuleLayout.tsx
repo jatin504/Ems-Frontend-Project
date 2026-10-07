@@ -19,18 +19,11 @@ import {
 
 import { FaRegCircle } from "react-icons/fa";
 
-const modules = [
-  { id: "01", alarm: false },
-  { id: "02", alarm: false },
-  { id: "03", alarm: false },
-  { id: "04", alarm: true },
-  { id: "05", alarm: false },
-  { id: "06", alarm: false },
-  { id: "07", alarm: false },
-  { id: "08", alarm: false },
-  { id: "09", alarm: true },
-  { id: "10", alarm: false },
-];
+const modulesPerRack = Number(import.meta.env.VITE_MODULES_PER_RACK) || 4;
+const modules = Array.from({ length: modulesPerRack }, (_, index) => ({
+  id: String(index + 1).padStart(2, "0"),
+  alarm: false,
+}));
 
 const floatAnim = keyframes`
   0%, 100% {
@@ -53,15 +46,6 @@ const ledGlow = keyframes`
   }
   100%{
     box-shadow:0 0 4px rgba(34,197,94,.4);
-  }
-`;
-
-const flow = keyframes`
-  0% {
-    stroke-dashoffset: 30;
-  }
-  100% {
-    stroke-dashoffset: 0;
   }
 `;
 
@@ -89,6 +73,11 @@ const ModuleCard = ({
   const border = useColorModeValue("#D8E2EE", "#2C4356");
   const title = useColorModeValue("#0F172A", "#FFFFFF");
   const label = useColorModeValue("#64748B", "#94A3B8");
+
+  const moduleNo = Number(id);
+  const voltage = (76.5 + moduleNo * 0.12).toFixed(2);
+  const capacity = (148.5 + moduleNo * 0.35).toFixed(2);
+  const temperature = (35.5 + moduleNo * 0.4).toFixed(1);
 
   return (
     <Box
@@ -170,7 +159,7 @@ const ModuleCard = ({
           mb="1px"
           fontWeight="600"
         >
-          76.78 V
+          {voltage} V
         </Text>
 
         <Text
@@ -179,14 +168,14 @@ const ModuleCard = ({
           mb="1px"
           fontWeight="600"
         >
-          149.2 Ah
+          {capacity} Ah
         </Text>
 
         <Text
           fontSize="11px"
           color={label}
         >
-          36.3 °C
+          {temperature} °C
         </Text>
       </Box>
 
@@ -195,16 +184,20 @@ const ModuleCard = ({
 };
 
 interface Props {
+  rackId: string;
   selectedModule: string | null;
   onModuleSelect: (id: string) => void;
   onOpenDetails: () => void;
 }
 
 export default function RackModuleLayout({
+  rackId,
   selectedModule,
   onModuleSelect,
   onOpenDetails,
 }: Props) {
+
+  void rackId;
 
   const bg = useColorModeValue("#FFFFFF", "#0D1720");
   const border = useColorModeValue("#E2E8F0", "#203344");
@@ -495,10 +488,14 @@ export default function RackModuleLayout({
           flex="1"
           minH="0"
           ml="42px"
-          templateColumns="repeat(5,1fr)"
-          gap="12px"
+          templateColumns="repeat(4, minmax(110px, 1fr))"
+          rowGap="8px"
+          columnGap="8px"
           zIndex={2}
+          alignItems="start"
           position="relative"
+          overflowY="auto"
+          overflowX="hidden"
         >
           {modules.map((m) => (
             <ModuleCard

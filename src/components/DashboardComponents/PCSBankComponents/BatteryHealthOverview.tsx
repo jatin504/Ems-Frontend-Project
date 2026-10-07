@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Box,
   Grid,
@@ -13,6 +13,7 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react";
 import WidgetTitle from "../../Common/WidgetTitle";
+import useTimeseriesData from "../../../hooks/useTimeseriesData";
 
 import {
   FiBatteryCharging,
@@ -47,56 +48,6 @@ interface BottomMetricProps {
   iconColor: string;
   borderColor: string;
 }
-
-const topMetrics: Metric[] = [
-  {
-    title: "Equivalent Full Cycles",
-    value: "862",
-    icon: BsArrowRepeat,
-    color: "#9333EA",
-    bg: "#F3E8FF",
-  },
-  {
-    title: "Total Charge Energy",
-    value: "1284.56",
-    unit: "MWh",
-    icon: MdBolt,
-    color: "#65A30D",
-    bg: "#ECFCCB",
-  },
-  {
-    title: "Total Discharge Energy",
-    value: "1284.56",
-    unit: "MWh",
-    icon: FiActivity,
-    color: "#2563EB",
-    bg: "#DBEAFE",
-  },
-  {
-    title: "Lifetime Throughput",
-    value: "2569.12",
-    unit: "MWh",
-    icon: MdOutlineBatteryChargingFull,
-    color: "#EA580C",
-    bg: "#FFEDD5",
-  },
-  {
-    title: "Calendar Age",
-    value: "14.2",
-    unit: "Months",
-    icon: FiBatteryCharging,
-    color: "#7C3AED",
-    bg: "#F3E8FF",
-  },
-  {
-    title: "Cycle Age",
-    value: "10.8",
-    unit: "Months",
-    icon: FiBatteryCharging,
-    color: "#0891B2",
-    bg: "#CFFAFE",
-  },
-];
 
 const MetricCard = ({ item }: { item: Metric }) => (
   <GridItem
@@ -167,7 +118,7 @@ const BottomMetric = ({
         </HStack>
 
         <Badge colorScheme={statusColor} fontSize="9px" px={2} py={0.5} alignSelf="center">
-          {status}
+            {status}
         </Badge>
       </VStack>
     </VStack>
@@ -179,10 +130,134 @@ interface Props {
 }
 
 const BatteryHealthOverview: React.FC<Props> = ({ selectedDevice }) => {
-  void selectedDevice;
-
   const bg = useColorModeValue("white", "#111827");
   const border = useColorModeValue("#E2E8F0", "whiteAlpha.200");
+
+  const { data, fetchData } = useTimeseriesData();
+
+  const metricKeys = {
+    equivalentFullCycles: "",
+    totalChargeEnergy: "chargeable_energy",
+    totalDischargeEnergy: "dischargeable_energy",
+    lifetimeThroughput: "",
+    calendarAge: "",
+    cycleAge: "",
+    maxCellVoltage: "cell_voltage_max",
+    voltageDelta: "voltage",
+    maxTemperature: "cell_temperature_max",
+    temperatureDelta: "",
+  };
+
+  useEffect(() => {
+    if (!selectedDevice) return;
+
+    fetchData({
+      devices: {
+        patterns: [],
+        ids: [selectedDevice],
+      },
+      keys: Object.values(metricKeys).map((key) => ({
+        key,
+        alias: key,
+        keyType: "common",
+      })),
+      aggregation: {
+        func: "none",
+        interval: 1,
+        intervalType: "minute",
+      },
+      timeRange: {
+        type: "last",
+        interval: 1,
+        intervalType: "day",
+      },
+      orderBy: "ASC",
+    } as any);
+  }, [selectedDevice]);
+
+  const latestValues = useMemo(() => {
+    const deviceData = selectedDevice
+      ? (data as Record<string, any> | undefined)?.[selectedDevice]
+      : undefined;
+
+    if (!deviceData) return {} as Record<string, string | number>;
+
+    return Object.fromEntries(
+      Object.entries(metricKeys).map(([metric, key]) => {
+        const points = deviceData[key];
+
+        if (!Array.isArray(points) || points.length === 0) {
+          return [metric, "--"];
+        }
+
+        const latest = points.reduce((a: any, b: any) =>
+          Number(b.ts) > Number(a.ts) ? b : a
+        );
+
+        return [metric, latest.value ?? "--"];
+      })
+    );
+  }, [data, selectedDevice]);
+
+  const getValue = (key: string) => {
+    const value = latestValues[key];
+    if (value === undefined || value === "--") return "--";
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue)
+      ? numericValue.toFixed(2)
+      : String(value);
+  };
+
+  const topMetrics: Metric[] = [
+    {
+      title: "Equivalent Full Cycles",
+      value: getValue("equivalentFullCycles"),
+      icon: BsArrowRepeat,
+      color: "#9333EA",
+      bg: "#F3E8FF",
+    },
+    {
+      title: "Total Charge Energy",
+      value: getValue("totalChargeEnergy"),
+      unit: "MWh",
+      icon: MdBolt,
+      color: "#65A30D",
+      bg: "#ECFCCB",
+    },
+    {
+      title: "Total Discharge Energy",
+      value: getValue("totalDischargeEnergy"),
+      unit: "MWh",
+      icon: FiActivity,
+      color: "#2563EB",
+      bg: "#DBEAFE",
+    },
+    {
+      title: "Lifetime Throughput",
+      value: getValue("lifetimeThroughput"),
+      unit: "MWh",
+      icon: MdOutlineBatteryChargingFull,
+      color: "#EA580C",
+      bg: "#FFEDD5",
+    },
+    {
+      title: "Calendar Age",
+      value: getValue("calendarAge"),
+      unit: "Months",
+      icon: FiBatteryCharging,
+      color: "#7C3AED",
+      bg: "#F3E8FF",
+    },
+    {
+      title: "Cycle Age",
+      value: getValue("cycleAge"),
+      unit: "Months",
+      icon: FiBatteryCharging,
+      color: "#0891B2",
+      bg: "#CFFAFE",
+    },
+  ];
 
   return (
     <Box
@@ -226,7 +301,7 @@ const BatteryHealthOverview: React.FC<Props> = ({ selectedDevice }) => {
           >
             <HStack spacing={1}>
               <Icon as={BsShieldCheck} />
-              <Text>Excellent</Text>
+              <Text>--</Text>
             </HStack>
           </Badge>
 
@@ -252,10 +327,10 @@ const BatteryHealthOverview: React.FC<Props> = ({ selectedDevice }) => {
       <Grid templateColumns="repeat(4,1fr)" h="124px">
         <BottomMetric
           title="Max Cell Voltage"
-          value="3.652"
+          value={getValue("maxCellVoltage")}
           unit="V"
-          status="Normal"
-          statusColor="green"
+          status="--"
+          statusColor="gray"
           icon={MdBolt}
           iconColor="orange.400"
           borderColor={border}
@@ -263,10 +338,10 @@ const BatteryHealthOverview: React.FC<Props> = ({ selectedDevice }) => {
 
         <BottomMetric
           title="Voltage Delta"
-          value="12"
+          value={getValue("voltageDelta")}
           unit="mV"
-          status="Excellent"
-          statusColor="green"
+          status="--"
+          statusColor="gray"
           icon={MdBolt}
           iconColor="blue.500"
           borderColor={border}
@@ -274,10 +349,10 @@ const BatteryHealthOverview: React.FC<Props> = ({ selectedDevice }) => {
 
         <BottomMetric
           title="Max Temperature"
-          value="31.8"
+          value={getValue("maxTemperature")}
           unit="°C"
-          status="Normal"
-          statusColor="green"
+          status="--"
+          statusColor="gray"
           icon={FiThermometer}
           iconColor="red.400"
           borderColor={border}
@@ -285,10 +360,10 @@ const BatteryHealthOverview: React.FC<Props> = ({ selectedDevice }) => {
 
         <BottomMetric
           title="Temperature Delta"
-          value="2.4"
+          value={getValue("temperatureDelta")}
           unit="°C"
-          status="Stable"
-          statusColor="yellow"
+          status="--"
+          statusColor="gray"
           icon={FiThermometer}
           iconColor="orange.500"
           borderColor="transparent"

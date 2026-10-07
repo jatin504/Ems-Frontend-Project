@@ -177,7 +177,7 @@ const PowerSummaryCard = () => {
   return (
     <GraphLayout
       title="TODAY'S POWER SUMMARY"
-      width={["450px"]}
+      width={["440px"]}
       height="250px"
       fullScreen
     >

@@ -167,7 +167,7 @@ const RtcDispatchTrend = () => {
   return (
     <GraphLayout
       title="RTC DISPATCH & NET POWER TREND"
-      width={["570px"]}
+      width={["540px"]}
       height="250px"
       fullScreen
       timeWindow

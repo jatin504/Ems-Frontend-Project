@@ -1,5 +1,4 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -12,12 +11,14 @@ import {
 } from "@chakra-ui/react";
 import { InfoOutlineIcon } from "@chakra-ui/icons";
 import { MdElectricBolt, MdLinkOff } from "react-icons/md";
+import { ExpandIcon, SqeezIcon } from "../../../assets/Icons";
 import WidgetTitle from "../../Common/WidgetTitle";
 
 import { MaterialReactTable, type MRT_ColumnDef } from "material-react-table";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 interface StringData {
+  deviceId: string;
   stringId: string;
   status: string;
   voltage: number;
@@ -84,113 +85,20 @@ const ValueBox = ({
   </HStack>
 );
 
-const rows: StringData[] = [
-  {
-    stringId: "S01",
-    status: "Connected",
-    voltage: 99.62,
-    current: 18.35,
-    soc: 78.5,
-    soe: 72.1,
-    dailyEnergy: 402.5,
-    totalEnergy: 1248.6,
-    deltaV: 14,
-    balance: "Balanced",
-  },
-  {
-    stringId: "S02",
-    status: "Connected",
-    voltage: 99.63,
-    current: 18.41,
-    soc: 78.6,
-    soe: 72.2,
-    dailyEnergy: 418.9,
-    totalEnergy: 1251.2,
-    deltaV: 15,
-    balance: "Balanced",
-  },
-  {
-    stringId: "S03",
-    status: "Connected",
-    voltage: 99.61,
-    current: 18.22,
-    soc: 78.4,
-    soe: 72.0,
-    dailyEnergy: 395.4,
-    totalEnergy: 1246.8,
-    deltaV: 16,
-    balance: "Balanced",
-  },
-  {
-    stringId: "S04",
-    status: "Connected",
-    voltage: 99.64,
-    current: 18.49,
-    soc: 78.5,
-    soe: 72.1,
-    dailyEnergy: 431.2,
-    totalEnergy: 1253.1,
-    deltaV: 17,
-    balance: "Balanced",
-  },
-  {
-    stringId: "S05",
-    status: "Connected",
-    voltage: 99.60,
-    current: 18.10,
-    soc: 78.3,
-    soe: 71.8,
-    dailyEnergy: 389.8,
-    totalEnergy: 1244.9,
-    deltaV: 18,
-    balance: "Balancing",
-  },
-  {
-    stringId: "S06",
-    status: "Connected",
-    voltage: 99.62,
-    current: 18.27,
-    soc: 78.6,
-    soe: 72.2,
-    dailyEnergy: 406.7,
-    totalEnergy: 1250.4,
-    deltaV: 16,
-    balance: "Balanced",
-  },
-  {
-    stringId: "S07",
-    status: "Connected",
-    voltage: 99.63,
-    current: 18.33,
-    soc: 78.4,
-    soe: 72.0,
-    dailyEnergy: 423.1,
-    totalEnergy: 1247.3,
-    deltaV: 15,
-    balance: "Balanced",
-  },
-  {
-    stringId: "S08",
-    status: "Connected",
-    voltage: 99.61,
-    current: 18.15,
-    soc: 78.3,
-    soe: 71.8,
-    dailyEnergy: 447.6,
-    totalEnergy: 1243.7,
-    deltaV: 14,
-    balance: "Balanced",
-  },
-];
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE?.toString()?.replace(/\/$/, "") || "";
 
 interface Props {
   selectedDevice?: string;
+  rackDevices?: Array<{ device_id: string }>;
+  onRackSelect?: (rackId: string) => void;
 }
 
-const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
-  void selectedDevice;
-
-  const navigate = useNavigate();
+const StringsSummary: React.FC<Props> = ({
+  selectedDevice,
+  rackDevices = [],
+  onRackSelect,
+}) => {
   const tableMode = useColorModeValue("light", "dark");
 
   const theme = useMemo(
@@ -212,6 +120,95 @@ const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
     pageIndex: 0,
     pageSize: 6,
   });
+
+  const [rows, setRows] = useState<StringData[]>([]);
+
+  useEffect(() => {
+    if (!selectedDevice) return;
+
+    const fetchStrings = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/lastest-direct-data/multiple-latest-devices`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              device_id_patterns: ["_bank_bank_"],
+            }),
+          }
+        );
+
+        const result = await response.json();
+        if (!result.success) return;
+
+        const bankPrefix = selectedDevice ? `${selectedDevice}_` : "";
+        const knownRackIds = new Set(rackDevices.map((device) => device.device_id));
+        const getValue = (deviceData: any, keys: string[]) => {
+          for (const key of keys) {
+            const raw = deviceData?.[key];
+            const value = raw && typeof raw === "object" ? raw.value : raw;
+            if (value !== null && value !== undefined && value !== "") {
+              return Number.isFinite(Number(value)) ? Number(value) : value;
+            }
+          }
+          return 0;
+        };
+
+        const mappedRows = Object.entries(result.data || {})
+          .filter(([deviceId]) => {
+            if (!/_rack_rack_\d+$/i.test(deviceId)) return false;
+            if (knownRackIds.size > 0 && !knownRackIds.has(deviceId)) return false;
+            return !bankPrefix || deviceId.startsWith(bankPrefix);
+          })
+          .map(([deviceId, deviceData]: [string, any]) => {
+            const rackMatch = deviceId.match(/rack_rack[_-]?(\d+)$/i);
+            const stringMatch = deviceId.match(/(?:string|string_string)[_-]?(\d+)$/i);
+            const fallbackMatch = deviceId.match(/(?:^|[._-])S(\d+)$/i);
+            const stringId = rackMatch
+              ? `R${String(rackMatch[1]).padStart(2, "0")}`
+              : stringMatch
+              ? `S${String(stringMatch[1]).padStart(2, "0")}`
+              : fallbackMatch
+                ? `S${String(fallbackMatch[1]).padStart(2, "0")}`
+                : deviceId.split("_").pop() || deviceId;
+
+            const timestamp = getValue(deviceData, ["Time_Stamp", "timestamp"]);
+            const isConnected = timestamp
+              ? Date.now() - new Date(String(timestamp)).getTime() < 10 * 60 * 1000
+              : true;
+            const deltaV = Number(getValue(deviceData, [
+              "Delta_V",
+              "delta_v",
+              "delta_cell_voltage",
+              "Cell_Voltage_Delta",
+            ]));
+
+            return {
+              deviceId,
+              stringId,
+              status: isConnected ? "Connected" : "Disconnected",
+              voltage: Number(getValue(deviceData, ["Voltage", "voltage", "BCU_1_Rack_voltage"])),
+              current: Number(getValue(deviceData, ["Current", "current", "BCU_1_Rack_current"])),
+              soc: Number(getValue(deviceData, ["SOC", "SoC", "BCU_1_SOC", "soc"])),
+              soe: Number(getValue(deviceData, ["SOE", "SoE", "BCU_1_SOE", "soe"])),
+              dailyEnergy: Number(getValue(deviceData, ["Daily_Energy", "daily_energy", "daily_active_energy_import"])),
+              totalEnergy: Number(getValue(deviceData, ["Total_Energy", "total_energy", "Total_energy_charged"])),
+              deltaV: Number.isFinite(deltaV) ? deltaV : 0,
+              balance: Number.isFinite(deltaV) && deltaV > 20 ? "Balancing" : "Balanced",
+            };
+          });
+
+        setRows(mappedRows);
+      } catch (error) {
+        console.error("Failed to fetch string summary:", error);
+      }
+    };
+
+    fetchStrings();
+    const interval = window.setInterval(fetchStrings, 60_000);
+    return () => window.clearInterval(interval);
+  }, [selectedDevice]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -394,8 +391,10 @@ const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
   return (
     <Box
       ref={panelRef}
-      w="100%"
-      h="344px"
+      w={isFullscreen ? "100%" : "93%"}
+      maxW={isFullscreen ? "100%" : "93%"}
+      minW={0}
+      h={isFullscreen ? "100vh" : "344px"}
       display="flex"
       flexDirection="column"
       borderRadius="10px"
@@ -443,14 +442,21 @@ const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
           </Box>
 
           <Button size="xs" variant="ghost" onClick={toggleFullscreen}>
-            ⤢
+            {isFullscreen ? <SqeezIcon /> : <ExpandIcon />}
           </Button>
 
           <InfoOutlineIcon color="gray.500" boxSize={4} />
         </HStack>
       </Flex>
 
-      <Box flex={1}>
+      <Box
+        flex={1}
+        minW={0}
+        minH={0}
+        w="100%"
+        maxW="100%"
+        overflow="hidden"
+      >
         <ThemeProvider theme={theme}>
           <MaterialReactTable
             columns={columns}
@@ -501,6 +507,9 @@ const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
             }}
             muiTableContainerProps={{
               sx: {
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
                 perspective: "1600px",
                 transformStyle: "preserve-3d",
                 flex: 1,
@@ -533,14 +542,22 @@ const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
             }}
             muiTableProps={{
               sx: {
-                tableLayout: isFullscreen ? "auto" : "fixed",
-                width: isFullscreen ? "max-content" : "100%",
-                minWidth: isFullscreen ? "max-content" : "100%",
+                tableLayout: "fixed",
+                width: "100%",
+                minWidth: "100%",
+                maxWidth: "100%",
                 borderCollapse: "collapse",
+                "& th, & td": {
+                  boxSizing: "border-box",
+                },
               },
             }}
             muiTableBodyRowProps={({ row }) => ({
-              onClick: () => navigate("/batteryrackk"),
+              onClick: () => {
+                if (row.original.deviceId) {
+                  onRackSelect?.(row.original.deviceId);
+                }
+              },
               sx: {
                 cursor: "pointer",
 
@@ -569,6 +586,11 @@ const StringsSummary: React.FC<Props> = ({ selectedDevice }) => {
 
                 "& .Mui-TableHeadCell-Content": {
                   justifyContent: "center",
+                },
+
+                "& .MuiTableCell-root": {
+                  width: "auto",
+                  maxWidth: "none",
                 },
               },
             }}

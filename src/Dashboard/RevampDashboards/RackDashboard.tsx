@@ -1,5 +1,7 @@
 import React from "react";
 import { Box, HStack, VStack, useColorModeValue } from "@chakra-ui/react";
+import { useLocation } from "react-router-dom";
+import { useDevices } from "../../hooks/useDevices";
 
 import RackHeader from "../../components/DashboardComponents/RackComponents/RackHeader";
 import RackSummary from "../../components/DashboardComponents/RackComponents/RackSummary";
@@ -19,6 +21,19 @@ import CellAnalyticsDashboard from "./CellAnalyticsDashboard";
 
 export default function RackDashboard() {
   const screen = useColorModeValue("#F1F5F9", "#0B0F14");
+  const location = useLocation();
+  const { devices } = useDevices();
+  const rackDeviceId =
+    (location.state as { currentRack?: string })?.currentRack || "";
+  const selectedRack = React.useMemo(
+    () => devices?.find(
+      (device) =>
+        device.deviceType === "rack" &&
+        device.device_id === rackDeviceId
+    ),
+    [devices, rackDeviceId]
+  );
+  const selectedRackId = selectedRack?.device_id || rackDeviceId;
   const [selectedModule, setSelectedModule] = React.useState<string | null>(null);
   const [showModuleDashboard, setShowModuleDashboard] = React.useState(false);
   const [showAnalyticsPage, setShowAnalyticsPage] = React.useState(false);
@@ -35,10 +50,10 @@ export default function RackDashboard() {
 
         {!showAnalyticsPage && (
           <>
-            <RackHeader />
+            <RackHeader rackId={selectedRackId} />
 
             <Box mt="-30px">
-              <RackSummary />
+              <RackSummary rackId={selectedRackId} />
             </Box>
 
             {/* ---------- First Row ---------- */}
@@ -53,6 +68,7 @@ export default function RackDashboard() {
                 h="370px"
               >
                 <RackModuleLayout
+                  rackId={selectedRackId}
                   selectedModule={selectedModule}
                   onModuleSelect={(id) => setSelectedModule(id)}
                   onOpenDetails={() => {
@@ -67,7 +83,7 @@ export default function RackDashboard() {
                 w="380px"
                 h="370px"
               >
-                <DeltaSummary />
+                <DeltaSummary rackId={selectedRackId} />
               </Box>
 
               <Box
@@ -105,7 +121,7 @@ export default function RackDashboard() {
                   h="360px"
                   mt={"-21px"}
                 >
-                  <CellVoltageHeatmap />
+                  <CellVoltageHeatmap rackId={selectedRackId} />
                 </Box>
 
                 <Box

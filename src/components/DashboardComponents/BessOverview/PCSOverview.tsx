@@ -47,74 +47,43 @@ interface PCSData {
   deviceId: string;
   name: string;
 
-  reactivePower: string;
-  reactivePower_raw: number;
-
   activePower: string;
   activePower_raw: number;
+  reactivePower: string;
+  reactivePower_raw: number;
+  current: string;
+  current_raw: number;
+  voltage: string;
+  voltage_raw: number;
+  frequency: string;
+  frequency_raw: number;
+  soc: string;
+  soc_raw: number;
+  soh: string;
+  soh_raw: number;
+  chargeEnergy: string;
+  chargeEnergy_raw: number;
+  dischargeEnergy: string;
+  dischargeEnergy_raw: number;
+  dod: string;
+  dod_raw: number;
+  temperature: string;
+  temperature_raw: number;
+  controlState: string;
+  controlState_raw: number;
 
-  dcCurrentB1: string;
-  dcCurrentB1_raw: number;
-
-  dcCurrentB2: string;
-  dcCurrentB2_raw: number;
-
-  dcVoltB1: string;
-  dcVoltB1_raw: number;
-
-  dcVoltB2: string;
-  dcVoltB2_raw: number;
-
-  dcVoltB3: string;
-  dcVoltB3_raw: number;
-
-  dcVoltTotal: string;
-  dcVoltTotal_raw: number;
-
-  acCurrentL1: string;
-  acCurrentL1_raw: number;
-
-  acCurrentL2: string;
-  acCurrentL2_raw: number;
-
-  acCurrentL3: string;
-  acCurrentL3_raw: number;
-
-  acVoltL1L2: string;
-  acVoltL1L2_raw: number;
-
-  acVoltL2L3: string;
-  acVoltL2L3_raw: number;
-
-  acVoltL3L1: string;
-  acVoltL3L1_raw: number;
-
-  gridFrequency: string;
-  gridFrequency_raw: number;
-
-  pf: string;
-  pf_raw: number;
-
-  apparentPower: string;
-  apparentPower_raw: number;
-
-  reactivePowerTrend: TrendType;
   activePowerTrend: TrendType;
-  dcCurrentB1Trend: TrendType;
-  dcCurrentB2Trend: TrendType;
-  dcVoltB1Trend: TrendType;
-  dcVoltB2Trend: TrendType;
-  dcVoltB3Trend: TrendType;
-  dcVoltTotalTrend: TrendType;
-  acCurrentL1Trend: TrendType;
-  acCurrentL2Trend: TrendType;
-  acCurrentL3Trend: TrendType;
-  acVoltL1L2Trend: TrendType;
-  acVoltL2L3Trend: TrendType;
-  acVoltL3L1Trend: TrendType;
-  gridFrequencyTrend: TrendType;
-  pfTrend: TrendType;
-  apparentPowerTrend: TrendType;
+  reactivePowerTrend: TrendType;
+  currentTrend: TrendType;
+  voltageTrend: TrendType;
+  frequencyTrend: TrendType;
+  socTrend: TrendType;
+  sohTrend: TrendType;
+  chargeEnergyTrend: TrendType;
+  dischargeEnergyTrend: TrendType;
+  dodTrend: TrendType;
+  temperatureTrend: TrendType;
+  controlStateTrend: TrendType;
 
   isLive: boolean;
   rawData?: any;
@@ -165,25 +134,18 @@ export default function PCSOverview() {
     Record<
       string,
       {
-        reactivePower: number;
         activePower: number;
-        dcCurrentB1: number;
-        dcCurrentB2: number;
-        dcCurrentB3: number;
-        dcCurrentTotal: number;
-        dcVoltB1: number;
-        dcVoltB2: number;
-        dcVoltB3: number;
-        dcVoltTotal: number;
-        acCurrentL1: number;
-        acCurrentL2: number;
-        acCurrentL3: number;
-        acVoltL1L2: number;
-        acVoltL2L3: number;
-        acVoltL3L1: number;
-        gridFrequency: number;
-        pf: number;
-        apparentPower: number;
+        reactivePower: number;
+        current: number;
+        voltage: number;
+        frequency: number;
+        soc: number;
+        soh: number;
+        chargeEnergy: number;
+        dischargeEnergy: number;
+        dod: number;
+        temperature: number;
+        controlState: number;
       }
     >
   >({});
@@ -242,37 +204,28 @@ export default function PCSOverview() {
         fn
       );
   }, []);
-    /* ---------- backend key map ---------- */
+  /* ---------- backend key map ---------- */
 
   const COLUMN_KEY_MAP: Record<string, string> = {
     Active_Power: "Active_power",
-    Reactive_Power: "Reactive_power",
+    Reactive_Power: "Reactive_Power_kVAR",
 
-    DC_Current_B1: "Active_power",
-    DC_Current_B2: "DCDC1_Battery_side_current",
-    DC_Current_B3: "DCDC1_Bus_side_current",
-    DC_Current_Total: "DCDC1_Bus_side_current",
+    Current: "Amps",
+    Voltage: "Voltage",
 
-    DC_Volt_B1: "DCDC1_Battery_side_voltage",
-    DC_Volt_B2: "Container_status_1",
-    DC_Volt_B3: "Container_status_2",
-    DC_Volt_Total: "Chargeable_capacity",
+    Frequency: "Frequency_Hz",
 
-    AC_Current_L1: "Alarm_1",
-    AC_Current_L2: "Alarm_2",
-    AC_Current_L3: "Alarm_3",
+    SoC: "SoC",
+    SoH: "SoH",
 
-    AC_Volt_L1L2: "Control_unit_cabin_temperature_1",
-    AC_Volt_L2L3: "Control_unit_cabin_humidity_1",
-    AC_Volt_L3L1: "Control_unit_cabin_dew_point_temperature",
+    Charge_Energy: "Charge_Energy_kWh",
+    Discharge_Energy: "Discharge_Energy_kWh",
 
-    Apparent_Power: "BCU_1_Chargeable_capacity",
-    PF: "BCU_1_DOD",
+    DoD: "DoD",
 
-    Grid_Frequency: "DCDC1_ISO_insulation_resistance",
+    Temperature: "Temperature",
 
-    mode: "Operating_Mode",
-    temp: "Temperature",
+    Control_State: "Control_State",
   };
 
   const getTrend = (
@@ -300,7 +253,7 @@ export default function PCSOverview() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            device_id_patterns: ["_bank_bank_"],
+            device_id_patterns: ["_pcs_pcs_"],
           }),
         }
       )
@@ -309,7 +262,7 @@ export default function PCSOverview() {
           if (j.success) {
             const filteredData = Object.fromEntries(
               Object.entries(j.data || {}).filter(
-                ([deviceId]) => /_bank_bank_\d+$/.test(deviceId)
+                ([deviceId]) => /_pcs_pcs_\d+$/.test(deviceId)
               )
             );
 
@@ -335,7 +288,6 @@ export default function PCSOverview() {
 
     Object.entries(dataMap).forEach(([deviceId, d]: any) => {
       const suffix = deviceId.match(/_(\d+)$/)?.[1];
-
       const name = suffix ? `PCS-${suffix}` : deviceId;
 
       const toNum = (key: keyof typeof COLUMN_KEY_MAP) => {
@@ -345,7 +297,7 @@ export default function PCSOverview() {
           value === null ||
           value === undefined ||
           value === "" ||
-          Number.isNaN(value)
+          Number.isNaN(Number(value))
         ) {
           return 0;
         }
@@ -355,9 +307,7 @@ export default function PCSOverview() {
 
       const toDisplay = (key: keyof typeof COLUMN_KEY_MAP) => {
         const field = d?.[COLUMN_KEY_MAP[key]];
-
         const value = field?.value;
-
         const unit = field?.unit ?? "";
 
         if (
@@ -372,197 +322,105 @@ export default function PCSOverview() {
       };
 
       const tsValue = d?.Time_Stamp?.value;
-
-      const ts = tsValue
-        ? new Date(tsValue).getTime()
-        : 0;
-
-      const isLive =
-        !!ts && now - ts < 10 * 60 * 1000;
-
+      const ts = tsValue ? new Date(tsValue).getTime() : 0;
+      const isLive = !!ts && now - ts < 10 * 60 * 1000;
       const prev = previousValues.current[deviceId];
 
-      const reactivePowerTrend = getTrend(
-        toNum("Reactive_Power"),
-        prev?.reactivePower
-      );
+      const activePowerValue = toNum("Active_Power");
+      const reactivePowerValue = toNum("Reactive_Power");
+      const currentValue = toNum("Current");
+      const voltageValue = toNum("Voltage");
+      const frequencyValue = toNum("Frequency");
+      const socValue = toNum("SoC");
+      const sohValue = toNum("SoH");
+      const chargeEnergyValue = toNum("Charge_Energy");
+      const dischargeEnergyValue = toNum("Discharge_Energy");
+      const dodValue = toNum("DoD");
+      const temperatureValue = toNum("Temperature");
+      const controlStateValue = toNum("Control_State");
 
-      const activePowerTrend = getTrend(
-        toNum("Active_Power"),
-        prev?.activePower
-      );
-
-      const dcCurrentB1Trend = getTrend(
-        toNum("DC_Current_B1"),
-        prev?.dcCurrentB1
-      );
-
-      const dcCurrentB2Trend = getTrend(
-        toNum("DC_Current_B2"),
-        prev?.dcCurrentB2
-      );
-
-      const dcVoltB1Trend = getTrend(
-        toNum("DC_Volt_B1"),
-        prev?.dcVoltB1
-      );
-
-      const dcVoltB2Trend = getTrend(
-        toNum("DC_Volt_B2"),
-        prev?.dcVoltB2
-      );
-
-      const dcVoltB3Trend = getTrend(
-        toNum("DC_Volt_B3"),
-        prev?.dcVoltB3
-      );
-
-      const dcVoltTotalTrend = getTrend(
-        toNum("DC_Volt_Total"),
-        prev?.dcVoltTotal
-      );
-
-      const acCurrentL1Trend = getTrend(
-        toNum("AC_Current_L1"),
-        prev?.acCurrentL1
-      );
-
-      const acCurrentL2Trend = getTrend(
-        toNum("AC_Current_L2"),
-        prev?.acCurrentL2
-      );
-
-      const acCurrentL3Trend = getTrend(
-        toNum("AC_Current_L3"),
-        prev?.acCurrentL3
-      );
-
-      const acVoltL1L2Trend = getTrend(
-        toNum("AC_Volt_L1L2"),
-        prev?.acVoltL1L2
-      );
-
-      const acVoltL2L3Trend = getTrend(
-        toNum("AC_Volt_L2L3"),
-        prev?.acVoltL2L3
-      );
-
-      const acVoltL3L1Trend = getTrend(
-        toNum("AC_Volt_L3L1"),
-        prev?.acVoltL3L1
-      );
-
-      const gridFrequencyTrend = getTrend(
-        toNum("Grid_Frequency"),
-        prev?.gridFrequency
-      );
-
-      const pfTrend = getTrend(
-        toNum("PF"),
-        prev?.pf
-      );
-
-      const apparentPowerTrend = getTrend(
-        toNum("Apparent_Power"),
-        prev?.apparentPower
-      );
+      const activePowerTrend = getTrend(activePowerValue, prev?.activePower);
+      const reactivePowerTrend = getTrend(reactivePowerValue, prev?.reactivePower);
+      const currentTrend = getTrend(currentValue, prev?.current);
+      const voltageTrend = getTrend(voltageValue, prev?.voltage);
+      const frequencyTrend = getTrend(frequencyValue, prev?.frequency);
+      const socTrend = getTrend(socValue, prev?.soc);
+      const sohTrend = getTrend(sohValue, prev?.soh);
+      const chargeEnergyTrend = getTrend(chargeEnergyValue, prev?.chargeEnergy);
+      const dischargeEnergyTrend = getTrend(dischargeEnergyValue, prev?.dischargeEnergy);
+      const dodTrend = getTrend(dodValue, prev?.dod);
+      const temperatureTrend = getTrend(temperatureValue, prev?.temperature);
+      const controlStateTrend = getTrend(controlStateValue, prev?.controlState);
 
       mapped.push({
         deviceId,
         name,
 
-        reactivePower: toDisplay("Reactive_Power"),
-        reactivePower_raw: toNum("Reactive_Power"),
-        reactivePowerTrend,
-
         activePower: toDisplay("Active_Power"),
-        activePower_raw: toNum("Active_Power"),
+        activePower_raw: activePowerValue,
         activePowerTrend,
 
-        dcCurrentB1: toDisplay("DC_Current_B1"),
-        dcCurrentB1_raw: toNum("DC_Current_B1"),
-        dcCurrentB1Trend,
+        reactivePower: toDisplay("Reactive_Power"),
+        reactivePower_raw: reactivePowerValue,
+        reactivePowerTrend,
 
-        dcCurrentB2: toDisplay("DC_Current_B2"),
-        dcCurrentB2_raw: toNum("DC_Current_B2"),
-        dcCurrentB2Trend,
+        current: toDisplay("Current"),
+        current_raw: currentValue,
+        currentTrend,
 
-        dcVoltB1: toDisplay("DC_Volt_B1"),
-        dcVoltB1_raw: toNum("DC_Volt_B1"),
-        dcVoltB1Trend,
+        voltage: toDisplay("Voltage"),
+        voltage_raw: voltageValue,
+        voltageTrend,
 
-        dcVoltB2: toDisplay("DC_Volt_B2"),
-        dcVoltB2_raw: toNum("DC_Volt_B2"),
-        dcVoltB2Trend,
+        frequency: toDisplay("Frequency"),
+        frequency_raw: frequencyValue,
+        frequencyTrend,
 
-        dcVoltB3: toDisplay("DC_Volt_B3"),
-        dcVoltB3_raw: toNum("DC_Volt_B3"),
-        dcVoltB3Trend,
+        soc: toDisplay("SoC"),
+        soc_raw: socValue,
+        socTrend,
 
-        dcVoltTotal: toDisplay("DC_Volt_Total"),
-        dcVoltTotal_raw: toNum("DC_Volt_Total"),
-        dcVoltTotalTrend,
+        soh: toDisplay("SoH"),
+        soh_raw: sohValue,
+        sohTrend,
 
-        acCurrentL1: toDisplay("AC_Current_L1"),
-        acCurrentL1_raw: toNum("AC_Current_L1"),
-        acCurrentL1Trend,
+        chargeEnergy: toDisplay("Charge_Energy"),
+        chargeEnergy_raw: chargeEnergyValue,
+        chargeEnergyTrend,
 
-        acCurrentL2: toDisplay("AC_Current_L2"),
-        acCurrentL2_raw: toNum("AC_Current_L2"),
-        acCurrentL2Trend,
+        dischargeEnergy: toDisplay("Discharge_Energy"),
+        dischargeEnergy_raw: dischargeEnergyValue,
+        dischargeEnergyTrend,
 
-        acCurrentL3: toDisplay("AC_Current_L3"),
-        acCurrentL3_raw: toNum("AC_Current_L3"),
-        acCurrentL3Trend,
+        dod: toDisplay("DoD"),
+        dod_raw: dodValue,
+        dodTrend,
 
-        acVoltL1L2: toDisplay("AC_Volt_L1L2"),
-        acVoltL1L2_raw: toNum("AC_Volt_L1L2"),
-        acVoltL1L2Trend,
+        temperature: toDisplay("Temperature"),
+        temperature_raw: temperatureValue,
+        temperatureTrend,
 
-        acVoltL2L3: toDisplay("AC_Volt_L2L3"),
-        acVoltL2L3_raw: toNum("AC_Volt_L2L3"),
-        acVoltL2L3Trend,
-
-        acVoltL3L1: toDisplay("AC_Volt_L3L1"),
-        acVoltL3L1_raw: toNum("AC_Volt_L3L1"),
-        acVoltL3L1Trend,
-
-        gridFrequency: toDisplay("Grid_Frequency"),
-        gridFrequency_raw: toNum("Grid_Frequency"),
-        gridFrequencyTrend,
-
-        pf: toDisplay("PF"),
-        pf_raw: toNum("PF"),
-        pfTrend,
-
-        apparentPower: toDisplay("Apparent_Power"),
-        apparentPower_raw: toNum("Apparent_Power"),
-        apparentPowerTrend,
+        controlState: toDisplay("Control_State"),
+        controlState_raw: controlStateValue,
+        controlStateTrend,
 
         isLive,
         rawData: d,
       });
 
       previousValues.current[deviceId] = {
-        reactivePower: toNum("Reactive_Power"),
-        activePower: toNum("Active_Power"),
-        dcCurrentB1: toNum("DC_Current_B1"),
-        dcCurrentB2: toNum("DC_Current_B2"),
-        dcCurrentB3: toNum("DC_Current_B3"),
-        dcCurrentTotal: toNum("DC_Current_Total"),
-        dcVoltB1: toNum("DC_Volt_B1"),
-        dcVoltB2: toNum("DC_Volt_B2"),
-        dcVoltB3: toNum("DC_Volt_B3"),
-        dcVoltTotal: toNum("DC_Volt_Total"),
-        acCurrentL1: toNum("AC_Current_L1"),
-        acCurrentL2: toNum("AC_Current_L2"),
-        acCurrentL3: toNum("AC_Current_L3"),
-        acVoltL1L2: toNum("AC_Volt_L1L2"),
-        acVoltL2L3: toNum("AC_Volt_L2L3"),
-        acVoltL3L1: toNum("AC_Volt_L3L1"),
-        gridFrequency: toNum("Grid_Frequency"),
-        pf: toNum("PF"),
-        apparentPower: toNum("Apparent_Power"),
+        activePower: activePowerValue,
+        reactivePower: reactivePowerValue,
+        current: currentValue,
+        voltage: voltageValue,
+        frequency: frequencyValue,
+        soc: socValue,
+        soh: sohValue,
+        chargeEnergy: chargeEnergyValue,
+        dischargeEnergy: dischargeEnergyValue,
+        dod: dodValue,
+        temperature: temperatureValue,
+        controlState: controlStateValue,
       };
     });
 
@@ -605,407 +463,266 @@ export default function PCSOverview() {
   );
 
   const allColumns = useMemo<MRT_ColumnDef<PCSData>[]>(
-  () => [
-    {
-      accessorKey: "name",
-      header: "PCS",
-      size: 110,
-      muiTableHeadCellProps: {
-        sx: {
-          textAlign: "left",
-          pl: 1,
-          fontSize: "9px",
+    () => [
+      {
+        accessorKey: "name",
+        header: "PCS",
+        size: 110,
+        muiTableHeadCellProps: {
+          sx: {
+            textAlign: "left",
+            pl: 1,
+            fontSize: "9px",
+          },
         },
-      },
-      muiTableBodyCellProps: {
-        sx: {
-          textAlign: "left",
-          pl: 1,
-          fontSize: "9px",
+        muiTableBodyCellProps: {
+          sx: {
+            textAlign: "left",
+            pl: 1,
+            fontSize: "9px",
+          },
         },
-      },
-      Cell: ({ row }) => (
-        <Box
-          w="100%"
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-        >
-          <Text
-            fontSize="13px"
-            fontWeight="700"
-            color="#2563EB"
-            cursor="pointer"
-            transition=".2s"
-            _hover={{
-              color: "#1D4ED8",
-              textDecoration: "underline",
-            }}
-            onClick={() =>
-              navigate("/devices/pcs/details", {
-                state: {
-                  selectedDevice: {
-                    device_id: row.original.deviceId,
-                    name: row.original.name,
-                    rawData: row.original.rawData,
-                  },
-                },
-              })
-            }
+        Cell: ({ row }) => (
+          <Box
+            w="100%"
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
           >
-            {row.original.name}
-          </Text>
-        </Box>
-      ),
-    },
-
-    {
-      id: "status",
-      header: "Status",
-      size: 110,
-      enableSorting: false,
-      Cell: ({ row }) => {
-        const d = row.original.rawData;
-
-        const lastTs = d?.Time_Stamp?.value
-          ? new Date(d.Time_Stamp.value).getTime()
-          : 0;
-
-        const activePower =
-          d?.Active_Power?.value ??
-          d?.Active_power?.value ??
-          0;
-
-        const now = Date.now();
-
-        if (!lastTs || now - lastTs > 4 * 60 * 1000) {
-          return (
-            <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
-              <Tooltip
-                label="Non-Comm"
-                placement="top"
-                hasArrow
-                openDelay={150}
-                borderRadius="10px"
-                bg="#0F172A"
-                color="white"
-                fontSize="11px"
-                fontWeight="600"
-                px={3}
-                py={2}
-                boxShadow="0 18px 45px rgba(15,23,42,.35)"
-                border="1px solid rgba(255,255,255,.08)"
-                arrowShadowColor="rgba(0,0,0,.35)"
-                motionProps={{
-                  initial: { opacity: 0, y: 8, scale: 0.9 },
-                  animate: { opacity: 1, y: 0, scale: 1 },
-                }}
-              >
-                <Box
-                  w="24px"
-                  h="24px"
-                  borderRadius="full"
-                  bg="#FFF7E6"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  cursor="pointer"
-                >
-                  <MdLinkOff color="orange" size={12} />
-                </Box>
-              </Tooltip>
-            </Box>
-          );
-        }
-
-        if (activePower > 0) {
-          return (
-            <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
-              <Tooltip
-                label="Running"
-                placement="top"
-                hasArrow
-                openDelay={150}
-                borderRadius="10px"
-                bg="#0F172A"
-                color="white"
-                fontSize="11px"
-                fontWeight="600"
-                px={3}
-                py={2}
-                boxShadow="0 18px 45px rgba(15,23,42,.35)"
-                border="1px solid rgba(255,255,255,.08)"
-                arrowShadowColor="rgba(0,0,0,.35)"
-                motionProps={{
-                  initial: { opacity: 0, y: 8, scale: 0.9 },
-                  animate: { opacity: 1, y: 0, scale: 1 },
-                }}
-              >
-                <Box
-                  w="24px"
-                  h="24px"
-                  borderRadius="full"
-                  bg="#EAFBF0"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  cursor="pointer"
-                >
-                  <MdElectricBolt color="#16A34A" size={13} />
-                </Box>
-              </Tooltip>
-            </Box>
-          );
-        }
-
-        return (
-          <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
-            <Tooltip
-              label="Stop"
-              placement="top"
-              hasArrow
-              openDelay={150}
-              borderRadius="10px"
-              bg="#0F172A"
-              color="white"
-              fontSize="11px"
-              fontWeight="600"
-              px={3}
-              py={2}
-              boxShadow="0 18px 45px rgba(15,23,42,.35)"
-              border="1px solid rgba(255,255,255,.08)"
-              arrowShadowColor="rgba(0,0,0,.35)"
-              motionProps={{
-                initial: { opacity: 0, y: 8, scale: 0.9 },
-                animate: { opacity: 1, y: 0, scale: 1 },
+            <Text
+              fontSize="13px"
+              fontWeight="700"
+              color="#2563EB"
+              cursor="pointer"
+              transition=".2s"
+              _hover={{
+                color: "#1D4ED8",
+                textDecoration: "underline",
               }}
+              onClick={() =>
+                navigate("/devices/pcs/details", {
+                  state: {
+                    selectedDevice: {
+                      device_id: row.original.deviceId,
+                      name: row.original.name,
+                      rawData: row.original.rawData,
+                    },
+                  },
+                })
+              }
             >
-              <Box
-                w="24px"
-                h="24px"
-                borderRadius="full"
-                bg="#FDECEC"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                cursor="pointer"
-              >
-                <MdElectricBolt color="red" size={13} />
-              </Box>
-            </Tooltip>
+              {row.original.name}
+            </Text>
           </Box>
-        );
+        ),
       },
-    },
 
-    {
-      accessorKey: "activePower",
-      header: "Active Power",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.activePower,
-          row.original.activePowerTrend
-        ),
-    },
+      {
+        id: "status",
+        header: "Status",
+        size: 110,
+        enableSorting: false,
+        Cell: ({ row }) => {
+          const d = row.original.rawData;
+          const lastTs = d?.Time_Stamp?.value ? new Date(d.Time_Stamp.value).getTime() : 0;
+          const activePower = d?.[COLUMN_KEY_MAP.Active_Power]?.value ?? 0;
+          const now = Date.now();
 
-    {
-      accessorKey: "dcCurrentB1",
-      header: "DC Current B1",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.dcCurrentB1,
-          row.original.dcCurrentB1Trend
-        ),
-    },
+          if (!lastTs || now - lastTs > 4 * 60 * 1000) {
+            return (
+              <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
+                <Tooltip
+                  label="Non-Comm"
+                  placement="top"
+                  hasArrow
+                  openDelay={150}
+                  borderRadius="10px"
+                  bg="#0F172A"
+                  color="white"
+                  fontSize="11px"
+                  fontWeight="600"
+                  px={3}
+                  py={2}
+                  boxShadow="0 18px 45px rgba(15,23,42,.35)"
+                  border="1px solid rgba(255,255,255,.08)"
+                  arrowShadowColor="rgba(0,0,0,.35)"
+                  motionProps={{
+                    initial: { opacity: 0, y: 8, scale: 0.9 },
+                    animate: { opacity: 1, y: 0, scale: 1 },
+                  }}
+                >
+                  <Box
+                    w="24px"
+                    h="24px"
+                    borderRadius="full"
+                    bg="#FFF7E6"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    cursor="pointer"
+                  >
+                    <MdLinkOff color="orange" size={12} />
+                  </Box>
+                </Tooltip>
+              </Box>
+            );
+          }
 
-    {
-      accessorKey: "dcCurrentB2",
-      header: "DC Current B2",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.dcCurrentB2,
-          row.original.dcCurrentB2Trend
-        ),
-    },
+          if (activePower > 0) {
+            return (
+              <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
+                <Tooltip
+                  label="Running"
+                  placement="top"
+                  hasArrow
+                  openDelay={150}
+                  borderRadius="10px"
+                  bg="#0F172A"
+                  color="white"
+                  fontSize="11px"
+                  fontWeight="600"
+                  px={3}
+                  py={2}
+                  boxShadow="0 18px 45px rgba(15,23,42,.35)"
+                  border="1px solid rgba(255,255,255,.08)"
+                  arrowShadowColor="rgba(0,0,0,.35)"
+                  motionProps={{
+                    initial: { opacity: 0, y: 8, scale: 0.9 },
+                    animate: { opacity: 1, y: 0, scale: 1 },
+                  }}
+                >
+                  <Box
+                    w="24px"
+                    h="24px"
+                    borderRadius="full"
+                    bg="#EAFBF0"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    cursor="pointer"
+                  >
+                    <MdElectricBolt color="#16A34A" size={13} />
+                  </Box>
+                </Tooltip>
+              </Box>
+            );
+          }
 
-    {
-      accessorKey: "dcVoltB1",
-      header: "DC Volt B1",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.dcVoltB1,
-          row.original.dcVoltB1Trend
-        ),
-    },
+          return (
+            <Box w="100%" h="100%" display="flex" justifyContent="center" alignItems="center">
+              <Tooltip
+                label="Stop"
+                placement="top"
+                hasArrow
+                openDelay={150}
+                borderRadius="10px"
+                bg="#0F172A"
+                color="white"
+                fontSize="11px"
+                fontWeight="600"
+                px={3}
+                py={2}
+                boxShadow="0 18px 45px rgba(15,23,42,.35)"
+                border="1px solid rgba(255,255,255,.08)"
+                arrowShadowColor="rgba(0,0,0,.35)"
+                motionProps={{
+                  initial: { opacity: 0, y: 8, scale: 0.9 },
+                  animate: { opacity: 1, y: 0, scale: 1 },
+                }}
+              >
+                <Box
+                  w="24px"
+                  h="24px"
+                  borderRadius="full"
+                  bg="#FDECEC"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  cursor="pointer"
+                >
+                  <MdElectricBolt color="red" size={13} />
+                </Box>
+              </Tooltip>
+            </Box>
+          );
+        },
+      },
 
-    {
-      accessorKey: "reactivePower",
-      header: "Reactive Power",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.reactivePower,
-          row.original.reactivePowerTrend
-        ),
-    },
-
-    {
-      accessorKey: "dcVoltB2",
-      header: "DC Volt B2",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.dcVoltB2,
-          row.original.dcVoltB2Trend
-        ),
-    },
-
-    {
-      accessorKey: "dcVoltB3",
-      header: "DC Volt B3",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.dcVoltB3,
-          row.original.dcVoltB3Trend
-        ),
-    },
-
-    {
-      accessorKey: "dcVoltTotal",
-      header: "DC Volt Total",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.dcVoltTotal,
-          row.original.dcVoltTotalTrend
-        ),
-    },
-
-    {
-      accessorKey: "acCurrentL1",
-      header: "AC Current L1",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.acCurrentL1,
-          row.original.acCurrentL1Trend
-        ),
-    },
-
-    {
-      accessorKey: "acCurrentL2",
-      header: "AC Current L2",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.acCurrentL2,
-          row.original.acCurrentL2Trend
-        ),
-    },
-
-    {
-      accessorKey: "acCurrentL3",
-      header: "AC Current L3",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.acCurrentL3,
-          row.original.acCurrentL3Trend
-        ),
-    },
-
-    {
-      accessorKey: "acVoltL1L2",
-      header: "AC Volt L1L2",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.acVoltL1L2,
-          row.original.acVoltL1L2Trend
-        ),
-    },
-
-    {
-      accessorKey: "acVoltL2L3",
-      header: "AC Volt L2L3",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.acVoltL2L3,
-          row.original.acVoltL2L3Trend
-        ),
-    },
-
-    {
-      accessorKey: "acVoltL3L1",
-      header: "AC Volt L3L1",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.acVoltL3L1,
-          row.original.acVoltL3L1Trend
-        ),
-    },
-
-    {
-      accessorKey: "gridFrequency",
-      header: "Grid Frequency",
-      size: 120,
-      Cell: ({ row }) => (
-        <HStack
-          w="92px"
-          h="28px"
-          px={2}
-          spacing={2}
-          bg={cardBg}
-          borderRadius="8px"
-          border={`1px solid ${cardBorder}`}
-          justifyContent="space-between"
-          transition=".25s"
-          _hover={{
-            borderColor: "#94A3B8",
-            boxShadow: "0 8px 18px rgba(15,23,42,.08)",
-          }}
-        >
-          <Text
-            fontWeight="600"
-            fontSize="11px"
-            color={cardText}
-          >
-            {row.original.gridFrequency}
-          </Text>
-          <TrendArrow trend={row.original.gridFrequencyTrend} />
-        </HStack>
-      ),
-    },
-
-    {
-      accessorKey: "pf",
-      header: "PF",
-      size: 100,
-      Cell: ({ row }) =>
-        renderValueCard(row.original.pf, row.original.pfTrend),
-    },
-
-    {
-      accessorKey: "apparentPower",
-      header: "Apparent Power",
-      size: 120,
-      Cell: ({ row }) =>
-        renderValueCard(
-          row.original.apparentPower,
-          row.original.apparentPowerTrend
-        ),
-    },
-
-  ],
-  [navigate, colorMode]
-);
+      {
+        accessorKey: "activePower",
+        header: "Active Power",
+        size: 120,
+        Cell: ({ row }) => renderValueCard(row.original.activePower, row.original.activePowerTrend),
+      },
+      {
+        accessorKey: "reactivePower",
+        header: "Reactive Power",
+        size: 120,
+        Cell: ({ row }) => renderValueCard(row.original.reactivePower, row.original.reactivePowerTrend),
+      },
+      {
+        accessorKey: "current",
+        header: "Current",
+        size: 120,
+        Cell: ({ row }) => renderValueCard(row.original.current, row.original.currentTrend),
+      },
+      {
+        accessorKey: "voltage",
+        header: "Voltage",
+        size: 120,
+        Cell: ({ row }) => renderValueCard(row.original.voltage, row.original.voltageTrend),
+      },
+      {
+        accessorKey: "frequency",
+        header: "Frequency",
+        size: 120,
+        Cell: ({ row }) => renderValueCard(row.original.frequency, row.original.frequencyTrend),
+      },
+      {
+        accessorKey: "soc",
+        header: "SoC",
+        size: 100,
+        Cell: ({ row }) => renderValueCard(row.original.soc, row.original.socTrend),
+      },
+      {
+        accessorKey: "soh",
+        header: "SoH",
+        size: 100,
+        Cell: ({ row }) => renderValueCard(row.original.soh, row.original.sohTrend),
+      },
+      {
+        accessorKey: "chargeEnergy",
+        header: "Charge Energy",
+        size: 140,
+        Cell: ({ row }) => renderValueCard(row.original.chargeEnergy, row.original.chargeEnergyTrend),
+      },
+      {
+        accessorKey: "dischargeEnergy",
+        header: "Discharge Energy",
+        size: 150,
+        Cell: ({ row }) => renderValueCard(row.original.dischargeEnergy, row.original.dischargeEnergyTrend),
+      },
+      {
+        accessorKey: "dod",
+        header: "DoD",
+        size: 100,
+        Cell: ({ row }) => renderValueCard(row.original.dod, row.original.dodTrend),
+      },
+      {
+        accessorKey: "temperature",
+        header: "Temperature",
+        size: 120,
+        Cell: ({ row }) => renderValueCard(row.original.temperature, row.original.temperatureTrend),
+      },
+      {
+        accessorKey: "controlState",
+        header: "Control State",
+        size: 120,
+        Cell: ({ row }) => renderValueCard(row.original.controlState, row.original.controlStateTrend),
+      },
+    ],
+    [navigate, colorMode]
+  );
 
 const columns = useMemo(() => {
   return isFullscreen
@@ -1271,6 +988,7 @@ return (
           muiBottomToolbarProps={{
             sx: {
               minHeight: "34px",
+              height: "34px",
               marginTop: "auto",
               background: cardBg,
               color: cardText,
@@ -1278,32 +996,60 @@ return (
 
               "& .MuiTablePagination-root": {
                 minHeight: "34px",
+                height: "34px",
                 color: cardText,
+                position: "relative",
+                top: "-4px",
               },
 
               "& .MuiTablePagination-toolbar": {
                 minHeight: "34px",
+                height: "34px",
                 padding: "0 6px",
+                display: "flex",
+                alignItems: "center",
+                transform: "translateY(-2px)",
               },
+
               "& .MuiTablePagination-selectRoot": {
                 display: "none",
               },
+
               "& .MuiTablePagination-selectLabel": {
                 display: "none",
               },
+
               "& .MuiTablePagination-spacer": {
                 display: "none",
               },
+
               "& .MuiTablePagination-displayedRows": {
-                display: "none",
+                display: "block",
+                margin: 0,
+                lineHeight: "34px",
               },
+
               "& .MuiSvgIcon-root": {
                 color: cardText,
               },
+
               "& .MuiIconButton-root": {
                 color: cardText,
                 padding: "2px",
               },
+
+              "& .MuiTablePagination-actions": {
+                position: "relative",
+                top: "0px",
+                transform: "translateY(0px)",
+              },
+
+              "& .MuiTablePagination-actions .MuiIconButton-root": {
+                position: "relative",
+                top: "0px",
+                transform: "none !important",
+              },
+
               "& .MuiSelect-select": {
                 color: cardText,
               },

@@ -25,8 +25,8 @@ const SOCSummary = () => {
       borderRadius="12px"
       p={3}
       border={`1px solid ${border}`}
-      w="100%"
-      h="120px"
+      w="570px"
+      h="150px"
       overflow="hidden"
     >
       {/* TITLE */}

@@ -125,7 +125,6 @@ const LegendItem = ({ color, label }: any) => (
 
 
 const HomeDashboard = () => {
-
   const { plantConfig } = usePlantConfig();
   const { rows: latestAlarms } = useAlarmLatest();
   const [prs, setPrs] = useState({ inv1: 0, inv2: 0, inv3: 0 });
@@ -177,11 +176,25 @@ const HomeDashboard = () => {
   );
 
   return (
-    <Box bg={bgColor} minH="100vh" px={4} pb={6} mt={-4}>
+    <Box
+      bg={bgColor}
+      h="calc(100vh - 76px)"
+      px={4}
+      pb={2}
+      mt={-4}
+      overflow="hidden"
+    >
 
-      <VStack spacing={6} align="stretch">
+      <VStack spacing={2} align="stretch" h="100%">
 
-        <Box w="100%" h="500px" borderRadius="lg" overflow="hidden" position="relative" boxShadow="xl">
+        <Box
+          w="100%"
+          h="calc(100vh - 330px)"
+          borderRadius="lg"
+          overflow="hidden"
+          position="relative"
+          boxShadow="xl"
+        >
 
           <Box
             as="img"
@@ -312,7 +325,7 @@ const HomeDashboard = () => {
 
         </Box>
 
-        <Grid templateColumns="1fr 1fr 320px 340px" gap={6} alignItems="start">
+        <Grid templateColumns="1fr 1fr 320px 340px" gap={2} alignItems="start" mt={0}>
           <Box mt={-5}><RtcDispatchTrend /></Box>
           <Box mt={-5} ml={-3}><PowerSummaryCard /></Box>
           <Box ml={-120} mt={-5}><FaultGraph /></Box>

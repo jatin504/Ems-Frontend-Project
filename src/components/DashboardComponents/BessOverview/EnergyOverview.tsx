@@ -292,7 +292,7 @@ const EnergyOverview = ({ isFullscreen: initialFullscreen = false }: { isFullscr
     return (
     <GraphLayout
       title={<WidgetTitle color={textColor}>Energy Overview</WidgetTitle>}
-      width={["615px"]}
+      width={["590px"]}
       height="320px"
       fullScreen
       timeWindow

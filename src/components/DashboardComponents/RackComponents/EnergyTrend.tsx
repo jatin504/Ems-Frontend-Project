@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   useColorModeValue,
@@ -7,41 +7,96 @@ import {
 import SplineGraph from "../../Graphs/RevampCharts/SplineGraph";
 import GraphLayout from "../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
 
+import useTimeseriesData from "../../../hooks/useTimeseriesData";
+import type { TimeseriesDataSource } from "../../../types/timeseries/datasource";
+
 import type { ExportFunctions } from "../../../types/graphExport/export";
 
-const day = 24 * 60 * 60 * 1000;
+interface Props {
+  rackId: string;
+}
 
-const start = Date.UTC(2026, 6, 1);
+interface SeriesPoint {
+  ts: number;
+  value: number;
+}
 
-const EnergyPowerTrend = () => {
+interface RackTimeseriesData {
+  [key: string]: SeriesPoint[] | any;
+}
 
+const EnergyPowerTrend = ({ rackId }: Props) => {
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
+  const { data, fetchData } = useTimeseriesData();
+
+  const energyFetch: TimeseriesDataSource = useMemo(
+    () => ({
+      devices: {
+        patterns: [],
+        ids: rackId ? [rackId] : [],
+      },
+      keys: [
+        { key: "charge_energy", alias: "charge_energy", keyType: "common" },
+        { key: "discharge_energy", alias: "discharge_energy", keyType: "common" },
+      ],
+      aggregation: {
+        func: "none",
+        interval: 1,
+        intervalType: "minute",
+      },
+      timeRange: {
+        type: "relative",
+        relativeType: "currentDaySoFar",
+      },
+      orderBy: "DESC",
+    }),
+    [rackId]
+  );
+
+  useEffect(() => {
+    if (!rackId || !energyFetch?.keys?.length) return;
+
+    fetchData(energyFetch);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rackId]);
+
+  const rackData = useMemo(() => {
+    if (!data || !rackId) return null;
+
+    const root = (data as any)?.data ?? data;
+    return (root?.[rackId] ?? null) as RackTimeseriesData | null;
+  }, [data, rackId]);
+
+  const getSeries = (aliases: string[]) => {
+    if (!rackData) return [] as SeriesPoint[];
+
+    for (const alias of aliases) {
+      const series = rackData[alias];
+      if (Array.isArray(series) && series.length > 0) {
+        return series
+          .filter((point) => point && point.ts && point.value !== null && point.value !== undefined)
+          .map((point) => ({
+            ts: Number(point.ts),
+            value: Number(point.value),
+          }))
+          .sort((a, b) => a.ts - b.ts);
+      }
+    }
+
+    return [] as SeriesPoint[];
+  };
+
   const chargeData = useMemo(
-    () => [
-      [start + day * 0, 165],
-      [start + day * 1, 182],
-      [start + day * 2, 210],
-      [start + day * 3, 175],
-      [start + day * 4, 192],
-      [start + day * 5, 218],
-      [start + day * 6, 205],
-    ],
-    []
+    () => getSeries(["charge_energy"]),
+    [rackData]
   );
 
   const dischargeData = useMemo(
-    () => [
-      [start + day * 0, 150],
-      [start + day * 1, 165],
-      [start + day * 2, 190],
-      [start + day * 3, 162],
-      [start + day * 4, 170],
-      [start + day * 5, 198],
-      [start + day * 6, 184],
-    ],
-    []
+    () => getSeries(["discharge_energy"]),
+    [rackData]
   );
 
   const seriesForChart = useMemo(
@@ -50,17 +105,16 @@ const EnergyPowerTrend = () => {
         type: "spline",
         name: "Charge Energy",
         color: "#45C854",
-        data: chargeData,
+        data: chargeData.map((point) => [point.ts, point.value]),
         marker: {
           enabled: false,
         },
       },
-
       {
         type: "spline",
         name: "Discharge Energy",
         color: "#2196F3",
-        data: dischargeData,
+        data: dischargeData.map((point) => [point.ts, point.value]),
         marker: {
           enabled: false,
         },
@@ -70,22 +124,11 @@ const EnergyPowerTrend = () => {
   );
 
   const textColor = useColorModeValue("#1A202C", "#E6E6E6");
+  const subTextColor = useColorModeValue("#4A5568", "#B9B9B9");
+  const gridColor = useColorModeValue("rgba(0,0,0,0.10)", "rgba(255,255,255,0.08)");
+  const axisLineColor = useColorModeValue("rgba(0,0,0,0.16)", "rgba(255,255,255,0.06)");
 
-  const subTextColor = useColorModeValue(
-    "#4A5568",
-    "#B9B9B9"
-  );
-
-  const gridColor = useColorModeValue(
-    "rgba(0,0,0,0.10)",
-    "rgba(255,255,255,0.08)"
-  );
-
-  const axisLineColor = useColorModeValue(
-    "rgba(0,0,0,0.16)",
-    "rgba(255,255,255,0.06)"
-  );
-    return (
+  return (
     <GraphLayout
       title={
         <Box display="flex" alignItems="center" w="100%">
@@ -107,7 +150,6 @@ const EnergyPowerTrend = () => {
         props={{
           yAxis: {
             min: 0,
-            max: 250,
             tickAmount: 5,
             labels: {
               style: {
