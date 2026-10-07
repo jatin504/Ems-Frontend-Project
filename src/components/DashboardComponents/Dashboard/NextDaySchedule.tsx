@@ -1,4 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Box,
   Flex,
@@ -16,7 +20,6 @@ import {
   Td,
   TableContainer,
 } from "@chakra-ui/react";
-
 import {
   FiCalendar,
   FiFileText,
@@ -28,13 +31,13 @@ import {
   FiRefreshCw,
   FiGrid,
 } from "react-icons/fi";
-
-/* =========================================================
-   DUMMY DATA
-========================================================= */
-
+const emsScheduleUrl = new URL(import.meta.env.VITE_API_BASE);
+emsScheduleUrl.port = import.meta.env.VITE_API_PORT;
+emsScheduleUrl.pathname = "/api/ems-schedule";
+const EMS_SCHEDULE_API = emsScheduleUrl.toString();
 interface ScheduleItem {
   time: string;
+  timeStamp: string;
   load: number;
   pv: number;
   tariff: number;
@@ -48,489 +51,131 @@ interface ScheduleItem {
   throughput: number;
   description: string;
 }
-
-/*
- * 15-minute dummy schedule
- */
-const DUMMY_SCHEDULE: ScheduleItem[] = [
-  {
-    time: "00:00",
-    load: 4000,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 4000,
-    grid: 0,
-    soc: 46.15,
-    battery: 12.0,
-    throughput: 0.0198,
-    description:
-      "PV supplies 0 kW. BESS discharges 4000 kW from energy above reserve. Grid imports 0 kW.",
-  },
-  {
-    time: "00:15",
-    load: 2180,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2180,
-    grid: 0,
-    soc: 44.06,
-    battery: 11.455,
-    throughput: 0.0305,
-    description:
-      "PV supplies 0 kW. BESS discharges 2180 kW from energy above reserve. Grid imports 0 kW.",
-  },
-  {
-    time: "00:30",
-    load: 2150,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2150,
-    grid: 0,
-    soc: 41.99,
-    battery: 10.918,
-    throughput: 0.0412,
-    description:
-      "PV supplies 0 kW. BESS discharges 2150 kW from energy above reserve. Grid imports 0 kW.",
-  },
-  {
-    time: "00:45",
-    load: 2120,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2120,
-    grid: 0,
-    soc: 39.95,
-    battery: 10.388,
-    throughput: 0.0516,
-    description:
-      "PV supplies 0 kW. BESS discharges 2120 kW from energy above reserve. Grid imports 0 kW.",
-  },
-  {
-    time: "01:00",
-    load: 2100,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2100,
-    grid: 0,
-    soc: 37.92,
-    battery: 9.870,
-    throughput: 0.0618,
-    description:
-      "PV supplies 0 kW. BESS continues discharging during the off-peak period.",
-  },
-  {
-    time: "01:15",
-    load: 2080,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2080,
-    grid: 0,
-    soc: 35.92,
-    battery: 9.360,
-    throughput: 0.0718,
-    description:
-      "BESS supplies the complete load requirement with no grid import.",
-  },
-  {
-    time: "01:30",
-    load: 2050,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2050,
-    grid: 0,
-    soc: 33.95,
-    battery: 8.858,
-    throughput: 0.0817,
-    description:
-      "BESS discharges to support the load while maintaining reserve energy.",
-  },
-  {
-    time: "01:45",
-    load: 2020,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2020,
-    grid: 0,
-    soc: 32.01,
-    battery: 8.363,
-    throughput: 0.0915,
-    description:
-      "BESS supplies 2020 kW and grid import remains at 0 kW.",
-  },
-  {
-    time: "02:00",
-    load: 2000,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 2000,
-    grid: 0,
-    soc: 30.10,
-    battery: 7.875,
-    throughput: 0.1012,
-    description:
-      "BESS discharges 2000 kW from available battery energy.",
-  },
-  {
-    time: "02:15",
-    load: 1980,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1980,
-    grid: 0,
-    soc: 28.22,
-    battery: 7.395,
-    throughput: 0.1108,
-    description:
-      "BESS continues discharge operation with zero grid import.",
-  },
-  {
-    time: "02:30",
-    load: 1950,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1950,
-    grid: 0,
-    soc: 26.37,
-    battery: 6.923,
-    throughput: 0.1203,
-    description:
-      "Battery energy is used to meet the complete load requirement.",
-  },
-  {
-    time: "02:45",
-    load: 1920,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1920,
-    grid: 0,
-    soc: 24.56,
-    battery: 6.458,
-    throughput: 0.1296,
-    description:
-      "BESS discharges 1920 kW while maintaining the reserve target.",
-  },
-  {
-    time: "03:00",
-    load: 1900,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1900,
-    grid: 0,
-    soc: 22.77,
-    battery: 6.005,
-    throughput: 0.1388,
-    description:
-      "BESS continues supplying the load during off-peak hours.",
-  },
-  {
-    time: "03:15",
-    load: 1880,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1880,
-    grid: 0,
-    soc: 21.00,
-    battery: 5.558,
-    throughput: 0.1480,
-    description:
-      "Battery discharge continues with no PV generation.",
-  },
-  {
-    time: "03:30",
-    load: 1850,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1850,
-    grid: 0,
-    soc: 19.25,
-    battery: 5.125,
-    throughput: 0.1570,
-    description:
-      "BESS supplies load while preserving the minimum reserve.",
-  },
-  {
-    time: "03:45",
-    load: 1820,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1820,
-    grid: 0,
-    soc: 17.53,
-    battery: 4.698,
-    throughput: 0.1659,
-    description:
-      "BESS discharge operation continues at 1820 kW.",
-  },
-  {
-    time: "04:00",
-    load: 1800,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1800,
-    grid: 0,
-    soc: 15.83,
-    battery: 4.285,
-    throughput: 0.1747,
-    description:
-      "BESS supplies the load from available stored energy.",
-  },
-  {
-    time: "04:15",
-    load: 1750,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1750,
-    grid: 0,
-    soc: 14.18,
-    battery: 3.888,
-    throughput: 0.1832,
-    description:
-      "Battery discharge continues during the off-peak period.",
-  },
-  {
-    time: "04:30",
-    load: 1700,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1700,
-    grid: 0,
-    soc: 12.55,
-    battery: 3.505,
-    throughput: 0.1915,
-    description:
-      "BESS supplies 1700 kW with zero grid import.",
-  },
-  {
-    time: "04:45",
-    load: 1650,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1650,
-    grid: 0,
-    soc: 11.02,
-    battery: 3.138,
-    throughput: 0.1995,
-    description:
-      "BESS continues discharge while approaching reserve level.",
-  },
-  {
-    time: "05:00",
-    load: 1600,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1600,
-    grid: 0,
-    soc: 9.53,
-    battery: 2.785,
-    throughput: 0.2073,
-    description:
-      "BESS supplies 1600 kW from available stored energy.",
-  },
-  {
-    time: "05:15",
-    load: 1550,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1550,
-    grid: 0,
-    soc: 8.08,
-    battery: 2.448,
-    throughput: 0.2148,
-    description:
-      "BESS discharge continues while maintaining reserve.",
-  },
-  {
-    time: "05:30",
-    load: 1500,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1500,
-    grid: 0,
-    soc: 6.67,
-    battery: 2.125,
-    throughput: 0.2221,
-    description:
-      "BESS supplies the load from battery energy.",
-  },
-  {
-    time: "05:45",
-    load: 1450,
-    pv: 0,
-    tariff: 2.0,
-    state: "Off Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1450,
-    grid: 0,
-    soc: 5.30,
-    battery: 1.818,
-    throughput: 0.2291,
-    description:
-      "BESS reaches the minimum reserve threshold.",
-  },
-  {
-    time: "06:00",
-    load: 2200,
-    pv: 400,
-    tariff: 4.5,
-    state: "Peak",
-    decision: "Discharge",
-    charge: 0,
-    discharge: 1800,
-    grid: 0,
-    soc: 4.95,
-    battery: 1.700,
-    throughput: 0.2380,
-    description:
-      "PV supplies 400 kW and BESS supports the remaining load during peak tariff.",
-  },
-  {
-    time: "06:15",
-    load: 2400,
-    pv: 550,
-    tariff: 4.5,
-    state: "Peak",
-    decision: "Charge",
-    charge: 500,
-    discharge: 0,
-    grid: 1350,
-    soc: 7.20,
-    battery: 2.450,
-    throughput: 0.2405,
-    description:
-      "PV generation increases. BESS begins charging using available excess energy.",
-  },
-  {
-    time: "06:30",
-    load: 2600,
-    pv: 800,
-    tariff: 4.5,
-    state: "Peak",
-    decision: "Charge",
-    charge: 700,
-    discharge: 0,
-    grid: 1100,
-    soc: 10.10,
-    battery: 3.450,
-    throughput: 0.2440,
-    description:
-      "BESS charges to restore energy reserve while PV contributes to the load.",
-  },
-  {
-    time: "06:45",
-    load: 2800,
-    pv: 1100,
-    tariff: 4.5,
-    state: "Peak",
-    decision: "Charge",
-    charge: 800,
-    discharge: 0,
-    grid: 900,
-    soc: 13.40,
-    battery: 4.450,
-    throughput: 0.2480,
-    description:
-      "BESS charging continues as PV generation increases.",
-  },
-];
-
+interface ApiSchedule {
+  time_stamp?: string;
+  load_kw?: number;
+  pv_kw?: number;
+  tariff_per_kw?: number;
+  load_state?: string;
+  decision?: string;
+  charge_kw?: number;
+  discharge_kw?: number;
+  grid_import_kw?: number;
+  soc_percent?: number;
+  battery_energy_mwh?: number;
+  throughput_cycles?: number;
+  description?: string;
+  is_pass?: boolean;
+}
+interface EMScheduleResponse {
+  success: boolean;
+  count: number;
+  schedule: ApiSchedule[];
+  message?: string;
+  error?: string;
+}
+const toNumber = (value: unknown, fallback = 0): number => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+const formatTime = (timestamp?: string): string => {
+  if (!timestamp) return "--";
+  const parts = timestamp.split(" ");
+  return parts[1]?.substring(0, 5) || parts[0]?.substring(0, 5) || "--";
+};
+const formatDate = (timestamp?: string): string => {
+  if (!timestamp) return "--";
+  const datePart = timestamp.split(" ")[0];
+  const [year, month, day] = datePart.split("-").map(Number);
+  if (!year || !month || !day) return "--";
+  return `${day} ${new Date(year, month - 1, day).toLocaleString("en-US", {
+    month: "short",
+  })} ${year}`;
+};
+const mapApiSchedule = (item: ApiSchedule): ScheduleItem => ({
+  time: formatTime(item.time_stamp),
+  timeStamp: item.time_stamp || "",
+  load: toNumber(item.load_kw),
+  pv: toNumber(item.pv_kw),
+  tariff: toNumber(item.tariff_per_kw),
+  state: item.load_state || "--",
+  decision: item.decision || "--",
+  charge: toNumber(item.charge_kw),
+  discharge: toNumber(item.discharge_kw),
+  grid: toNumber(item.grid_import_kw),
+  soc: toNumber(item.soc_percent),
+  battery: toNumber(item.battery_energy_mwh),
+  throughput: toNumber(item.throughput_cycles),
+  description: item.description || "--",
+});
 /* =========================================================
    COMPONENT
 ========================================================= */
-
 const NextDaySchedule: React.FC = () => {
+  const [schedules, setSchedules] =
+    useState<ScheduleItem[]>([]);
   const [selectedIndex, setSelectedIndex] =
     useState(0);
-
+  useEffect(() => {
+    let mounted = true;
+    const fetchSchedule = async () => {
+      try {
+        const response = await fetch(EMS_SCHEDULE_API, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`API failed: ${response.status}`);
+        }
+        const result: EMScheduleResponse = await response.json();
+        if (!result.success) {
+          throw new Error(
+            result.message ||
+              result.error ||
+              "EMS schedule API failed"
+          );
+        }
+        const mappedSchedules = Array.isArray(result.schedule)
+          ? result.schedule
+              .filter((item) => item.is_pass === true)
+              .map(mapApiSchedule)
+          : [];
+        if (mounted) {
+          setSchedules(mappedSchedules);
+          setSelectedIndex(0);
+        }
+      } catch (error) {
+        console.error("EMS Schedule API Error:", error);
+        if (mounted) {
+          setSchedules([]);
+        }
+      }
+    };
+    fetchSchedule();
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const selected =
-    DUMMY_SCHEDULE[selectedIndex];
-
+    schedules.length > 0
+      ? schedules[Math.min(selectedIndex, schedules.length - 1)]
+      : null;
   /* =========================================================
      SUMMARY
   ========================================================= */
-
   const summary = useMemo(() => {
     const intervalHours = 0.25;
-
-    const totalCharge = DUMMY_SCHEDULE.reduce(
+    const totalCharge = schedules.reduce(
       (sum, item) =>
         sum +
         (item.charge * intervalHours) /
           1000,
       0
     );
-
     const totalDischarge =
-      DUMMY_SCHEDULE.reduce(
+      schedules.reduce(
         (sum, item) =>
           sum +
           (item.discharge *
@@ -538,27 +183,26 @@ const NextDaySchedule: React.FC = () => {
             1000,
         0
       );
-
     const totalGridImport =
-      DUMMY_SCHEDULE.reduce(
+      schedules.reduce(
         (sum, item) =>
           sum +
           (item.grid * intervalHours) /
             1000,
         0
       );
-
     return {
       charge: totalCharge,
       discharge: totalDischarge,
       grid: totalGridImport,
     };
-  }, []);
-
+  }, [schedules]);
+  if (!selected) {
+    return null;
+  }
   /* =========================================================
      DECISION STYLE
   ========================================================= */
-
   const getDecisionStyle = (
     decision: string
   ) => {
@@ -571,7 +215,6 @@ const NextDaySchedule: React.FC = () => {
         color: "#EF4444",
       };
     }
-
     if (
       decision.toLowerCase() ===
       "charge"
@@ -581,17 +224,14 @@ const NextDaySchedule: React.FC = () => {
         color: "#10A568",
       };
     }
-
     return {
       bg: "#E5E7EB",
       color: "#374151",
     };
   };
-
   /* =========================================================
      STATE STYLE
   ========================================================= */
-
   const getStateStyle = (
     state: string
   ) => {
@@ -604,27 +244,22 @@ const NextDaySchedule: React.FC = () => {
         color: "#EA580C",
       };
     }
-
     return {
       bg: "#DDEEFF",
       color: "#0878E8",
     };
   };
-
   const decisionStyle =
     getDecisionStyle(
       selected.decision
     );
-
   const stateStyle =
     getStateStyle(
       selected.state
     );
-
   /* =========================================================
      NUMBER FORMAT
   ========================================================= */
-
   const formatNumber = (
     value: number,
     decimals = 0
@@ -639,11 +274,9 @@ const NextDaySchedule: React.FC = () => {
       }
     );
   };
-
   /* =========================================================
      UI
   ========================================================= */
-
   return (
     <Box
       width="100%"
@@ -658,7 +291,6 @@ const NextDaySchedule: React.FC = () => {
       {/* ===================================================
           HEADER
       =================================================== */}
-
       <Flex
         height="70px"
         px="24px"
@@ -667,7 +299,6 @@ const NextDaySchedule: React.FC = () => {
         borderBottom="1px solid #E6EBF1"
       >
         {/* LEFT */}
-
         <HStack spacing="13px">
           <Box
             width="30px"
@@ -684,7 +315,6 @@ const NextDaySchedule: React.FC = () => {
               color="#075DBB"
             />
           </Box>
-
           <Text
             fontSize="17px"
             fontWeight="700"
@@ -693,16 +323,13 @@ const NextDaySchedule: React.FC = () => {
           >
             Next Day Schedule
           </Text>
-
           <Box
             width="1px"
             height="34px"
             bg="#D6DCE5"
             mx="4px"
           />
-
           {/* DATE */}
-
           <Flex
             height="32px"
             px="9px"
@@ -717,16 +344,16 @@ const NextDaySchedule: React.FC = () => {
               boxSize="17px"
               color="#40506A"
             />
-
             <Text
               fontSize="10px"
               fontWeight="700"
               color="#243552"
             >
-              22 Sep 2026
+              {selected?.timeStamp
+                ? formatDate(selected.timeStamp)
+                : "--"}
             </Text>
           </Flex>
-
           <Box
             width="40px"
             height="40px"
@@ -750,11 +377,9 @@ const NextDaySchedule: React.FC = () => {
             </Text>
           </Box>
         </HStack>
-
         {/* =================================================
             SUMMARY CARDS
         ================================================= */}
-
         <HStack spacing="12px">
           <SummaryCard
             icon={FiZap}
@@ -765,7 +390,6 @@ const NextDaySchedule: React.FC = () => {
               1
             )} MWh`}
           />
-
           <SummaryCard
             icon={FiZap}
             iconColor="#F97316"
@@ -775,7 +399,6 @@ const NextDaySchedule: React.FC = () => {
               1
             )} MWh`}
           />
-
           <SummaryCard
             icon={FiGrid}
             iconColor="#253858"
@@ -787,11 +410,9 @@ const NextDaySchedule: React.FC = () => {
           />
         </HStack>
       </Flex>
-
       {/* ===================================================
           BODY
       =================================================== */}
-
       <Flex
         width="100%"
         height="calc(100% - 70px)"
@@ -800,7 +421,6 @@ const NextDaySchedule: React.FC = () => {
         {/* =================================================
             LEFT TABLE
         ================================================= */}
-
         <Box
           width="70%"
           borderRight="1px solid #E5EAF0"
@@ -816,7 +436,6 @@ const NextDaySchedule: React.FC = () => {
               "&::-webkit-scrollbar": {
                 width: "7px",
               },
-
               "&::-webkit-scrollbar-track":
                 {
                   background:
@@ -824,7 +443,6 @@ const NextDaySchedule: React.FC = () => {
                   borderRadius:
                     "10px",
                 },
-
               "&::-webkit-scrollbar-thumb":
                 {
                   background:
@@ -852,57 +470,47 @@ const NextDaySchedule: React.FC = () => {
                   <TableHeader width="7%">
                     Time
                   </TableHeader>
-
                   <TableHeader width="9%">
                     Load
                     <br />
                     (kW)
                   </TableHeader>
-
                   <TableHeader width="8%">
                     PV
                     <br />
                     (kW)
                   </TableHeader>
-
                   <TableHeader width="10%">
                     Tariff
                     <br />
                     (₹/kWh)
                   </TableHeader>
-
                   <TableHeader width="11%">
                     State
                   </TableHeader>
-
                   <TableHeader width="12%">
                     Decision
                   </TableHeader>
-
                   <TableHeader width="10%">
                     Charge
                     <br />
                     (kW)
                   </TableHeader>
-
                   <TableHeader width="11%">
                     Discharge
                     <br />
                     (kW)
                   </TableHeader>
-
                   <TableHeader width="9%">
                     Grid
                     <br />
                     (kW)
                   </TableHeader>
-
                   <TableHeader width="7%">
                     SOC
                     <br />
                     (%)
                   </TableHeader>
-
                   <TableHeader width="11%">
                     Battery
                     <br />
@@ -910,24 +518,20 @@ const NextDaySchedule: React.FC = () => {
                   </TableHeader>
                 </Tr>
               </Thead>
-
               <Tbody>
-                {DUMMY_SCHEDULE.map(
+                {schedules.map(
                   (item, index) => {
                     const itemDecision =
                       getDecisionStyle(
                         item.decision
                       );
-
                     const itemState =
                       getStateStyle(
                         item.state
                       );
-
                     const selectedRow =
                       index ===
                       selectedIndex;
-
                     return (
                       <Tr
                         key={item.time}
@@ -960,26 +564,22 @@ const NextDaySchedule: React.FC = () => {
                             item.time
                           }
                         </TableCell>
-
                         <TableCell>
                           {formatNumber(
                             item.load
                           )}
                         </TableCell>
-
                         <TableCell>
                           {formatNumber(
                             item.pv
                           )}
                         </TableCell>
-
                         <TableCell>
                           {formatNumber(
                             item.tariff,
                             1
                           )}
                         </TableCell>
-
                         <TableCell>
                           <Badge
                             px="5px"
@@ -999,7 +599,6 @@ const NextDaySchedule: React.FC = () => {
                             }
                           </Badge>
                         </TableCell>
-
                         <TableCell>
                           <Badge
                             px="5px"
@@ -1019,32 +618,27 @@ const NextDaySchedule: React.FC = () => {
                             }
                           </Badge>
                         </TableCell>
-
                         <TableCell>
                           {formatNumber(
                             item.charge
                           )}
                         </TableCell>
-
                         <TableCell>
                           {formatNumber(
                             item.discharge
                           )}
                         </TableCell>
-
                         <TableCell>
                           {formatNumber(
                             item.grid
                           )}
                         </TableCell>
-
                         <TableCell fontWeight="600">
                           {formatNumber(
                             item.soc,
                             2
                           )}
                         </TableCell>
-
                         <TableCell fontWeight="600">
                           {formatNumber(
                             item.battery,
@@ -1059,11 +653,9 @@ const NextDaySchedule: React.FC = () => {
             </Table>
           </TableContainer>
         </Box>
-
         {/* =================================================
             RIGHT DETAILS
         ================================================= */}
-
         <Box
           width="30%"
           px="18px"
@@ -1072,7 +664,6 @@ const NextDaySchedule: React.FC = () => {
           height="100%"
         >
           {/* SELECTED TIME */}
-
           <Flex
             height="48px"
             px="16px"
@@ -1089,7 +680,6 @@ const NextDaySchedule: React.FC = () => {
             >
               {selected.time}
             </Text>
-
             <Badge
               px="7px"
               py="3px"
@@ -1102,9 +692,7 @@ const NextDaySchedule: React.FC = () => {
               {selected.state}
             </Badge>
           </Flex>
-
           {/* DETAILS */}
-
           <DetailRow
             icon={FiFileText}
             iconColor="#253858"
@@ -1113,7 +701,6 @@ const NextDaySchedule: React.FC = () => {
               selected.load
             )} kW`}
           />
-
           <DetailRow
             icon={FiSun}
             iconColor="#F59E0B"
@@ -1122,7 +709,6 @@ const NextDaySchedule: React.FC = () => {
               selected.pv
             )} kW`}
           />
-
           <DetailRow
             icon={FiZap}
             iconColor="#F59E0B"
@@ -1132,7 +718,6 @@ const NextDaySchedule: React.FC = () => {
               1
             )} /kWh`}
           />
-
           <DetailRow
             icon={FiZap}
             iconColor="#2563EB"
@@ -1157,7 +742,6 @@ const NextDaySchedule: React.FC = () => {
               </Badge>
             }
           />
-
           <DetailRow
             icon={FiArrowUp}
             iconColor="#16A34A"
@@ -1166,7 +750,6 @@ const NextDaySchedule: React.FC = () => {
               selected.charge
             )} kW`}
           />
-
           <DetailRow
             icon={FiArrowDown}
             iconColor="#EF4444"
@@ -1175,7 +758,6 @@ const NextDaySchedule: React.FC = () => {
               selected.discharge
             )} kW`}
           />
-
           <DetailRow
             icon={FiGrid}
             iconColor="#253858"
@@ -1184,11 +766,9 @@ const NextDaySchedule: React.FC = () => {
               selected.grid
             )} kW`}
           />
-
           {/* =================================================
               SOC
           ================================================= */}
-
           <Box
             py="5px"
             borderBottom="1px solid #E9EEF4"
@@ -1204,7 +784,6 @@ const NextDaySchedule: React.FC = () => {
                   boxSize="13px"
                   color="#2563EB"
                 />
-
                 <Text
                   fontSize="9px"
                   color="#263B5B"
@@ -1212,7 +791,6 @@ const NextDaySchedule: React.FC = () => {
                   SOC
                 </Text>
               </HStack>
-
               <Text
                 fontSize="9px"
                 fontWeight="700"
@@ -1225,7 +803,6 @@ const NextDaySchedule: React.FC = () => {
                 %
               </Text>
             </Flex>
-
             <Progress
               value={selected.soc}
               height="6px"
@@ -1241,11 +818,9 @@ const NextDaySchedule: React.FC = () => {
               }}
             />
           </Box>
-
           {/* =================================================
               BATTERY ENERGY
           ================================================= */}
-
           <Box
             py="5px"
             borderBottom="1px solid #E9EEF4"
@@ -1261,7 +836,6 @@ const NextDaySchedule: React.FC = () => {
                   boxSize="13px"
                   color="#10B981"
                 />
-
                 <Text
                   fontSize="9px"
                   color="#263B5B"
@@ -1269,7 +843,6 @@ const NextDaySchedule: React.FC = () => {
                   Battery Energy
                 </Text>
               </HStack>
-
               <Text
                 fontSize="9px"
                 fontWeight="700"
@@ -1282,7 +855,6 @@ const NextDaySchedule: React.FC = () => {
                 MWh
               </Text>
             </Flex>
-
             <Progress
               value={Math.min(
                 100,
@@ -1303,9 +875,7 @@ const NextDaySchedule: React.FC = () => {
               }}
             />
           </Box>
-
           {/* THROUGHPUT */}
-
           <DetailRow
             icon={FiRefreshCw}
             iconColor="#2563EB"
@@ -1315,11 +885,9 @@ const NextDaySchedule: React.FC = () => {
               4
             )}
           />
-
           {/* =================================================
               DESCRIPTION
           ================================================= */}
-
           <Box
             mt="6px"
             p="8px"
@@ -1335,7 +903,6 @@ const NextDaySchedule: React.FC = () => {
                 boxSize="18px"
                 color="#2563EB"
               />
-
               <Text
                 fontSize="9px"
                 fontWeight="700"
@@ -1344,7 +911,6 @@ const NextDaySchedule: React.FC = () => {
                 Description
               </Text>
             </HStack>
-
             <Text
               fontSize="8px"
               lineHeight="1.35"
@@ -1360,18 +926,15 @@ const NextDaySchedule: React.FC = () => {
     </Box>
   );
 };
-
 /* =========================================================
    SUMMARY CARD
 ========================================================= */
-
 interface SummaryCardProps {
   icon: React.ElementType;
   iconColor: string;
   title: string;
   value: string;
 }
-
 const SummaryCard: React.FC<
   SummaryCardProps
 > = ({
@@ -1397,7 +960,6 @@ const SummaryCard: React.FC<
         boxSize="15px"
         color={iconColor}
       />
-
       <VStack
         align="start"
         spacing={0}
@@ -1409,7 +971,6 @@ const SummaryCard: React.FC<
         >
           {title}
         </Text>
-
         <Text
           fontSize="11px"
           fontWeight="800"
@@ -1422,11 +983,9 @@ const SummaryCard: React.FC<
     </Box>
   );
 };
-
 /* =========================================================
    TABLE HEADER
 ========================================================= */
-
 const TableHeader = ({
   children,
   width,
@@ -1451,11 +1010,9 @@ const TableHeader = ({
     </Th>
   );
 };
-
 /* =========================================================
    TABLE CELL
 ========================================================= */
-
 const TableCell = ({
   children,
   fontWeight,
@@ -1484,18 +1041,15 @@ const TableCell = ({
     </Td>
   );
 };
-
 /* =========================================================
    DETAIL ROW
 ========================================================= */
-
 interface DetailRowProps {
   icon: React.ElementType;
   iconColor: string;
   label: string;
   value: React.ReactNode;
 }
-
 const DetailRow: React.FC<
   DetailRowProps
 > = ({
@@ -1517,7 +1071,6 @@ const DetailRow: React.FC<
           boxSize="13px"
           color={iconColor}
         />
-
         <Text
           fontSize="9px"
           color="#263B5B"
@@ -1525,7 +1078,6 @@ const DetailRow: React.FC<
           {label}
         </Text>
       </HStack>
-
       <Box
         fontSize="9px"
         fontWeight="700"
@@ -1536,5 +1088,4 @@ const DetailRow: React.FC<
     </Flex>
   );
 };
-
 export default NextDaySchedule;

@@ -7,7 +7,7 @@ import LoadBreakdown from "../components/DashboardComponents/Dashboard/LoadBreak
 import LoadForecastChart from "../components/DashboardComponents/Dashboard/LoadForecastChart";
 import LoadVsBESSChart from "../components/DashboardComponents/Dashboard/LoadVsBESSChart";
 import ControllableLoads from "../components/DashboardComponents/Dashboard/ControllableLoads";
-import EMSRecommendation from "../components/DashboardComponents/Dashboard/EMSRecommendation";
+import OptimizationSchedule from "../components/DashboardComponents/Dashboard/OptimizationSchedule";
 import NextDaySchedule from "../components/DashboardComponents/Dashboard/NextDaySchedule";
 
 const ControlNewDashboard = () => {
@@ -34,7 +34,7 @@ const ControlNewDashboard = () => {
         </Grid>
 
         <Grid
-          templateColumns={{ base: "1fr", xl: "1.2fr 1.3fr 1fr" }}
+          templateColumns={{ base: "1fr", xl: "1.2fr 1.3fr 2fr" }}
           gap={2.5}
           mt={-1}
         >
@@ -46,8 +46,8 @@ const ControlNewDashboard = () => {
             <LoadVsBESSChart />
           </GridItem>
 
-          <GridItem transform={{ xl: "translateX(-12px)" }}>
-            <EMSRecommendation />
+          <GridItem transform={{ xl: "translateX(0px)" }}>
+            <OptimizationSchedule />
           </GridItem>
         </Grid>
 

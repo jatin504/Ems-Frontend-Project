@@ -141,7 +141,7 @@ const LoadForecastChart = () => {
 
         <HStack
           position="absolute"
-          bottom="34px"
+          bottom="-12px"
           left="10px"
           right="10px"
           justify="space-between"
