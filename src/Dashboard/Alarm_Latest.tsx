@@ -76,7 +76,10 @@ const AlarmLatest: React.FC = () => {
     goToNext,
     goToLast,
     getRowBg,
-  } = useAlarmLatest(10);
+    searchInput,
+    setSearchInput,
+    handleSearch,
+  } = useAlarmLatest();
 
   const bgColor = useColorModeValue("gray.100", "gray.900");
   const textColor = useColorModeValue("black", "white");
@@ -114,42 +117,61 @@ const AlarmLatest: React.FC = () => {
         color={textColor}
         position="relative"
       >
-        <HStack justify="space-between" mt={5}>
-          
-          <Box width="100%" mt={5} display="flex" justifyContent="flex-end">
-            <HStack spacing={3}>
-              <Button
-                size="sm"
-                colorScheme="green"
-                variant="outline"
-                onClick={() => downloadCSV(pageRows, "alarm_latest.csv")}
-              >
-                Download CSV
-              </Button>
-              <Button
-                size="sm"
-                colorScheme="blue"
-                onClick={() => navigate("/alarms/latest")}
-              >
-                Latest
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate("/alarms/history")}
-              >
-                History
-              </Button>
-            </HStack>
-          </Box>
+        <HStack
+          justify="flex-end"
+          mt={5}
+          spacing={3}
+        >
+          <Input
+            size="sm"
+            width="280px"
+            placeholder="Search alarms..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSearch();
+              }
+            }}
+          />
+
+          <Button size="sm" colorScheme="blue" onClick={handleSearch}>
+            Search
+          </Button>
+
+          <Button
+            size="sm"
+            colorScheme="green"
+            variant="outline"
+            onClick={() => downloadCSV(pageRows, "alarm_latest.csv")}
+          >
+            Download CSV
+          </Button>
+
+          <Button
+            size="sm"
+            colorScheme="blue"
+            onClick={() => navigate("/alarms/latest")}
+          >
+            Latest
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate("/alarms/history")}
+          >
+            History
+          </Button>
         </HStack>
+
         <Box overflowX="auto" mt={4}>
           <Table size="sm">
             <Thead bg="gray.700">
               <Tr>
                 <Th color="gray.200">DEVICE</Th>
                 <Th color="gray.200">CREATED TIME</Th>
-                <Th color="gray.200">TYPE</Th>
+                <Th color="gray.200">DESCRIPTION</Th>
                 <Th color="gray.200">SEVERITY</Th>
                 <Th color="gray.200">STATUS</Th>
                 <Th color="gray.200">ASSIGNEE</Th>
@@ -167,9 +189,9 @@ const AlarmLatest: React.FC = () => {
                     bg={getRowBg(row.status)}
                     color="black"
                   >
-                    <Td>{row.device}</Td>
+                    <Td>{row.device.replace("plant_1_", "").replace(/_/g, " ")}</Td>
                     <Td>{row.time}</Td>
-                    <Td>{row.type}</Td>
+                    <Td>{row.type.replace(/_/g, " ")}</Td>
                     <Td>{row.severity}</Td>
                     <Td fontWeight="bold">{row.status}</Td>
                     <Td>{row.assignee}</Td>

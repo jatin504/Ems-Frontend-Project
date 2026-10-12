@@ -14,9 +14,6 @@ import {
   ModalCloseButton,
   Input,
   VStack,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink
 } from "@chakra-ui/react";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Calendar as BigCalendar, dateFnsLocalizer, type View } from "react-big-calendar";
@@ -32,7 +29,6 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useFetchSchedules } from "../hooks/energy_strategy/useFetchSchedules";
-import { ChevronRightIcon } from "@chakra-ui/icons";
 import FloatingAIAgentButton from "../components/FloatingAIAgentButton";
 
 const locales = {
@@ -156,32 +152,14 @@ const CalendarPage = () => {
     }
   }, [events, view, date, selectedDate]);
 
-  const bgColor = useColorModeValue("#F4F6F6", "#0E1111");
+  const bgColor = useColorModeValue("#F4F6F6", "#091e1eff");
   const textColor = useColorModeValue("black", "white");
 
-  const breadcrumbs = [{ label: "Home", href: "/plantview" }, { label: "Control", href: "/besscontroll" }, {label : "BESS", href: "/besscontroll"}, {label : "Calendar"}]
   return (
     <>
       <Box
         bg={bgColor} minH="100vh" color={textColor} px={5}
       >
-        <Breadcrumb
-            color={useColorModeValue("primaryText.light", "primaryText.dark")}
-            spacing="5px"
-            fontSize={"12px"}
-            py={2}
-            separator={<ChevronRightIcon height={"16px"} width={"16px"} boxSize={"6"} color={useColorModeValue("rgba(0, 0, 0, 0.4)", "rgba(255, 255, 255, 0.5)")} />}
-          >
-            {breadcrumbs.map((bc, idx) => (
-              <BreadcrumbItem key={idx} isCurrentPage={!bc.href}>
-                {bc.href ? (
-                  <BreadcrumbLink href={bc.href}>{bc.label}</BreadcrumbLink>
-                ) : (
-                  <BreadcrumbLink fontWeight={"600"}>{bc.label}</BreadcrumbLink>
-                )}
-              </BreadcrumbItem>
-            ))}
-          </Breadcrumb>
         <Flex width={"100%"}>
           {/* Left Sidebar */}
           <Box w="250px" bg={bgColor} p={4} borderRight="1px solid #4A5568" color={textColor}>

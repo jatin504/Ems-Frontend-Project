@@ -52,14 +52,10 @@ export function useAlarmLatest(fetchLimit: number = 50000) {
         if (!res.ok) return;
 
         const data: AlarmApiRow[] = await res.json();
-        const inverterRegex = /inverter[_-]?(\d+)/i;
 
         const mapped: AlarmRow[] = data
-          .filter((item) => inverterRegex.test(item.device_id))
           .map((item) => {
-            const match = item.device_id.match(inverterRegex);
-            const invNum = match ? match[1] : "";
-            const device = invNum ? `Inverter_${invNum}` : item.device_id;
+            const device = item.device_id;
 
             let activationTime = "";
             const d = new Date(item.time_stamp);

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 
-export type RowStatus = "Latest Alarm" | "Acknowledged";
+export type RowStatus = "ACTIVE" | "Acknowledged" | "Self Resolved";
 
 export type AlarmBase = {
   device: string;
@@ -14,6 +14,7 @@ export type AlarmBase = {
 export type AlarmRow = AlarmBase & {
   deviceId: string;
   rawTimeStamp: string;
+  ackTime: string;
   state: string;
   comment: string;
   inputValue: string;
@@ -32,70 +33,103 @@ export type AlarmApiRow = {
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
-export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+export const PAGE_SIZE_OPTIONS = [10, 20, 30, 50];
 
-export function useAlarmLatest(initialPageSize: number = 10) {
+export function useAlarmLatest() {
   const [rows, setRows] = useState<AlarmRow[]>([]);
   const [activePopover, setActivePopover] = useState<number | null>(null);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(initialPageSize);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   /* ================= FETCH LATEST ================= */
   useEffect(() => {
-    const fetchLatest = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/alarms/latest`);
-        if (!res.ok) return;
+  const fetchLatest = async () => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/alarms/latest`
+      );
 
-        const data: AlarmApiRow[] = await res.json();
-        const inverterRegex = /inverter[_-]?(\d+)/i;
+      if (!res.ok) return;
 
-        const mapped: AlarmRow[] = data
-          .filter((item) => inverterRegex.test(item.device_id))
-          .map((item) => {
-            const match = item.device_id.match(inverterRegex);
-            const invNum = match ? match[1] : "";
-            const device = invNum ? `Inverter_${invNum}` : item.device_id;
+      const data: AlarmApiRow[] = await res.json();
 
-            let activationTime = "";
-            const d = new Date(item.time_stamp);
+      const mapped: AlarmRow[] = data.map((item) => {
+        const device = item.device_id;
 
-            if (!isNaN(d.getTime())) {
-              const pad = (n: number) => n.toString().padStart(2, "0");
-              activationTime = `${pad(d.getUTCDate())}/${pad(
-                d.getUTCMonth() + 1
-              )}/${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(
-                d.getUTCMinutes()
-              )}:${pad(d.getUTCSeconds())}`;
-            }
+        let activationTime = "";
+        const d = new Date(item.time_stamp);
 
-            return {
-              device,
-              deviceId: item.device_id,
-              rawTimeStamp: item.time_stamp,
-              time: activationTime,
-              type: item.tag_name,
-              severity: item.severity,
-              status: item.ack_timestamp ? "Acknowledged" : "Latest Alarm",
-              assignee: "-",
-              comment: item.comment ?? "--",
-              inputValue: "",
-              ackDisabled: Boolean(item.ack_timestamp),
-              clrDisabled: false,
-              state: item.tag_name,
-            };
-          });
+        if (!isNaN(d.getTime())) {
+          const pad = (n: number) => n.toString().padStart(2, "0");
 
-        setRows(mapped);
-        setCurrentPage(1);
-      } catch (err) {
-        console.error("Error while loading latest alarms:", err);
-      }
-    };
+          activationTime = `${pad(d.getUTCDate())}/${pad(
+            d.getUTCMonth() + 1
+          )}/${d.getUTCFullYear()}, ${pad(
+            d.getUTCHours()
+          )}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+        }
 
-    fetchLatest();
-  }, []);
+        let ackTime = "--";
+
+        if (item.ack_timestamp) {
+          const ackDate = new Date(item.ack_timestamp);
+
+          if (!isNaN(ackDate.getTime())) {
+            const pad = (n: number) => n.toString().padStart(2, "0");
+
+            ackTime = `${pad(ackDate.getUTCDate())}/${pad(
+              ackDate.getUTCMonth() + 1
+            )}/${ackDate.getUTCFullYear()}, ${pad(
+              ackDate.getUTCHours()
+            )}:${pad(ackDate.getUTCMinutes())}:${pad(
+              ackDate.getUTCSeconds()
+            )}`;
+          }
+        }
+
+        return {
+          device,
+          deviceId: item.device_id,
+          rawTimeStamp: item.time_stamp,
+          ackTime,
+          time: activationTime,
+          type: item.tag_name,
+          severity: item.severity,
+
+          // Status shown in the Status column
+          status: "ACTIVE",
+
+          assignee: "-",
+          comment: item.comment ?? "--",
+          inputValue: "",
+          ackDisabled: Boolean(item.ack_timestamp),
+          clrDisabled: false,
+          state: item.tag_name,
+        };
+      });
+
+      setRows(mapped);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error("Error while loading latest alarms:", err);
+    }
+  };
+
+  // Fetch immediately when page loads
+  fetchLatest();
+
+  // Then refresh every 3 seconds
+  const intervalId = window.setInterval(fetchLatest, 20000);
+
+  // Stop polling when component unmounts
+  return () => {
+    window.clearInterval(intervalId);
+  };
+}, []);
+
 
   /* ================= COUNTS ================= */
   const alarmCount = rows.length;
@@ -105,18 +139,66 @@ export function useAlarmLatest(initialPageSize: number = 10) {
     [rows]
   );
 
+  const liveCount = rows.filter((r) => r.status === ("ACTIVE" as RowStatus)).length;
+
+  const ackCount = rows.filter((r) => r.status === ("Acknowledged" as RowStatus)).length;
+
+  const selfResolvedCount = rows.filter((r) => r.status === ("Self Resolved" as RowStatus)).length;
+
+  /* ================= SEARCH FILTER ================= */
+
+  const filteredRows = useMemo(() => {
+    if (!searchTerm.trim()) return rows;
+
+    const q = searchTerm.toLowerCase();
+
+    return rows.filter((row) =>
+      [row.device, row.type, row.severity, row.status, row.comment, row.assignee, row.time]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [rows, searchTerm]);
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+    setCurrentPage(1);
+  };
+
   /* ================= PAGINATION ================= */
-  const totalRows = rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const totalRows = filteredRows.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalRows / pageSize)
+  );
   const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const startIndex = (safeCurrentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalRows);
-  const pageRows = rows.slice(startIndex, endIndex);
+  const pageRows = filteredRows.slice(
+    startIndex,
+    endIndex
+  );
 
   const handlePageSizeChange = (value: string) => {
     setPageSize(parseInt(value || "10", 10));
     setCurrentPage(1);
+  };
+
+  const updateAlarm = async (row: AlarmRow, action: "ack" | "clr") => {
+    await fetch(`${API_BASE}/api/alarms/update`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        device_id: row.deviceId,
+        tag_name: row.state,
+        time_stamp: row.rawTimeStamp,
+        action,
+        comment: row.inputValue,
+      }),
+    });
   };
 
   const goToFirst = () => setCurrentPage(1);
@@ -133,22 +215,6 @@ export function useAlarmLatest(initialPageSize: number = 10) {
       if (!copy[globalIndex]) return prev;
       copy[globalIndex] = { ...copy[globalIndex], inputValue: value };
       return copy;
-    });
-  };
-
-  const updateAlarm = async (row: AlarmRow, action: "ack" | "clr") => {
-    await fetch(`${API_BASE}/api/alarms/update`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        device_id: row.deviceId,
-        tag_name: row.state,
-        time_stamp: row.rawTimeStamp,
-        action,
-        comment: row.inputValue,
-      }),
     });
   };
 
@@ -211,5 +277,11 @@ export function useAlarmLatest(initialPageSize: number = 10) {
 
     alarmCount,
     warningCount,
+    liveCount,
+    ackCount,
+    selfResolvedCount,
+    searchInput,
+    setSearchInput,
+    handleSearch,
   };
 }

@@ -202,12 +202,24 @@ export default function AlarmHistory() {
 
         {/* Table */}
         <Box overflowX="auto" mt={4}>
-          <Table size="sm">
+          <Table
+            size="sm"
+            sx={{
+              "& td": {
+                padding: "6px 12px",
+                fontSize: "12px",
+                lineHeight: "1.2",
+                whiteSpace: "nowrap",
+                height: "40px",
+              },
+            }}
+          >
             <Thead bg="gray.700">
               <Tr>
                 <Th color="gray.200">DEVICE</Th>
                 <Th color="gray.200">CREATED TIME</Th>
-                <Th color="gray.200">STATE</Th>
+                <Th color="gray.200">CLEAR TIME</Th>
+                <Th color="gray.200">DESCIPTION</Th>
                 <Th color="gray.200">SEVERITY</Th>
                 <Th color="gray.200">STATUS</Th>
                 <Th color="gray.200">ASSIGNEE</Th>
@@ -225,14 +237,28 @@ export default function AlarmHistory() {
                     bg={getRowBg(row.status)}
                     color="black"
                   >
-                    <Td>{row.device}</Td>
+                    <Td>{row.device.replace("plant_1_", "").replace(/_/g, " ")}</Td>
                     <Td>{row.time}</Td>
-                    <Td>{row.type}</Td>
+                    <Td>{row.clrTime}</Td>
+                    <Td>{row.tag.replace(/_/g, " ")}</Td>
                     <Td>{row.severity}</Td>
                     <Td fontWeight="bold">{row.status}</Td>
                     <Td>{row.assignee}</Td>
                     <Td>
-                      <Box bg="whiteAlpha.600" px={2} py={1} borderRadius="md">{row.comment}</Box>
+                      <Box
+                        bg="whiteAlpha.600"
+                        px={2}
+                        py={1}
+                        borderRadius="md"
+                        width="140px"
+                        maxWidth="140px"
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        whiteSpace="nowrap"
+                        title={row.comment}
+                      >
+                        {row.comment}
+                      </Box>
                     </Td>
                     {/* ACK */}
                     <Td>

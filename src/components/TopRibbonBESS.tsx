@@ -15,7 +15,7 @@ import {
   FiSun, FiMoon
 } from "react-icons/fi";
 import imgPlant from "../assets/OIP.jpeg";
-import logoNew from "../assets/LOGO_NEW.png";
+import cognetaLogoBlack from "../assets/cogneta_logo_black.png";
 
 type PlantDetails = {
   name: string; location: string; date: string; energySystem: string;
@@ -655,7 +655,7 @@ export default function TopRibbonBESS({
             overflow="visible"
           >
             <Image
-              src={logoNew}
+              src={cognetaLogoBlack}
               alt="Cogneta Green Solutions"
               maxW="68px"
               maxH="42px"

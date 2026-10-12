@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 
-export type RowStatus = "Self Resolved" | "Ack Alarm" | "Cleared";
+export type RowStatus =
+  | "Self Resolved"
+  | "Ack Alarm"
+  | "ACTIVE"
+  | "CLEARED";
 
 export type AlarmBase = {
   device: string;
   time: string;
   rawTimestamp: string;
+  clrTime: string;
   tag: string;
   type: string;
   severity: string;
@@ -26,6 +31,7 @@ export type AlarmApiRow = {
   severity: string;
   tag_name: string;
   time_stamp: string;
+  clr_timestamp?: string | null;
   value: string;
   status?: string;
   comment?: string;
@@ -60,18 +66,50 @@ export function useAlarmHistory(initialPageSize: number = 10) {
 
       const data: AlarmApiRow[] = await res.json();
 
+      const formatDateTime = (timestamp?: string | null) => {
+        if (!timestamp) return "--";
+
+        const date = new Date(timestamp);
+
+        if (isNaN(date.getTime())) return "--";
+
+        const pad = (n: number) => n.toString().padStart(2, "0");
+
+        return `${pad(date.getUTCDate())}/${pad(
+          date.getUTCMonth() + 1
+        )}/${date.getUTCFullYear()}, ${pad(
+          date.getUTCHours()
+        )}:${pad(date.getUTCMinutes())}:${pad(
+          date.getUTCSeconds()
+        )}`;
+      };
+
       const mapped: AlarmRow[] = data.map((item) => {
-        const formattedTime = item.time_stamp ?? "";
+        const formattedTime = formatDateTime(item.time_stamp);
 
         let status: RowStatus = "Self Resolved";
-        if (item.status === "ACK") status = "Ack Alarm";
-        if (item.status === "CLR") status = "Cleared";
+        if (item.status === "ACK") {
+          status = "Ack Alarm";
+        }
+
+        if (item.status === "CLR") {
+          status = "CLEARED";
+        }
+
+        if (item.status === "CLEARED") {
+          status = "Self Resolved";
+        }
+
+        if (item.status === "ACTIVE") {
+          status = "ACTIVE";
+        }
 
         return {
           device: item.device_id,
           tag: item.tag_name,
           time: formattedTime,
           rawTimestamp: item.time_stamp,
+          clrTime: formatDateTime(item.clr_timestamp),
           type: item.alarm_type,
           severity: item.severity,
           status,
@@ -79,7 +117,7 @@ export function useAlarmHistory(initialPageSize: number = 10) {
           comment: item.comment || "--",
           inputValue: "",
           ackDisabled: status !== "Self Resolved",
-          clrDisabled: status === "Cleared",
+          clrDisabled: status === "CLEARED",
         };
       });
 
@@ -171,7 +209,8 @@ export function useAlarmHistory(initialPageSize: number = 10) {
   const getRowBg = (status: RowStatus) => {
     if (status === "Ack Alarm") return "yellow.300";
     if (status === "Self Resolved") return "green.300";
-    if (status === "Cleared") return "gray.300";
+    if (status === "CLEARED") return "gray.300";
+    if (status === "ACTIVE") return "red.300";
     return undefined;
   };
 

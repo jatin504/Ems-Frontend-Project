@@ -15,8 +15,11 @@ import {
 import { AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, Button as ChakraButton } from "@chakra-ui/react";
 import { EditIcon, ChevronDownIcon } from "@chakra-ui/icons";
 import ReactSelect, { components } from "react-select";
+const ReactSelectAny = ReactSelect as any;
 import usePermissions from "../../../../hooks/usePermissions";
+import useBessControlPermission from "../../../../hooks/useBessControlPermission";
 import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
+import ControlPermissionModal from "./ControlPermissionModal";
 
 import { useCurrentStrategy } from "../../../../hooks/current_strategy/useCurrentStrategy";
 import { useDevices } from "../../../../hooks/useDevices";
@@ -202,16 +205,33 @@ const CheckboxOptionPCS = (props: any) => {
 /* ================= MAIN ================= */
 
 const CapacityAndStrategyCard: React.FC = () => {
-  //Permission logic
+  // Permission logic
   const { permissions } = usePermissions();
+
   const role = (sessionStorage.getItem("role") || "").toLowerCase();
+
   const myPermission = permissions.find(
     (p: any) => (p.role_name || "").toLowerCase() === role
   );
-  const canControl =
+
+  const roleCanControl =
     permissions?.length > 0
       ? myPermission?.can_control_bess === true
       : true;
+
+  const {
+    currentUser,
+    controlOwner,
+    permissionRequestedBy,
+    permissionGrantedTo,
+    canControl: hasControlPermission,
+    requestPermission,
+    grantPermission,
+    denyPermission,
+    claimControl,
+  } = useBessControlPermission();
+
+  const canControl = roleCanControl && hasControlPermission;
   const cardBg = useColorModeValue("#ffffff", "#161B1B");
   const cardBorder = useColorModeValue("#e5e7eb", "#202525");
   const softBg = useColorModeValue("#f3f4f6", "#1C2121");
@@ -242,7 +262,23 @@ const CapacityAndStrategyCard: React.FC = () => {
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   // Confirmation dialog state for Apply
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const cancelRef = React.useRef<HTMLButtonElement | null>(null);
+  const [isPermissionOpen, setIsPermissionOpen] = useState(false);
+  const cancelRef = React.useRef<any>(null);
+
+  useEffect(() => {
+    if (
+      currentUser &&
+      controlOwner === currentUser &&
+      permissionRequestedBy &&
+      permissionRequestedBy !== currentUser
+    ) {
+      setIsPermissionOpen(true);
+    }
+  }, [
+    currentUser,
+    controlOwner,
+    permissionRequestedBy,
+  ]);
 
   /* ========= PCS OPTIONS ========= */
 
@@ -301,13 +337,15 @@ const CapacityAndStrategyCard: React.FC = () => {
   /* ================= APPLY ================= */
 
   const handleApply = async () => {
+    if (!canControl) {
+      setIsPermissionOpen(true);
+      return;
+    }
 
-    
     (window as any).__CONTROL_TYPE__ = "STRATEGY";
     (window as any).__CONTROL_MODULE__ = "PCS_MODE";
 
     setIsPasswordOpen(true);
-
   };
 
   // Actual apply logic after password confirmation
@@ -331,6 +369,9 @@ const CapacityAndStrategyCard: React.FC = () => {
     });
 
     await setBessControlModes(payload);
+
+    // Frontend permission ownership update
+    claimControl();
   };
 
   const selectStyles = {
@@ -349,13 +390,10 @@ const CapacityAndStrategyCard: React.FC = () => {
       border="1px solid"
       borderColor={cardBorder}
       borderRadius="12px"
-      w="705px"
-      minH="210px"
+      w="720px"
+      minH="222px"
       p="16px"
       position="relative"
-      // FULL UI LOCK
-      pointerEvents={!canControl ? "none" : "auto"}
-      opacity={!canControl ? 0.6 : 1}
     >
       <VStack spacing="16px" align="stretch">
         <WidgetTitle fontWeight={600} fontSize="16px">
@@ -366,9 +404,14 @@ const CapacityAndStrategyCard: React.FC = () => {
           <Select
             size="sm"
             value={localRemoteMode}
-            onChange={(e) =>
-              setLocalRemoteMode(e.target.value as any)
-            }
+            onChange={(e) => {
+              if (!canControl) {
+                setIsPermissionOpen(true);
+                return;
+              }
+
+              setLocalRemoteMode(e.target.value as any);
+            }}
             w="100px"
           >
             <option value="Local">Local</option>
@@ -376,7 +419,7 @@ const CapacityAndStrategyCard: React.FC = () => {
           </Select>
 
           <Box w="480px">
-            <ReactSelect
+            <ReactSelectAny
               isMulti
               options={MODE_OPTIONS}
               value={selectedModes}
@@ -441,6 +484,11 @@ const CapacityAndStrategyCard: React.FC = () => {
                 },
               }}
               onChange={(selected: any) => {
+                if (!canControl) {
+                  setIsPermissionOpen(true);
+                  return;
+                }
+
                 const selectedValues = Array.isArray(selected)
                   ? selected
                   : selected
@@ -477,7 +525,17 @@ const CapacityAndStrategyCard: React.FC = () => {
             />
           </Box>
 
-          <Button colorScheme="teal" onClick={() => setIsConfirmOpen(true)} isDisabled={!canControl}>
+          <Button
+            colorScheme="teal"
+            onClick={() => {
+              if (!canControl) {
+                setIsPermissionOpen(true);
+                return;
+              }
+
+              setIsConfirmOpen(true);
+            }}
+          >
             Apply
           </Button>
           <ConfirmPasswordModal
@@ -575,7 +633,15 @@ const CapacityAndStrategyCard: React.FC = () => {
             <Select
               size="sm"
               value={strategy ?? "0"}
-              onChange={(e) => updateStrategy(e.target.value)}
+              onChange={async (e) => {
+                if (!canControl) {
+                  setIsPermissionOpen(true);
+                  return;
+                }
+
+                await updateStrategy(e.target.value);
+                claimControl();
+              }}
             >
               <option value="0">Basic</option>
               <option value="3">Smart-ToU</option>
@@ -587,11 +653,14 @@ const CapacityAndStrategyCard: React.FC = () => {
               aria-label="edit"
               icon={<EditIcon />}
               size="sm"
-              isDisabled={!canControl}
               opacity={!canControl ? 0.5 : 1}
               cursor={!canControl ? "not-allowed" : "pointer"}
               onClick={() => {
-                if (!canControl) return;
+                if (!canControl) {
+                  setIsPermissionOpen(true);
+                  return;
+                }
+
                 setIsOpen(true);
               }}
             />
@@ -618,6 +687,26 @@ const CapacityAndStrategyCard: React.FC = () => {
         strategy={strategy}
         loading={loading}
         onStrategyChange={() => {}}
+      />
+
+      <ControlPermissionModal
+        isOpen={isPermissionOpen}
+        onClose={() => setIsPermissionOpen(false)}
+        currentUser={currentUser}
+        controlOwner={controlOwner}
+        permissionRequestedBy={permissionRequestedBy}
+        permissionGrantedTo={permissionGrantedTo}
+        onRequestPermission={() => {
+          requestPermission();
+        }}
+        onGrant={() => {
+          grantPermission();
+          setIsPermissionOpen(false);
+        }}
+        onDeny={() => {
+          denyPermission();
+          setIsPermissionOpen(false);
+        }}
       />
     </Box>
   );

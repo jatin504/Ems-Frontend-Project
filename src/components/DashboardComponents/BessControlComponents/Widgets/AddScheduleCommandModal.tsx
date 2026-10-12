@@ -2,11 +2,11 @@ import React from "react";
 import {
   Box, VStack, HStack, Text, Button, useColorModeValue,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton,
-  InputGroup, Input, InputLeftAddon, InputRightAddon, InputRightElement, Textarea, Divider,
+  InputGroup, Input, InputLeftAddon, InputRightAddon, InputRightElement, Textarea,
   useToast, Alert, AlertIcon, AlertTitle, AlertDescription, Portal,
 } from "@chakra-ui/react";
 import { CheckIcon } from "@chakra-ui/icons";
-import { FiCalendar } from "react-icons/fi";
+import { FiCalendar, FiUpload, FiEye } from "react-icons/fi";
 import { useInsertStrategy } from "../../../../hooks/energy_strategy/useInsertStrategy";
 import { useFetchSchedules } from "../../../../hooks/energy_strategy/useFetchSchedules";
 import { useDeleteSchedule } from "../../../../hooks/energy_strategy/useDeleteSchedule";
@@ -21,22 +21,37 @@ type Props = {
 };
 
 function SegButton({
-  children, isActive, onClick,
-}: { children: React.ReactNode; isActive?: boolean; onClick?: () => void }) {
-  const activeBg   = useColorModeValue("#DBF9F7", "#103C3C");
-  const activeText = useColorModeValue("#0b1516", "#CFF2F2");
-  const idleBg     = useColorModeValue("#EEF2F4", "#262C2C");
-  const idleText   = useColorModeValue("#0f172a", "#C7D0D0");
-  const borderCol  = useColorModeValue("#E5E7EB", "#30383A");
+  children,
+  isActive,
+  onClick,
+}: {
+  children: React.ReactNode;
+  isActive?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <Button
       onClick={onClick}
-      h="30px" px="12px" borderRadius="16px"
-      bg={isActive ? activeBg : idleBg} color={isActive ? activeText : idleText}
-      border="1px solid" borderColor={borderCol}
-      _hover={{ bg: isActive ? activeBg : idleBg }} _active={{ bg: isActive ? activeBg : idleBg }}
+      h="34px"
+      px="14px"
+      borderRadius="16px"
+      bg={isActive ? "#D9F8F6" : "#EEF2F4"}
+      color="#111827"
+      border="1px solid"
+      borderColor={isActive ? "#55CFC9" : "#E1E6EA"}
+      fontSize="12px"
+      fontWeight="700"
+      _hover={{
+        bg: isActive ? "#D9F8F6" : "#EEF2F4",
+      }}
+      _active={{
+        bg: isActive ? "#D9F8F6" : "#EEF2F4",
+      }}
     >
-      <HStack spacing="6px">{isActive && <CheckIcon boxSize="10px" />}<Text fontSize="sm">{children}</Text></HStack>
+      <HStack spacing="6px">
+        {isActive && <CheckIcon boxSize="11px" />}
+        <Text fontSize="12px">{children}</Text>
+      </HStack>
     </Button>
   );
 }
@@ -101,6 +116,8 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
 
   const [conflictOpen, setConflictOpen] = React.useState(false);
   const [conflicts, setConflicts] = React.useState<ScheduleItem[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
 
   React.useEffect(() => {
     setForm((f) => ({ ...f, command: cmd }));
@@ -109,10 +126,13 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
   const softBg      = useColorModeValue("#F3F4F6", "#1C2121");
   const fieldBorder = useColorModeValue("#E5E7EB", "#30383A");
   const labelCol    = useColorModeValue("#475569", "#A6B0B0");
+  const modalBg     = useColorModeValue("#FFFFFF", "#161B1B");
+  const modalBorder = useColorModeValue("#E5E7EB", "#2A3030");
+  const headerText  = useColorModeValue("#0F172A", "#E5E7EB");
+  const headerBg    = useColorModeValue("#F8FBFB", "#1A2121");
 
   const hideDurationTariff = norm === "basic" || norm === "peak";
   const hidePower          = norm === "smart" || norm === "flat";
-  const showLoad           = norm === "peak";
 
   const resetAll = () => {
     setCmd("Charge");
@@ -131,9 +151,25 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
     });
     setConflicts([]);
     setConflictOpen(false);
+    setSelectedFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const closeAndReset = () => { resetAll(); onClose(); };
+
+  const handleViewSample = () => {
+    const link = document.createElement("a");
+
+    link.href = "/sample.xlsx";
+    link.download = "BESS_Schedule_Sample.xlsx";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const proceedInsert = async (priorityOverride?: "low" | "medium" | "high") => {
     const payload = { ...form };
@@ -183,10 +219,63 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
   };
 
   const validateAndSubmit = async () => {
+
+    // ==============================
+    // EXCEL / CSV BULK UPLOAD
+    // ==============================
+    if (selectedFile) {
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const response = await fetch(`${import.meta.env.VITE_API_BASE}/strategy/bulk`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.message || "Bulk upload failed");
+        }
+
+        toast({
+          title: "Commands added successfully",
+          description: `${result.inserted_count || 0} commands inserted.`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+
+        if (onAdded) {
+          await onAdded();
+        }
+
+        closeAndReset();
+        return;
+
+      } catch (e: any) {
+        toast({
+          title: "Excel upload failed",
+          description: e?.message || "Unable to add schedules from Excel.",
+          status: "error",
+          duration: 4000,
+          isClosable: true,
+          position: "top-left",
+        });
+
+        return;
+      }
+    }
+
+    // ==============================
+    // EXISTING MANUAL FLOW
+    // ==============================
+
     const errors: string[] = [];
 
-    if (!form.from || !form.to) {
-      errors.push("Start and End times are required.");
+    if (!form.from) {
+      errors.push("Start time is required.");
     }
 
     const start = form.from ? new Date(form.from) : null;
@@ -218,10 +307,7 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
         if (tlen !== dlen) errors.push("Tariff and Duration count must be equal.");
       }
     }
-    if (showLoad) {
-      if (!form.load) errors.push("Load (kW) is required for Peak Shaving.");
-      else if (isNaN(Number(form.load))) errors.push("Load must be a number.");
-    }
+    // Load input disabled by requirement.
     if (form.socMin && isNaN(Number(form.socMin))) errors.push("Min SoC must be a number.");
     if (form.socMax && isNaN(Number(form.socMax))) errors.push("Max SoC must be a number.");
     if (form.socMin && form.socMax && Number(form.socMin) > Number(form.socMax)) {
@@ -276,62 +362,240 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
     >
       <ModalOverlay />
       <ModalContent
-        maxW={["92vw", "520px"]}
-        maxH={["85vh", "80vh"]}
+        maxW={["86vw", "520px"]}
+        maxH="58vh"
         w="full"
-        bg={useColorModeValue("#FFFFFF", "#161B1B")}
-        borderRadius="12px"
-        p="20px"
+        bg={modalBg}
+        border="1px solid"
+        borderColor={modalBorder}
+        borderRadius="16px"
+        p="0"
         overflow="hidden"
+        boxShadow="0 18px 48px rgba(15, 23, 42, 0.18)"
       >
-        <ModalHeader p="0" color="#E5E7EB" fontSize="md">
-          Add New Schedule Command
-        </ModalHeader>
-        <ModalCloseButton />
+        <ModalHeader
+          p="14px 16px 10px"
+          bg={headerBg}
+          borderBottom="1px solid"
+          borderColor={fieldBorder}
+          color={headerText}
+          fontSize="md"
+          fontWeight={700}
+        >
+          <HStack justify="space-between" align="center" spacing="8px">
+            <VStack align="start" spacing="1px">
+              <Text
+                fontSize="18px"
+                fontWeight="800"
+                color="#0F172A"
+              >
+                Add New Schedule Command
+              </Text>
 
-        <ModalBody p="0" mt="20px" overflowY="auto">
+              
+            </VStack>
+            <HStack spacing="6px">
+              <Button
+                leftIcon={<FiEye />}
+                size="xs"
+                height="32px"
+                minH="32px"
+                px="10px"
+                borderRadius="8px"
+                fontSize="11px"
+                fontWeight="700"
+                variant="outline"
+                borderColor="#55CFC9"
+                color="#168C88"
+                bg="#F0FFFD"
+                _hover={{ bg: "#D9F8F6" }}
+                onClick={handleViewSample}
+              >
+                View Sample
+              </Button>
+
+              <Button
+                leftIcon={<FiUpload />}
+                size="xs"
+                height="32px"
+                minH="32px"
+                px="10px"
+                borderRadius="8px"
+                fontSize="11px"
+                fontWeight="700"
+                variant="outline"
+                borderColor={fieldBorder}
+                color={headerText}
+                _hover={{ bg: useColorModeValue("#F1F5F9", "#1F2828") }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Excel Upload
+              </Button>
+            </HStack>
+          </HStack>
+        </ModalHeader>
+        <ModalCloseButton size="sm" color={headerText} _focus={{ boxShadow: "none" }} />
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+
+            setSelectedFile(file);
+
+            if (file) {
+              toast({
+                title: "File selected",
+                description: file.name,
+                status: "info",
+                duration: 2000,
+                isClosable: true,
+                position: "top-left",
+              });
+            }
+          }}
+        />
+
+        <ModalBody
+          px="12px"
+          py="0"
+          overflowY="auto"
+        >
           <Box w="full" mx="auto">
-            <VStack align="stretch" spacing="20px" w="full">
+            <VStack align="stretch" spacing="8px" w="full">
               {/* Command type */}
-              <VStack align="stretch" spacing="6px">
-                <Text fontSize="sm" color={labelCol}>Select Command type</Text>
-                <HStack spacing="10px" flexWrap="wrap">
-                  {(["Charge","Discharge","Idle","Grid Support"] as const).map((t) => (
-                    <SegButton key={t} isActive={cmd === t} onClick={() => setCmd(t)}>{t}</SegButton>
-                  ))}
-                </HStack>
-              </VStack>
+              <Box
+                bg="#F7FBFC"
+                border="1px solid #E5EDF0"
+                borderRadius="10px"
+                p="8px 10px"
+              >
+                <VStack align="stretch" spacing="6px">
+                  <VStack align="start" spacing="1px">
+                    <Text
+                      fontSize="13px"
+                      fontWeight="800"
+                      color="#0F172A"
+                    >
+                      Command Type
+                    </Text>
+
+                    <Text
+                      fontSize="10px"
+                      color="#64748B"
+                    >
+                      Select the operation command for this schedule
+                    </Text>
+                  </VStack>
+
+                  <HStack spacing="8px" flexWrap="wrap">
+                    {(["Charge","Discharge","Idle","Grid Support"] as const).map((t) => (
+                      <SegButton key={t} isActive={cmd === t} onClick={() => setCmd(t)}>{t}</SegButton>
+                    ))}
+                  </HStack>
+                </VStack>
+              </Box>
 
               {/* Time Window */}
-              <VStack align="stretch" spacing="6px">
-                <Text fontSize="sm" color={labelCol}>Time Window</Text>
-                <HStack spacing="12px">
-                  <InputGroup size="sm" flex="1">
-                    <Input
-                      type="datetime-local"
-                      placeholder="From"
-                      min={minDt}
-                      bg={softBg}
-                      borderColor={fieldBorder}
-                      value={form.from}
-                      onChange={(e) => setForm({ ...form, from: e.target.value })}
-                    />
-                    <InputRightElement pointerEvents="none"><FiCalendar /></InputRightElement>
-                  </InputGroup>
-                  <InputGroup size="sm" flex="1">
-                    <Input
-                      type="datetime-local"
-                      placeholder="To"
-                      min={minDt}
-                      bg={softBg}
-                      borderColor={fieldBorder}
-                      value={form.to}
-                      onChange={(e) => setForm({ ...form, to: e.target.value })}
-                    />
-                    <InputRightElement pointerEvents="none"><FiCalendar /></InputRightElement>
-                  </InputGroup>
-                </HStack>
-              </VStack>
+              <Box
+                bg="#F7FBFC"
+                border="1px solid #E5EDF0"
+                borderRadius="10px"
+                p="8px 10px"
+              >
+                <VStack align="stretch" spacing="6px">
+
+                  <VStack align="start" spacing="1px">
+                    <Text
+                      fontSize="13px"
+                      fontWeight="800"
+                      color="#0F172A"
+                    >
+                      Time Window
+                    </Text>
+
+                    <Text
+                      fontSize="10px"
+                      color="#64748B"
+                    >
+                      Select start and end date & time for this schedule
+                    </Text>
+                  </VStack>
+
+                  <HStack spacing="8px" w="full">
+                    <VStack align="stretch" spacing="4px" flex="1">
+                      <Text
+                        fontSize="10px"
+                        fontWeight="700"
+                        color="#334155"
+                      >
+                        Start Date & Time
+                      </Text>
+
+                      <InputGroup size="sm" flex="1" maxW="180px">
+                        <Input
+                          type="datetime-local"
+                          placeholder="From"
+                          min={minDt}
+                          bg="#FFFFFF"
+                          borderColor="#D8E1E6"
+                          borderRadius="8px"
+                          h="36px"
+                          fontSize="11px"
+                          value={form.from}
+                          onChange={(e) => setForm({ ...form, from: e.target.value })}
+                          sx={{
+                            "&::-webkit-calendar-picker-indicator": {
+                              width: "12px",
+                              height: "12px",
+                              cursor: "pointer",
+                              opacity: 0.8,
+                            },
+                          }}
+                        />
+                        <InputRightElement pointerEvents="none"><FiCalendar /></InputRightElement>
+                      </InputGroup>
+                    </VStack>
+
+                    <VStack align="stretch" spacing="4px" flex="1">
+                      <Text
+                        fontSize="10px"
+                        fontWeight="700"
+                        color="#334155"
+                      >
+                        End Date & Time
+                      </Text>
+
+                      <InputGroup size="sm" flex="1" maxW="180px">
+                        <Input
+                          type="datetime-local"
+                          placeholder="To"
+                          min={minDt}
+                          bg="#FFFFFF"
+                          borderColor="#D8E1E6"
+                          borderRadius="8px"
+                          h="36px"
+                          fontSize="11px"
+                          value={form.to}
+                          onChange={(e) => setForm({ ...form, to: e.target.value })}
+                          sx={{
+                            "&::-webkit-calendar-picker-indicator": {
+                              width: "12px",
+                              height: "12px",
+                              cursor: "pointer",
+                              opacity: 0.8,
+                            },
+                          }}
+                        />
+                        <InputRightElement pointerEvents="none"><FiCalendar /></InputRightElement>
+                      </InputGroup>
+                    </VStack>
+                  </HStack>
+                </VStack>
+              </Box>
 
               {/* Duration & Tariff */}
               {!hideDurationTariff && (
@@ -367,25 +631,92 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
                 </>
               )}
 
-              {/* Power */}
-              {!hidePower && (
-                <>
-                  <Text fontSize="sm" color={labelCol}>Power (kW)</Text>
-                  <InputGroup size="sm">
-                    <Input
-                      type="text"
-                      placeholder="100"
-                      bg={softBg}
-                      borderColor={fieldBorder}
-                      value={form.power}
-                      onChange={(e) => setForm({ ...form, power: e.target.value })}
-                    />
-                    <InputRightAddon borderColor={fieldBorder}>kW</InputRightAddon>
-                  </InputGroup>
-                </>
-              )}
+              {/* Power + Priority */}
+              <HStack
+                spacing="8px"
+                align="stretch"
+                w="full"
+              >
+                {!hidePower && (
+                  <Box
+                    flex="1"
+                    bg="#F7FBFC"
+                    border="1px solid #E5EDF0"
+                    borderRadius="10px"
+                    p="8px 10px"
+                  >
+                    <VStack align="stretch" spacing="6px">
+                      <VStack align="start" spacing="1px">
+                        <Text
+                          fontSize="13px"
+                          fontWeight="800"
+                          color="#0F172A"
+                        >
+                          Power (kW)
+                        </Text>
+                        <Text
+                          fontSize="10px"
+                          color="#64748B"
+                        >
+                          Set the required discharge/charge power
+                        </Text>
+                      </VStack>
+
+                      <InputGroup size="sm">
+                        <Input
+                          type="text"
+                          placeholder="100"
+                          bg="#FFFFFF"
+                          borderColor="#D8E1E6"
+                          borderRadius="8px"
+                          h="34px"
+                          fontSize="11px"
+                          value={form.power}
+                          onChange={(e) => setForm({ ...form, power: e.target.value })}
+                        />
+                        <InputRightAddon borderColor={fieldBorder}>kW</InputRightAddon>
+                      </InputGroup>
+                    </VStack>
+                  </Box>
+                )}
+
+                <Box
+                  flex="1"
+                  bg="#F7FBFC"
+                  border="1px solid #E5EDF0"
+                  borderRadius="10px"
+                  p="8px 10px"
+                >
+                  <VStack align="stretch" spacing="6px">
+                    <VStack align="start" spacing="1px">
+                      <Text
+                        fontSize="13px"
+                        fontWeight="800"
+                        color="#0F172A"
+                      >
+                        Priority
+                      </Text>
+                      <Text
+                        fontSize="10px"
+                        color="#64748B"
+                      >
+                        Select the schedule priority level
+                      </Text>
+                    </VStack>
+
+                    <HStack spacing="8px" w="full">
+                      {(["low","medium","high"] as const).map((p) => (
+                        <SegButton key={p} isActive={priority === p} onClick={() => setPriority(p)}>
+                          {p[0].toUpperCase() + p.slice(1)}
+                        </SegButton>
+                      ))}
+                    </HStack>
+                  </VStack>
+                </Box>
+              </HStack>
 
               {/* Load */}
+              {/*
               {showLoad && (
                 <>
                   <Text fontSize="sm" color={labelCol}>Load (kW)</Text>
@@ -402,66 +733,154 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
                   </InputGroup>
                 </>
               )}
+              */}
 
-              {/* SoC + Priority */}
-              <HStack spacing="20px" align="flex-start" flexWrap="wrap">
-                <VStack align="stretch" spacing="6px" minW="180px" flex="1">
-                  <Text fontSize="sm" color={labelCol}>SoC Threshold</Text>
-                  <HStack spacing="8px">
-                    <InputGroup size="sm" flex="1">
-                      <Input
-                        placeholder="Min"
-                        bg={softBg}
-                        borderColor={fieldBorder}
-                        value={form.socMin}
-                        onChange={(e) => setForm({ ...form, socMin: e.target.value })}
-                      />
-                    </InputGroup>
-                    <Text color={labelCol}>/</Text>
-                    <InputGroup size="sm" flex="1">
-                      <Input
-                        placeholder="Max"
-                        bg={softBg}
-                        borderColor={fieldBorder}
-                        value={form.socMax}
-                        onChange={(e) => setForm({ ...form, socMax: e.target.value })}
-                      />
-                    </InputGroup>
-                  </HStack>
+              {/* SoC section */}
+              <Box
+                bg="#F7FBFC"
+                border="1px solid #E5EDF0"
+                borderRadius="10px"
+                p="8px 10px"
+              >
+                <VStack align="stretch" spacing="6px">
+                  <VStack align="start" spacing="1px">
+                    <Text
+                      fontSize="13px"
+                      fontWeight="800"
+                      color="#0F172A"
+                    >
+                      SoC Threshold (%)
+                    </Text>
+
+                    <Text
+                      fontSize="10px"
+                      color="#64748B"
+                    >
+                      Set minimum and maximum state of charge
+                    </Text>
+                  </VStack>
+
+                  {!form.to && (
+                    <HStack spacing="8px" align="stretch" w="full">
+                      <InputGroup size="sm" flex="1">
+                        <Input
+                          placeholder="Min"
+                          bg="#FFFFFF"
+                          borderColor="#D8E1E6"
+                          borderRadius="8px"
+                          h="34px"
+                          fontSize="11px"
+                          value={form.socMin}
+                          onChange={(e) => setForm({ ...form, socMin: e.target.value })}
+                        />
+                      </InputGroup>
+
+                      <InputGroup size="sm" flex="1">
+                        <Input
+                          placeholder="Max"
+                          bg="#FFFFFF"
+                          borderColor="#D8E1E6"
+                          borderRadius="8px"
+                          h="34px"
+                          fontSize="11px"
+                          value={form.socMax}
+                          onChange={(e) => setForm({ ...form, socMax: e.target.value })}
+                        />
+                      </InputGroup>
+                    </HStack>
+                  )}
                 </VStack>
-                <VStack align="stretch" spacing="6px" minW="220px" flex="2">
-                  <Text fontSize="sm" color={labelCol}>Select Priority Level</Text>
-                  <HStack spacing="10px" flexWrap="wrap">
-                    {(["low","medium","high"] as const).map((p) => (
-                      <SegButton key={p} isActive={priority === p} onClick={() => setPriority(p)}>
-                        {p[0].toUpperCase() + p.slice(1)}
-                      </SegButton>
-                    ))}
-                  </HStack>
-                </VStack>
-              </HStack>
+              </Box>
 
               {/* Remarks */}
-              <Text fontSize="sm" color={labelCol}>Remarks</Text>
-              <Textarea
-                h="32px"
-                resize="none"
-                bg={useColorModeValue("#00000059", "#242929")}
-                borderColor={fieldBorder}
-                placeholder="Comment to this schedule"
-                value={form.remarks}
-                onChange={(e) => setForm({ ...form, remarks: e.target.value })}
-                _focus={{ borderColor: "#33D2D2", boxShadow: "0 0 0 1px #33D2D2" }}
-              />
+              <Box
+                bg="#F7FBFC"
+                border="1px solid #E5EDF0"
+                borderRadius="10px"
+                p="8px 10px"
+              >
+                <VStack align="stretch" spacing="6px">
+
+                  <VStack align="start" spacing="1px">
+                    <Text
+                      fontSize="13px"
+                      fontWeight="800"
+                      color="#0F172A"
+                    >
+                      Remarks
+                    </Text>
+
+                    <Text
+                      fontSize="10px"
+                      color="#64748B"
+                    >
+                      Add any additional notes for this schedule
+                    </Text>
+                  </VStack>
+
+                  <Textarea
+                    h="68px"
+                    resize="none"
+                    bg="#FFFFFF"
+                    borderColor="#D8E1E6"
+                    borderRadius="8px"
+                    fontSize="11px"
+                    p="8px 10px"
+                    placeholder="Add a note for this schedule..."
+                    value={form.remarks}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        remarks: e.target.value,
+                      })
+                    }
+                    _focus={{
+                      borderColor: "#2CA7A2",
+                      boxShadow: "0 0 0 1px #2CA7A2",
+                    }}
+                  />
+
+                </VStack>
+              </Box>
             </VStack>
           </Box>
         </ModalBody>
 
-        <Divider borderColor={fieldBorder} my="16px" />
-        <ModalFooter p="0">
-          <HStack spacing="10px">
-            <Button variant="outline" onClick={closeAndReset}>Cancel</Button>
-            <Button colorScheme="teal" onClick={validateAndSubmit}>Add Command</Button>
+        <ModalFooter
+          px="14px"
+          py="10px"
+          borderTop="1px solid #E5EDF0"
+        >
+          <HStack spacing="8px">
+            <Button
+              size="sm"
+              h="34px"
+              px="12px"
+              variant="outline"
+              borderColor="#D8E1E6"
+              borderRadius="8px"
+              fontSize="11px"
+              fontWeight="700"
+              onClick={closeAndReset}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              h="34px"
+              px="14px"
+              bg="#27AAA5"
+              color="white"
+              borderRadius="8px"
+              fontSize="11px"
+              fontWeight="700"
+              _hover={{
+                bg: "#229893",
+              }}
+              onClick={validateAndSubmit}
+            >
+              Add Command
+            </Button>
           </HStack>
         </ModalFooter>
       </ModalContent>
@@ -483,17 +902,28 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
             maxW={["92vw", "480px"]}
             maxH="70vh"
             w="full"
-            bg={useColorModeValue("#FFFFFF", "#161B1B")}
-            borderRadius="12px"
-            p="16px"
+            bg={modalBg}
+            border="1px solid"
+            borderColor={modalBorder}
+            borderRadius="16px"
+            p="0"
             overflow="hidden"
+            boxShadow="0 16px 40px rgba(15, 23, 42, 0.18)"
           >
-            <ModalHeader p="0" color="#E5E7EB" fontSize="md">
+            <ModalHeader
+              p="12px 16px 10px"
+              bg={headerBg}
+              borderBottom="1px solid"
+              borderColor={fieldBorder}
+              color={headerText}
+              fontSize="sm"
+              fontWeight={700}
+            >
               Overlapping Schedule Found
             </ModalHeader>
-            <ModalCloseButton />
+            <ModalCloseButton size="sm" color={headerText} _focus={{ boxShadow: "none" }} />
 
-            <ModalBody p="0" mt="12px" overflowY="auto">
+            <ModalBody p="14px 16px 8px" overflowY="auto">
               <VStack align="stretch" spacing="12px">
                 <Alert status="warning" borderRadius="md">
                   <AlertIcon />
@@ -537,7 +967,7 @@ export default function AddScheduleCommandModal({ isOpen, onClose, onAdded, curr
             </ModalBody>
 
             {/* one-line, smaller buttons */}
-            <ModalFooter p="0" mt="12px">
+            <ModalFooter p="8px 16px 14px" mt="8px">
               <HStack spacing="8px" w="100%" justify="flex-end" wrap="nowrap">
                 <Button
                   variant="outline"

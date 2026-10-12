@@ -15,8 +15,6 @@ import { BarChart, LineChart } from "echarts/charts";
 
 import { CanvasRenderer } from "echarts/renderers";
 
-import { Button } from "@chakra-ui/react";
-
 import "../../../App.css";
 import type { ExportFunctions } from "../../../types/graphExport/export";
 import { EnlargeHeight } from "../../../Services/EnlargeWidget";
@@ -131,42 +129,6 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
     });
   }, [isFullscreen]);
 
-  // Show All / Hide All
-  const [areAllHidden, setAreAllHidden] = useState(false);
-
-  const handleHideAll = () => {
-    const instance = chartRef.current?.getEchartsInstance();
-    if (!instance) return;
-
-    const option: any = instance.getOption();
-
-    option.legend[0].selected = {};
-
-    option.series.forEach((s: any) => {
-      option.legend[0].selected[s.name] = false;
-    });
-
-    instance.setOption(option, true);
-
-    setAreAllHidden(true);
-  };
-
-  const handleShowAll = () => {
-    const instance = chartRef.current?.getEchartsInstance();
-    if (!instance) return;
-
-    const option: any = instance.getOption();
-
-    option.legend[0].selected = {};
-
-    option.series.forEach((s: any) => {
-      option.legend[0].selected[s.name] = true;
-    });
-
-    instance.setOption(option, true);
-
-    setAreAllHidden(false);
-  };
     const option = useMemo(() => {
     const isCategory = !!category?.length;
     const hasTimeSeriesData = (apiData || []).some((series: any) => {
@@ -197,6 +159,8 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
         : [],
     }));
 
+    const legendBottomSpace = Math.max(legendHeight + 24, 64);
+
     return {
       backgroundColor: bg || "transparent",
 
@@ -206,7 +170,7 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
         left: 20,
         right: 20,
         top: 20,
-        bottom: 35,
+        bottom: legendBottomSpace,
         containLabel: true,
         borderWidth: 1,
         borderColor: "#DFDFDF",
@@ -214,7 +178,11 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
 
       legend: {
         type: "scroll",
-        bottom: 5,
+        left: "center",
+        bottom: 8,
+        width: "100%",
+        padding: [2, 8, 2, 8],
+        itemGap: 28,
         icon: "rect",
         itemWidth: 12,
         itemHeight: 12,
@@ -505,33 +473,13 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
   }, [onExportReady, apiData]);
 
   return (
-    <div style={{ position: "relative" }}>
-      <Button
-        size="xs"
-        variant="ghost"
-        position="absolute"
-        left="12px"
-        bottom="-40px"
-        zIndex={2}
-        onClick={handleShowAll}
-        isDisabled={areAllHidden === false}
-      >
-        Show all
-      </Button>
-
-      <Button
-        size="xs"
-        variant="ghost"
-        position="absolute"
-        right="12px"
-        bottom="-40px"
-        zIndex={2}
-        onClick={handleHideAll}
-        isDisabled={areAllHidden}
-      >
-        Hide all
-      </Button>
-
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        boxSizing: "border-box",
+      }}
+    >
       <ReactECharts
         ref={chartRef}
         echarts={echarts}

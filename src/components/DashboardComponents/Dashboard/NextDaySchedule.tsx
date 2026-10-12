@@ -1,9 +1,4 @@
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -21,7 +16,9 @@ import {
   Th,
   Td,
   TableContainer,
+  Spinner,
 } from "@chakra-ui/react";
+
 import {
   FiCalendar,
   FiFileText,
@@ -32,15 +29,53 @@ import {
   FiBattery,
   FiRefreshCw,
   FiGrid,
+  FiAlertCircle,
 } from "react-icons/fi";
+
 import { ExpandIcon, SqeezIcon } from "../../../assets/Icons";
-const emsScheduleUrl = new URL(import.meta.env.VITE_API_BASE);
-emsScheduleUrl.port = import.meta.env.VITE_API_PORT;
-emsScheduleUrl.pathname = "/api/ems-schedule";
-const EMS_SCHEDULE_API = emsScheduleUrl.toString();
+
+/* =========================================================
+   API URL
+========================================================= */
+
+const getEmsScheduleUrl = (): string => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE;
+    const port = import.meta.env.VITE_API_PORT;
+
+    if (!baseUrl) {
+      console.error("VITE_API_BASE is not defined");
+      return "/api/ems-schedule";
+    }
+
+    const url = new URL(baseUrl);
+
+    if (port) {
+      url.port = String(port);
+    }
+
+    url.pathname = "/api/ems-schedule";
+    url.search = "";
+
+    return url.toString();
+  } catch (error) {
+    console.error("Failed to construct EMS API URL:", error);
+    return "/api/ems-schedule";
+  }
+};
+
+const EMS_SCHEDULE_API = getEmsScheduleUrl();
+
+console.log("EMS Schedule API:", EMS_SCHEDULE_API);
+
+/* =========================================================
+   TYPES
+========================================================= */
+
 interface ScheduleItem {
   time: string;
   timeStamp: string;
+  eventId: string;
   load: number;
   pv: number;
   tariff: number;
@@ -54,156 +89,464 @@ interface ScheduleItem {
   throughput: number;
   description: string;
 }
+
 interface ApiSchedule {
-  time_stamp?: string;
-  load_kw?: number;
-  pv_kw?: number;
-  tariff_per_kw?: number;
-  load_state?: string;
-  decision?: string;
-  charge_kw?: number;
-  discharge_kw?: number;
-  grid_import_kw?: number;
-  soc_percent?: number;
-  battery_energy_mwh?: number;
-  throughput_cycles?: number;
-  description?: string;
-  is_pass?: boolean;
+  time_stamp?: string | null;
+  load_kw?: number | string | null;
+  pv_kw?: number | string | null;
+  tariff_per_kw?: number | string | null;
+  load_state?: string | null;
+  decision?: string | null;
+  charge_kw?: number | string | null;
+  grid_charge_kw?: number | string | null;
+  discharge_kw?: number | string | null;
+  grid_import_kw?: number | string | null;
+  soc_percent?: number | string | null;
+  battery_energy_mwh?: number | string | null;
+  throughput_cycles?: number | string | null;
+  description?: string | null;
+
+  // API may return true / false / 1 / 0 / "true" / "false"
+  is_pass?: boolean | number | string | null;
+  event_id?: string | null;
 }
+
 interface EMScheduleResponse {
-  success: boolean;
-  count: number;
-  schedule: ApiSchedule[];
+  success?: boolean;
+  count?: number;
+  schedule?: ApiSchedule[];
   message?: string;
   error?: string;
 }
-const toNumber = (value: unknown, fallback = 0): number => {
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const toNumber = (
+  value: unknown,
+  fallback = 0
+): number => {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+
   const num = Number(value);
+
   return Number.isFinite(num) ? num : fallback;
 };
-const formatTime = (timestamp?: string): string => {
-  if (!timestamp) return "--";
-  const parts = timestamp.split(" ");
-  return parts[1]?.substring(0, 5) || parts[0]?.substring(0, 5) || "--";
+
+const toStringValue = (
+  value: unknown,
+  fallback = "--"
+): string => {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+
+  const stringValue = String(value).trim();
+
+  return stringValue || fallback;
 };
-const formatDate = (timestamp?: string): string => {
+
+const isPassedSchedule = (
+  value: unknown
+): boolean => {
+  if (value === true) return true;
+
+  if (value === 1) return true;
+
+  if (
+    typeof value === "string" &&
+    ["true", "1", "yes", "pass", "passed"].includes(
+      value.trim().toLowerCase()
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+const formatTime = (
+  timestamp?: string | null
+): string => {
   if (!timestamp) return "--";
-  const datePart = timestamp.split(" ")[0];
-  const [year, month, day] = datePart.split("-").map(Number);
-  if (!year || !month || !day) return "--";
-  return `${day} ${new Date(year, month - 1, day).toLocaleString("en-US", {
+
+  const value = String(timestamp).trim();
+
+  // Handles:
+  // 2026-10-08 12:30:00
+  // 2026-10-08T12:30:00
+  // 12:30:00
+
+  const match = value.match(
+    /(?:T|\s)(\d{2}):(\d{2})/
+  );
+
+  if (match) {
+    return `${match[1]}:${match[2]}`;
+  }
+
+  return value.substring(0, 5) || "--";
+};
+
+const formatDate = (
+  timestamp?: string | null
+): string => {
+  if (!timestamp) return "--";
+
+  const value = String(timestamp).trim();
+
+  const match = value.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})/
+  );
+
+  if (!match) {
+    return "--";
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (!year || !month || !day) {
+    return "--";
+  }
+
+  const date = new Date(
+    year,
+    month - 1,
+    day
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return `${day} ${date.toLocaleString("en-US", {
     month: "short",
   })} ${year}`;
 };
-const mapApiSchedule = (item: ApiSchedule): ScheduleItem => ({
+
+const mapApiSchedule = (
+  item: ApiSchedule
+): ScheduleItem => ({
   time: formatTime(item.time_stamp),
-  timeStamp: item.time_stamp || "",
+
+  timeStamp: toStringValue(
+    item.time_stamp,
+    ""
+  ),
+
+  eventId: toStringValue(
+    item.event_id,
+    "--"
+  ),
+
   load: toNumber(item.load_kw),
+
   pv: toNumber(item.pv_kw),
+
   tariff: toNumber(item.tariff_per_kw),
-  state: item.load_state || "--",
-  decision: item.decision || "--",
-  charge: toNumber(item.charge_kw),
-  discharge: toNumber(item.discharge_kw),
-  grid: toNumber(item.grid_import_kw),
-  soc: toNumber(item.soc_percent),
-  battery: toNumber(item.battery_energy_mwh),
-  throughput: toNumber(item.throughput_cycles),
-  description: item.description || "--",
+
+  state: toStringValue(
+    item.load_state
+  ),
+
+  decision: toStringValue(
+    item.decision
+  ),
+
+  charge: toNumber(item.grid_charge_kw),
+
+  discharge: toNumber(
+    item.discharge_kw
+  ),
+
+  grid: toNumber(
+    item.grid_import_kw
+  ),
+
+  soc: toNumber(
+    item.soc_percent
+  ),
+
+  battery: toNumber(
+    item.battery_energy_mwh
+  ),
+
+  throughput: toNumber(
+    item.throughput_cycles
+  ),
+
+  description: toStringValue(
+    item.description
+  ),
 });
+
 /* =========================================================
    COMPONENT
 ========================================================= */
+
 const NextDaySchedule: React.FC = () => {
-  const widgetRef = useRef<HTMLDivElement>(null);
+  const widgetRef =
+    useRef<HTMLDivElement>(null);
+
   const [schedules, setSchedules] =
     useState<ScheduleItem[]>([]);
+
   const [selectedIndex, setSelectedIndex] =
     useState(0);
+
   const [isFullscreen, setIsFullscreen] =
     useState(false);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  /* =========================================================
+     FETCH SCHEDULE
+  ========================================================= */
+
   useEffect(() => {
     let mounted = true;
+
     const fetchSchedule = async () => {
+      setError(null);
+
       try {
-        const response = await fetch(EMS_SCHEDULE_API, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        });
+        console.log(
+          "Fetching EMS schedule:",
+          EMS_SCHEDULE_API
+        );
+
+        const response = await fetch(
+          `${EMS_SCHEDULE_API}?_t=${Date.now()}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+            cache: "no-store",
+          }
+        );
+
+        console.log(
+          "EMS response status:",
+          response.status
+        );
+
         if (!response.ok) {
-          throw new Error(`API failed: ${response.status}`);
+          throw new Error(
+            `API failed with status ${response.status}`
+          );
         }
-        const result: EMScheduleResponse = await response.json();
-        if (!result.success) {
+
+        const result: EMScheduleResponse =
+          await response.json();
+
+        console.log(
+          "EMS API response:",
+          result
+        );
+
+        if (!result) {
+          throw new Error(
+            "Empty API response"
+          );
+        }
+
+        if (
+          result.success === false
+        ) {
           throw new Error(
             result.message ||
               result.error ||
               "EMS schedule API failed"
           );
         }
-        const mappedSchedules = Array.isArray(result.schedule)
-          ? result.schedule
-              .filter((item) => item.is_pass === true)
-              .map(mapApiSchedule)
-          : [];
+
+        const rawSchedule =
+          Array.isArray(result.schedule)
+            ? result.schedule
+            : [];
+
+        console.log(
+          "Raw schedule length:",
+          rawSchedule.length
+        );
+
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT blindly use:
+         *
+         * .filter(item => item.is_pass === true)
+         *
+         * because backend may send:
+         *
+         * 1
+         * "1"
+         * "true"
+         * true
+         */
+
+        const passedSchedules =
+          rawSchedule.filter((item) =>
+            isPassedSchedule(
+              item?.is_pass
+            )
+          );
+
+        /*
+         * If is_pass isn't supplied by the API,
+         * don't make the entire UI disappear.
+         */
+        const finalSchedule =
+          passedSchedules.length > 0
+            ? passedSchedules
+            : rawSchedule;
+
+        const mappedSchedules =
+          finalSchedule
+            .filter(Boolean)
+            .map(mapApiSchedule);
+
+        console.log(
+          "Mapped schedules:",
+          mappedSchedules
+        );
+
+        if (!mounted) return;
+
+        setSchedules(mappedSchedules);
+        setSelectedIndex((current) =>
+          mappedSchedules.length === 0
+            ? 0
+            : Math.min(
+                current,
+                mappedSchedules.length - 1
+              )
+        );
+      } catch (err) {
+        console.error(
+          "EMS Schedule API Error:",
+          err
+        );
+
+        if (!mounted) return;
+
+        setSchedules([]);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load EMS schedule"
+        );
+      } finally {
         if (mounted) {
-          setSchedules(mappedSchedules);
-          setSelectedIndex(0);
-        }
-      } catch (error) {
-        console.error("EMS Schedule API Error:", error);
-        if (mounted) {
-          setSchedules([]);
+          setLoading(false);
         }
       }
     };
+
     fetchSchedule();
+    const interval = setInterval(
+      fetchSchedule,
+      30 * 1000
+    );
+
     return () => {
       mounted = false;
+      clearInterval(interval);
     };
   }, []);
+
+  /* =========================================================
+     FULLSCREEN
+  ========================================================= */
+
+  useEffect(() => {
+    const handleFullscreenChange =
+      () => {
+        setIsFullscreen(
+          document.fullscreenElement ===
+            widgetRef.current
+        );
+      };
+
+    document.addEventListener(
+      "fullscreenchange",
+      handleFullscreenChange
+    );
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullscreenChange
+      );
+    };
+  }, []);
+
+  const toggleFullscreen =
+    async () => {
+      const widget =
+        widgetRef.current;
+
+      if (!widget) return;
+
+      try {
+        if (
+          document.fullscreenElement ===
+          widget
+        ) {
+          await document.exitFullscreen();
+        } else {
+          await widget.requestFullscreen();
+        }
+      } catch (err) {
+        console.error(
+          "Fullscreen error:",
+          err
+        );
+      }
+    };
+
+  /* =========================================================
+     SELECTED ROW
+  ========================================================= */
+
   const selected =
     schedules.length > 0
-      ? schedules[Math.min(selectedIndex, schedules.length - 1)]
+      ? schedules[
+          Math.min(
+            selectedIndex,
+            schedules.length - 1
+          )
+        ]
       : null;
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(document.fullscreenElement === widgetRef.current);
-    };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = async () => {
-    const widget = widgetRef.current;
-    if (!widget) return;
-
-    try {
-      if (document.fullscreenElement === widget) {
-        await document.exitFullscreen();
-      } else {
-        await widget.requestFullscreen();
-      }
-    } catch (error) {
-      console.error("Failed to toggle schedule fullscreen:", error);
-    }
-  };
   /* =========================================================
      SUMMARY
   ========================================================= */
+
   const summary = useMemo(() => {
     const intervalHours = 0.25;
-    const totalCharge = schedules.reduce(
-      (sum, item) =>
-        sum +
-        (item.charge * intervalHours) /
-          1000,
-      0
-    );
+
+    const totalCharge =
+      schedules.reduce(
+        (sum, item) =>
+          sum +
+          (item.charge *
+            intervalHours) /
+            1000,
+        0
+      );
+
     const totalDischarge =
       schedules.reduce(
         (sum, item) =>
@@ -213,83 +556,83 @@ const NextDaySchedule: React.FC = () => {
             1000,
         0
       );
+
     const totalGridImport =
       schedules.reduce(
         (sum, item) =>
           sum +
-          (item.grid * intervalHours) /
+          (item.grid *
+            intervalHours) /
             1000,
         0
       );
+
     return {
       charge: totalCharge,
       discharge: totalDischarge,
       grid: totalGridImport,
     };
   }, [schedules]);
-  if (!selected) {
-    return null;
-  }
+
   /* =========================================================
-     DECISION STYLE
+     STYLES
   ========================================================= */
+
   const getDecisionStyle = (
     decision: string
   ) => {
+    const normalized =
+      decision
+        .trim()
+        .toLowerCase();
+
     if (
-      decision.toLowerCase() ===
-      "discharge"
+      normalized === "discharge"
     ) {
       return {
         bg: "#FFE1E4",
         color: "#EF4444",
       };
     }
+
     if (
-      decision.toLowerCase() ===
-      "charge"
+      normalized === "charge"
     ) {
       return {
         bg: "#DDF7EC",
         color: "#10A568",
       };
     }
+
     return {
       bg: "#E5E7EB",
       color: "#374151",
     };
   };
-  /* =========================================================
-     STATE STYLE
-  ========================================================= */
+
   const getStateStyle = (
     state: string
   ) => {
+    const normalized =
+      state
+        .trim()
+        .toLowerCase();
+
     if (
-      state.toLowerCase() ===
-      "peak"
+      normalized === "peak"
     ) {
       return {
         bg: "#FFF0E5",
         color: "#EA580C",
       };
     }
+
     return {
       bg: "#DDEEFF",
       color: "#0878E8",
     };
   };
-  const decisionStyle =
-    getDecisionStyle(
-      selected.decision
-    );
-  const stateStyle =
-    getStateStyle(
-      selected.state
-    );
-  /* =========================================================
-     NUMBER FORMAT
-  ========================================================= */
+
   const formatNumber = (
     value: number,
     decimals = 0
@@ -304,22 +647,149 @@ const NextDaySchedule: React.FC = () => {
       }
     );
   };
+
+  /* =========================================================
+     LOADING STATE
+  ========================================================= */
+
+  if (loading) {
+    return (
+      <Box
+        width="100%"
+        height="725px"
+        minHeight="725px"
+        bg="#FFFFFF"
+        border="1px solid #E4EAF1"
+        borderRadius="16px"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <VStack spacing="12px">
+          <Spinner
+            size="md"
+            color="#1769D2"
+          />
+          <Text
+            fontSize="13px"
+            color="#52627A"
+          >
+            Loading EMS schedule...
+          </Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  /* =========================================================
+     ERROR / EMPTY STATE
+  ========================================================= */
+
+  if (!selected) {
+    return (
+      <Box
+        width="100%"
+        height="715px"
+        minHeight="715px"
+        bg="#FFFFFF"
+        border="1px solid #E4EAF1"
+        borderRadius="16px"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        boxShadow="0 3px 14px rgba(20, 40, 70, 0.05)"
+      >
+        <VStack
+          spacing="10px"
+          px="20px"
+          textAlign="center"
+        >
+          <Icon
+            as={FiAlertCircle}
+            boxSize="28px"
+            color="#F59E0B"
+          />
+
+          <Text
+            fontSize="15px"
+            fontWeight="700"
+            color="#172B4D"
+          >
+            No EMS schedule available
+          </Text>
+
+          <Text
+            fontSize="11px"
+            color="#66758A"
+            maxWidth="500px"
+          >
+            {error ||
+              "The API returned no schedule records."}
+          </Text>
+
+          <Text
+            fontSize="9px"
+            color="#9AA6B5"
+          >
+            API: {EMS_SCHEDULE_API}
+          </Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  const decisionStyle =
+    getDecisionStyle(
+      selected.decision
+    );
+
+  const stateStyle =
+    getStateStyle(
+      selected.state
+    );
+
   /* =========================================================
      UI
   ========================================================= */
+
   return (
     <Box
       ref={widgetRef}
-      width={isFullscreen ? "100vw" : "100%"}
-      height={isFullscreen ? "100vh" : "100%"}
+      width={
+        isFullscreen
+          ? "100vw"
+          : "100%"
+      }
+      height={
+        isFullscreen
+          ? "100vh"
+          : "715px"
+      }
       minHeight="0"
-      position={isFullscreen ? "fixed" : "relative"}
-      top={isFullscreen ? 0 : "auto"}
-      left={isFullscreen ? 0 : "auto"}
-      right={isFullscreen ? 0 : "auto"}
-      bottom={isFullscreen ? 0 : "auto"}
+      position={
+        isFullscreen
+          ? "fixed"
+          : "relative"
+      }
+      top={
+        isFullscreen ? 0 : "auto"
+      }
+      left={
+        isFullscreen ? 0 : "auto"
+      }
+      right={
+        isFullscreen ? 0 : "auto"
+      }
+      bottom={
+        isFullscreen ? 0 : "auto"
+      }
+      zIndex={
+        isFullscreen ? 9999 : "auto"
+      }
       bg="#FFFFFF"
-      borderRadius={isFullscreen ? 0 : "16px"}
+      borderRadius={
+        isFullscreen ? 0 : "16px"
+      }
       border="1px solid #E4EAF1"
       overflow="hidden"
       boxShadow="0 3px 14px rgba(20, 40, 70, 0.05)"
@@ -327,6 +797,7 @@ const NextDaySchedule: React.FC = () => {
       {/* ===================================================
           HEADER
       =================================================== */}
+
       <Flex
         height="70px"
         px="24px"
@@ -334,7 +805,6 @@ const NextDaySchedule: React.FC = () => {
         justify="space-between"
         borderBottom="1px solid #E6EBF1"
       >
-        {/* LEFT */}
         <HStack spacing="13px">
           <Box
             width="30px"
@@ -351,21 +821,22 @@ const NextDaySchedule: React.FC = () => {
               color="#075DBB"
             />
           </Box>
+
           <Text
-            fontSize="17px"
+            fontSize={isFullscreen ? "20px" : "18px"}
             fontWeight="700"
             color="#102452"
-            letterSpacing="-0.3px"
           >
-            Next Day Schedule
+            Provisional Schedule
           </Text>
+
           <Box
             width="1px"
             height="34px"
             bg="#D6DCE5"
             mx="4px"
           />
-          {/* DATE */}
+
           <Flex
             height="32px"
             px="9px"
@@ -380,16 +851,18 @@ const NextDaySchedule: React.FC = () => {
               boxSize="17px"
               color="#40506A"
             />
+
             <Text
-              fontSize="10px"
+              fontSize={isFullscreen ? "12px" : "11px"}
               fontWeight="700"
               color="#243552"
             >
-              {selected?.timeStamp
-                ? formatDate(selected.timeStamp)
-                : "--"}
+              {formatDate(
+                selected.timeStamp
+              )}
             </Text>
           </Flex>
+
           <Box
             width="40px"
             height="40px"
@@ -413,10 +886,19 @@ const NextDaySchedule: React.FC = () => {
             </Text>
           </Box>
         </HStack>
-        {/* =================================================
-            SUMMARY CARDS
-        ================================================= */}
+
+        {/* SUMMARY */}
+
         <HStack spacing="12px">
+          <SummaryCard
+            icon={FiFileText}
+            iconColor="#2563EB"
+            title="Event ID"
+            value={selected?.eventId || "--"}
+            valueFontSize="9px"
+            isFullscreen={isFullscreen}
+          />
+
           <SummaryCard
             icon={FiZap}
             iconColor="#10B981"
@@ -425,7 +907,9 @@ const NextDaySchedule: React.FC = () => {
               summary.charge,
               1
             )} MWh`}
+            isFullscreen={isFullscreen}
           />
+
           <SummaryCard
             icon={FiZap}
             iconColor="#F97316"
@@ -434,7 +918,9 @@ const NextDaySchedule: React.FC = () => {
               summary.discharge,
               1
             )} MWh`}
+            isFullscreen={isFullscreen}
           />
+
           <SummaryCard
             icon={FiGrid}
             iconColor="#253858"
@@ -443,11 +929,27 @@ const NextDaySchedule: React.FC = () => {
               summary.grid,
               1
             )} MWh`}
+            isFullscreen={isFullscreen}
           />
+
           <IconButton
-            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-            icon={isFullscreen ? <SqeezIcon /> : <ExpandIcon />}
+            aria-label={
+              isFullscreen
+                ? "Exit fullscreen"
+                : "Enter fullscreen"
+            }
+            title={
+              isFullscreen
+                ? "Exit fullscreen"
+                : "Fullscreen"
+            }
+            icon={
+              isFullscreen ? (
+                <SqeezIcon />
+              ) : (
+                <ExpandIcon />
+              )
+            }
             size="xs"
             w="32px"
             h="32px"
@@ -457,14 +959,21 @@ const NextDaySchedule: React.FC = () => {
             borderColor="#D7E0EA"
             bg="white"
             color="#243552"
-            _hover={{ bg: "#E8F1FD", color: "#1769D2" }}
-            onClick={toggleFullscreen}
+            _hover={{
+              bg: "#E8F1FD",
+              color: "#1769D2",
+            }}
+            onClick={
+              toggleFullscreen
+            }
           />
         </HStack>
       </Flex>
+
       {/* ===================================================
           BODY
       =================================================== */}
+
       <Flex
         width="100%"
         height="calc(100% - 70px)"
@@ -473,6 +982,7 @@ const NextDaySchedule: React.FC = () => {
         {/* =================================================
             LEFT TABLE
         ================================================= */}
+
         <Box
           width="70%"
           borderRight="1px solid #E5EAF0"
@@ -481,35 +991,27 @@ const NextDaySchedule: React.FC = () => {
         >
           <TableContainer
             height="100%"
-            maxHeight="none"
             overflowY="auto"
-            overflowX="hidden"
+            overflowX="auto"
             sx={{
               "&::-webkit-scrollbar": {
                 width: "7px",
+                height: "7px",
               },
-              "&::-webkit-scrollbar-track":
-                {
-                  background:
-                    "#F4F6F8",
-                  borderRadius:
-                    "10px",
-                },
-              "&::-webkit-scrollbar-thumb":
-                {
-                  background:
-                    "#B9C3D0",
-                  borderRadius:
-                    "10px",
-                },
+              "&::-webkit-scrollbar-track": {
+                background: "#F4F6F8",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                background: "#B9C3D0",
+                borderRadius: "10px",
+              },
             }}
           >
             <Table
               size="sm"
               variant="simple"
               sx={{
-                tableLayout:
-                  "fixed",
+                tableLayout: "fixed",
               }}
             >
               <Thead
@@ -519,57 +1021,68 @@ const NextDaySchedule: React.FC = () => {
                 bg="#F8FAFD"
               >
                 <Tr>
-                  <TableHeader width="7%">
+                  <TableHeader width="7%" isFullscreen={isFullscreen}>
                     Time
                   </TableHeader>
-                  <TableHeader width="9%">
+
+                  <TableHeader width="9%" isFullscreen={isFullscreen}>
                     Load
                     <br />
                     (kW)
                   </TableHeader>
-                  <TableHeader width="8%">
+
+                  <TableHeader width="8%" isFullscreen={isFullscreen}>
                     PV
                     <br />
                     (kW)
                   </TableHeader>
-                  <TableHeader width="10%">
+
+                  <TableHeader width="10%" isFullscreen={isFullscreen}>
                     Tariff
                     <br />
                     (₹/kWh)
                   </TableHeader>
-                  <TableHeader width="11%">
+
+                  <TableHeader width="11%" isFullscreen={isFullscreen}>
                     State
                   </TableHeader>
-                  <TableHeader width="12%">
+
+                  <TableHeader width="12%" isFullscreen={isFullscreen}>
                     Decision
                   </TableHeader>
-                  <TableHeader width="10%">
+
+                  <TableHeader width="10%" isFullscreen={isFullscreen}>
                     Charge
                     <br />
                     (kW)
                   </TableHeader>
-                  <TableHeader width="11%">
+
+                  <TableHeader width="11%" isFullscreen={isFullscreen}>
                     Discharge
                     <br />
                     (kW)
                   </TableHeader>
-                  <TableHeader width="9%">
+
+                  <TableHeader width="9%" isFullscreen={isFullscreen}>
                     Grid
                     <br />
                     (kW)
                   </TableHeader>
-                  <TableHeader width="7%">
+
+                  <TableHeader width="7%" isFullscreen={isFullscreen}>
                     SOC
                     <br />
                     (%)
                   </TableHeader>
-                  <TableHeader width="11%">
+
+                  <TableHeader width="11%" isFullscreen={isFullscreen}>
                     Battery
                     <br />
                     (MWh)
                   </TableHeader>
                 </Tr>
               </Thead>
+
               <Tbody>
                 {schedules.map(
                   (item, index) => {
@@ -577,16 +1090,19 @@ const NextDaySchedule: React.FC = () => {
                       getDecisionStyle(
                         item.decision
                       );
+
                     const itemState =
                       getStateStyle(
                         item.state
                       );
+
                     const selectedRow =
                       index ===
                       selectedIndex;
+
                     return (
                       <Tr
-                        key={item.time}
+                        key={`${item.timeStamp}-${index}`}
                         onClick={() =>
                           setSelectedIndex(
                             index
@@ -605,6 +1121,7 @@ const NextDaySchedule: React.FC = () => {
                         }}
                       >
                         <TableCell
+                          isFullscreen={isFullscreen}
                           fontWeight={
                             selectedRow
                               ? "700"
@@ -612,27 +1129,29 @@ const NextDaySchedule: React.FC = () => {
                           }
                           color="#172B4D"
                         >
-                          {
-                            item.time
-                          }
+                          {item.time}
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           {formatNumber(
                             item.load
                           )}
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           {formatNumber(
                             item.pv
                           )}
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           {formatNumber(
                             item.tariff,
                             1
                           )}
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           <Badge
                             px="5px"
                             py="3px"
@@ -643,15 +1162,14 @@ const NextDaySchedule: React.FC = () => {
                             color={
                               itemState.color
                             }
-                            fontSize="7px"
+                            fontSize={isFullscreen ? "9px" : "8px"}
                             fontWeight="600"
                           >
-                            {
-                              item.state
-                            }
+                            {item.state}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           <Badge
                             px="5px"
                             py="3px"
@@ -662,36 +1180,39 @@ const NextDaySchedule: React.FC = () => {
                             color={
                               itemDecision.color
                             }
-                            fontSize="7px"
+                            fontSize={isFullscreen ? "9px" : "8px"}
                             fontWeight="700"
                           >
-                            {
-                              item.decision
-                            }
+                            {item.decision}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           {formatNumber(
                             item.charge
                           )}
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           {formatNumber(
                             item.discharge
                           )}
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell isFullscreen={isFullscreen}>
                           {formatNumber(
                             item.grid
                           )}
                         </TableCell>
-                        <TableCell fontWeight="600">
+
+                        <TableCell isFullscreen={isFullscreen} fontWeight="600">
                           {formatNumber(
                             item.soc,
                             2
                           )}
                         </TableCell>
-                        <TableCell fontWeight="600">
+
+                        <TableCell isFullscreen={isFullscreen} fontWeight="600">
                           {formatNumber(
                             item.battery,
                             3
@@ -705,9 +1226,11 @@ const NextDaySchedule: React.FC = () => {
             </Table>
           </TableContainer>
         </Box>
+
         {/* =================================================
             RIGHT DETAILS
         ================================================= */}
+
         <Box
           width="30%"
           px="18px"
@@ -716,6 +1239,7 @@ const NextDaySchedule: React.FC = () => {
           height="100%"
         >
           {/* SELECTED TIME */}
+
           <Flex
             height="48px"
             px="16px"
@@ -726,54 +1250,62 @@ const NextDaySchedule: React.FC = () => {
             mb="9px"
           >
             <Text
-              fontSize="17px"
+              fontSize={isFullscreen ? "20px" : "18px"}
               fontWeight="800"
               color="#132D61"
             >
               {selected.time}
             </Text>
+
             <Badge
               px="7px"
               py="3px"
               borderRadius="5px"
               bg={stateStyle.bg}
               color={stateStyle.color}
-              fontSize="7px"
+              fontSize={isFullscreen ? "9px" : "8px"}
               fontWeight="700"
             >
               {selected.state}
             </Badge>
           </Flex>
-          {/* DETAILS */}
+
           <DetailRow
             icon={FiFileText}
             iconColor="#253858"
             label="Load"
+            isFullscreen={isFullscreen}
             value={`${formatNumber(
               selected.load
             )} kW`}
           />
+
           <DetailRow
             icon={FiSun}
             iconColor="#F59E0B"
             label="PV"
+            isFullscreen={isFullscreen}
             value={`${formatNumber(
               selected.pv
             )} kW`}
           />
+
           <DetailRow
             icon={FiZap}
             iconColor="#F59E0B"
             label="Tariff"
+            isFullscreen={isFullscreen}
             value={`₹ ${formatNumber(
               selected.tariff,
               1
             )} /kWh`}
           />
+
           <DetailRow
             icon={FiZap}
             iconColor="#2563EB"
             label="Decision"
+            isFullscreen={isFullscreen}
             value={
               <Badge
                 px="5px"
@@ -785,42 +1317,46 @@ const NextDaySchedule: React.FC = () => {
                 color={
                   decisionStyle.color
                 }
-                fontSize="7px"
+                fontSize={isFullscreen ? "9px" : "8px"}
                 fontWeight="700"
               >
-                {
-                  selected.decision
-                }
+                {selected.decision}
               </Badge>
             }
           />
+
           <DetailRow
             icon={FiArrowUp}
             iconColor="#16A34A"
             label="Charge"
+            isFullscreen={isFullscreen}
             value={`${formatNumber(
               selected.charge
             )} kW`}
           />
+
           <DetailRow
             icon={FiArrowDown}
             iconColor="#EF4444"
             label="Discharge"
+            isFullscreen={isFullscreen}
             value={`${formatNumber(
               selected.discharge
             )} kW`}
           />
+
           <DetailRow
             icon={FiGrid}
             iconColor="#253858"
             label="Grid Import"
+            isFullscreen={isFullscreen}
             value={`${formatNumber(
               selected.grid
             )} kW`}
           />
-          {/* =================================================
-              SOC
-          ================================================= */}
+
+          {/* SOC */}
+
           <Box
             py="5px"
             borderBottom="1px solid #E9EEF4"
@@ -836,15 +1372,17 @@ const NextDaySchedule: React.FC = () => {
                   boxSize="13px"
                   color="#2563EB"
                 />
+
                 <Text
-                  fontSize="9px"
+                  fontSize={isFullscreen ? "11px" : "10px"}
                   color="#263B5B"
                 >
                   SOC
                 </Text>
               </HStack>
+
               <Text
-                fontSize="9px"
+                fontSize={isFullscreen ? "11px" : "10px"}
                 fontWeight="700"
                 color="#172B4D"
               >
@@ -855,8 +1393,15 @@ const NextDaySchedule: React.FC = () => {
                 %
               </Text>
             </Flex>
+
             <Progress
-              value={selected.soc}
+              value={Math.max(
+                0,
+                Math.min(
+                  100,
+                  selected.soc
+                )
+              )}
               height="6px"
               borderRadius="10px"
               bg="#E8EDF3"
@@ -870,9 +1415,9 @@ const NextDaySchedule: React.FC = () => {
               }}
             />
           </Box>
-          {/* =================================================
-              BATTERY ENERGY
-          ================================================= */}
+
+          {/* BATTERY */}
+
           <Box
             py="5px"
             borderBottom="1px solid #E9EEF4"
@@ -888,15 +1433,17 @@ const NextDaySchedule: React.FC = () => {
                   boxSize="13px"
                   color="#10B981"
                 />
+
                 <Text
-                  fontSize="9px"
+                  fontSize={isFullscreen ? "11px" : "10px"}
                   color="#263B5B"
                 >
                   Battery Energy
                 </Text>
               </HStack>
+
               <Text
-                fontSize="9px"
+                fontSize={isFullscreen ? "11px" : "10px"}
                 fontWeight="700"
                 color="#172B4D"
               >
@@ -907,12 +1454,16 @@ const NextDaySchedule: React.FC = () => {
                 MWh
               </Text>
             </Flex>
+
             <Progress
-              value={Math.min(
-                100,
-                (selected.battery /
-                  26) *
-                  100
+              value={Math.max(
+                0,
+                Math.min(
+                  100,
+                  (selected.battery /
+                    26) *
+                    100
+                )
               )}
               height="6px"
               borderRadius="10px"
@@ -927,19 +1478,20 @@ const NextDaySchedule: React.FC = () => {
               }}
             />
           </Box>
-          {/* THROUGHPUT */}
+
           <DetailRow
             icon={FiRefreshCw}
             iconColor="#2563EB"
             label="Throughput Cycles"
+            isFullscreen={isFullscreen}
             value={formatNumber(
               selected.throughput,
               4
             )}
           />
-          {/* =================================================
-              DESCRIPTION
-          ================================================= */}
+
+          {/* DESCRIPTION */}
+
           <Box
             mt="6px"
             p="8px"
@@ -955,22 +1507,22 @@ const NextDaySchedule: React.FC = () => {
                 boxSize="18px"
                 color="#2563EB"
               />
+
               <Text
-                fontSize="9px"
+                fontSize={isFullscreen ? "11px" : "10px"}
                 fontWeight="700"
                 color="#163B73"
               >
                 Description
               </Text>
             </HStack>
+
             <Text
-              fontSize="8px"
+              fontSize={isFullscreen ? "10px" : "9px"}
               lineHeight="1.35"
               color="#385274"
             >
-              {
-                selected.description
-              }
+              {selected.description}
             </Text>
           </Box>
         </Box>
@@ -978,15 +1530,20 @@ const NextDaySchedule: React.FC = () => {
     </Box>
   );
 };
+
 /* =========================================================
    SUMMARY CARD
 ========================================================= */
+
 interface SummaryCardProps {
   icon: React.ElementType;
   iconColor: string;
   title: string;
   value: string;
+  valueFontSize?: string;
+  isFullscreen: boolean;
 }
+
 const SummaryCard: React.FC<
   SummaryCardProps
 > = ({
@@ -994,6 +1551,8 @@ const SummaryCard: React.FC<
   iconColor,
   title,
   value,
+  valueFontSize = "11px",
+  isFullscreen,
 }) => {
   return (
     <Box
@@ -1012,19 +1571,24 @@ const SummaryCard: React.FC<
         boxSize="15px"
         color={iconColor}
       />
+
       <VStack
         align="start"
         spacing={0}
       >
         <Text
-          fontSize="8px"
+          fontSize="9px"
           color="#52627A"
           lineHeight="1.1"
         >
           {title}
         </Text>
+
         <Text
-          fontSize="11px"
+          fontSize={`${
+            Number.parseInt(valueFontSize, 10) +
+            (isFullscreen ? 2 : 1)
+          }px`}
           fontWeight="800"
           color="#14213D"
           lineHeight="1.2"
@@ -1035,15 +1599,19 @@ const SummaryCard: React.FC<
     </Box>
   );
 };
+
 /* =========================================================
    TABLE HEADER
 ========================================================= */
+
 const TableHeader = ({
   children,
   width,
+  isFullscreen,
 }: {
   children: React.ReactNode;
   width: string;
+  isFullscreen: boolean;
 }) => {
   return (
     <Th
@@ -1051,7 +1619,7 @@ const TableHeader = ({
       px="4px"
       py="6px"
       textAlign="center"
-      fontSize="8px"
+      fontSize={isFullscreen ? "10px" : "9px"}
       fontWeight="700"
       color="#1D2D47"
       whiteSpace="nowrap"
@@ -1062,24 +1630,28 @@ const TableHeader = ({
     </Th>
   );
 };
+
 /* =========================================================
    TABLE CELL
 ========================================================= */
+
 const TableCell = ({
   children,
   fontWeight,
   color,
+  isFullscreen,
 }: {
   children: React.ReactNode;
   fontWeight?: string | number;
   color?: string;
+  isFullscreen: boolean;
 }) => {
   return (
     <Td
       px="4px"
       py="5px"
       textAlign="center"
-      fontSize="9px"
+      fontSize={isFullscreen ? "11px" : "10px"}
       fontWeight={
         fontWeight || "500"
       }
@@ -1093,15 +1665,19 @@ const TableCell = ({
     </Td>
   );
 };
+
 /* =========================================================
    DETAIL ROW
 ========================================================= */
+
 interface DetailRowProps {
   icon: React.ElementType;
   iconColor: string;
   label: string;
   value: React.ReactNode;
+  isFullscreen: boolean;
 }
+
 const DetailRow: React.FC<
   DetailRowProps
 > = ({
@@ -1109,6 +1685,7 @@ const DetailRow: React.FC<
   iconColor,
   label,
   value,
+  isFullscreen,
 }) => {
   return (
     <Flex
@@ -1123,15 +1700,17 @@ const DetailRow: React.FC<
           boxSize="13px"
           color={iconColor}
         />
+
         <Text
-          fontSize="9px"
+          fontSize={isFullscreen ? "11px" : "10px"}
           color="#263B5B"
         >
           {label}
         </Text>
       </HStack>
+
       <Box
-        fontSize="9px"
+        fontSize={isFullscreen ? "11px" : "10px"}
         fontWeight="700"
         color="#172B4D"
       >
@@ -1140,4 +1719,5 @@ const DetailRow: React.FC<
     </Flex>
   );
 };
+
 export default NextDaySchedule;

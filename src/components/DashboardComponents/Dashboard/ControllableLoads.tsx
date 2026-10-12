@@ -327,7 +327,7 @@ export default function ControllableLoads() {
           muiTablePaperProps={{
             elevation: 0,
             sx: {
-              height: "220px",
+              height: "240px",
               background: tableBg,
               borderRadius: 0,
               boxShadow: "none",
@@ -335,8 +335,13 @@ export default function ControllableLoads() {
           }}
           muiTableContainerProps={{
             sx: {
-              height: "180px",
+              height: "240px",
               overflowY: "auto",
+              overflowX: "auto",
+
+              "& .MuiTable-root": {
+                minWidth: "760px",
+              },
 
               "&::-webkit-scrollbar": {
                 width: "6px",
@@ -420,16 +425,6 @@ export default function ControllableLoads() {
             </HStack>
           </HStack>
 
-          <Text
-            px={3}
-            py={2}
-            fontSize="10px"
-            color={headCellColor}
-            borderTop="1px solid"
-            borderColor="#17324A"
-          >
-            Note: Critical loads are always protected and cannot be shed.
-          </Text>
         </Box>
       </ThemeProvider>
     </Box>

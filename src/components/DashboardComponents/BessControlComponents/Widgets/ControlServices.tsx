@@ -12,12 +12,17 @@ import { AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader,
 import React, { useEffect, useState } from "react";
 import { useBessControlModes } from "../../../../hooks/useBessControlModes";
 import ConfirmPasswordModal from "../../../Common/ConfirmPasswordModal";
+import ControlServicesEditModal, {
+  DEFAULT_VALUES,
+  type ControlCurvesValues,
+} from "./ControlServicesEditModal";
 import usePermissions from "../../../../hooks/usePermissions";
+import { GetDataService } from "../../../SLDComponents/guvnl/DataExtractionService";
 
 type Dot = "green" | "red";
 
 const WRAP_W = 332;
-const WRAP_H = 578;
+const WRAP_H = 360;
 const FIELD_W = 160;
 const FIELD_H = 34;
 const FIELD_RADIUS = 8;
@@ -192,13 +197,23 @@ function RampField({ modeSymbol }: { modeSymbol?: "L" | "R" }) {
 }
 
 /* ================= MAIN ================= */
-export default function ControlServices() {
+export default function ControlServices({ ppc_data }: { ppc_data: any }) {
   const cardBg = useColorModeValue("white", "#161B1B");
   const cardBorder = useColorModeValue("gray.200", "#202525");
   const divider = cardBorder;
 
-  const [pValue, setPValue] = useState("");
-  const [qValue, setQValue] = useState("");
+  const [pValue, setPValue] = useState(String(GetDataService("operator_setpoint_active_power_abs", ppc_data) || 0));
+  const [qValue, setQValue] = useState(String(GetDataService("operator_setpoint_reactive_power", ppc_data) || 0));
+  const [vValue, setVValue] = useState("");
+  const [cosphiValue, setCosphiValue] = useState("");
+  const [curveValues, setCurveValues] = useState<ControlCurvesValues>(() => ({
+    ...DEFAULT_VALUES,
+    pf: DEFAULT_VALUES.pf.map((point) => ({ ...point })),
+    quQ: DEFAULT_VALUES.quQ.map((point) => ({ ...point })),
+    quU: DEFAULT_VALUES.quU.map((point) => ({ ...point })),
+  }));
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
   const [modes, setModes] = useState<any>({});
 
   // PERMISSION CHECK
@@ -221,7 +236,7 @@ export default function ControlServices() {
   const [pendingPayload, setPendingPayload] = useState<any>(null);
   // Confirmation dialog state for Apply
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const cancelRef = React.useRef<HTMLButtonElement | null>(null);
+  const cancelRef = React.useRef<any>(null);
 
   const {
     setBessControlSetpoints,
@@ -231,11 +246,25 @@ export default function ControlServices() {
 
   /* ===== GET SETPOINTS (same as before) ===== */
   useEffect(() => {
-    getBessControlSetpoints().then((res) => {
-      if (res?.data?.p) setPValue(String(res.data.p.setpoint_value ?? ""));
-      if (res?.data?.q) setQValue(String(res.data.q.setpoint_value ?? ""));
-    });
-  }, []);
+  getBessControlSetpoints().then((res) => {
+    if (res?.data?.p) {
+      setPValue(String(res.data.p.setpoint_value ? res.data.p.setpoint_value / 1000 :  ""));
+    }
+
+    if (res?.data?.q) {
+      setQValue(String(res.data.q.setpoint_value ? res.data.q.setpoint_value / 1000 : ""));
+    }
+
+    if (res?.data?.v) {
+      setVValue(String(res.data.v.setpoint_value ?? ""));
+    }
+
+    if (res?.data?.cosphi) {
+      setCosphiValue(String(res.data.cosphi.setpoint_value ?? ""));
+    }
+  });
+}, []);
+
 
   /* ===== GET MODES (AUTO REFRESH ADDED) ===== */
   useEffect(() => {
@@ -246,22 +275,176 @@ export default function ControlServices() {
 
     fetchModes(); // first load
 
-    const interval = setInterval(fetchModes, 10000); 
+    const interval = setInterval(fetchModes, 10000);
 
     return () => clearInterval(interval);
   }, []);
 
   /* ===== APPLY ===== */
-  const handleApply = async () => {
+  const handleApply = () => {
     if (!canControlService) {
       console.warn("User has no service control permission");
       return;
     }
 
     const payload = {
-      p: { setpoint_value: Number(pValue), setpoint_unit: "kW" },
-      q: { setpoint_value: Number(qValue), setpoint_unit: "kVAr" },
+      p: {
+        setpoint_value: Number(pValue) * 1000,
+        setpoint_unit: "kW",
+      },
+
+      q: {
+        setpoint_value: Number(qValue) * 1000,
+        setpoint_unit: "kVAr",
+      },
+
+      v: {
+        setpoint_value: Number(vValue),
+        setpoint_unit: "V",
+      },
+
+      cosphi: {
+        setpoint_value: Number(cosphiValue),
+        setpoint_unit: "",
+      },
+
+      ramp: {
+        setpoint_value: Number(curveValues.ramp),
+        setpoint_unit: "%/min",
+      },
+
+      recover: {
+        setpoint_value: Number(curveValues.recover),
+        setpoint_unit: "s",
+      },
+
+      pfx0: {
+        setpoint_value: Number(curveValues.pf[0]?.x || 0),
+        setpoint_unit: "Hz",
+      },
+      pfx1: {
+        setpoint_value: Number(curveValues.pf[1]?.x || 0),
+        setpoint_unit: "Hz",
+      },
+      pfx2: {
+        setpoint_value: Number(curveValues.pf[2]?.x || 0),
+        setpoint_unit: "Hz",
+      },
+      pfx3: {
+        setpoint_value: Number(curveValues.pf[3]?.x || 0),
+        setpoint_unit: "Hz",
+      },
+
+      pfy0: {
+        setpoint_value: Number(curveValues.pf[0]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      pfy1: {
+        setpoint_value: Number(curveValues.pf[1]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      pfy2: {
+        setpoint_value: Number(curveValues.pf[2]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      pfy3: {
+        setpoint_value: Number(curveValues.pf[3]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+
+      quqx0: {
+        setpoint_value: Number(curveValues.quQ[0]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqx1: {
+        setpoint_value: Number(curveValues.quQ[1]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqx2: {
+        setpoint_value: Number(curveValues.quQ[2]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqx3: {
+        setpoint_value: Number(curveValues.quQ[3]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqx4: {
+        setpoint_value: Number(curveValues.quQ[4]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqx5: {
+        setpoint_value: Number(curveValues.quQ[5]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+
+      quqy0: {
+        setpoint_value: Number(curveValues.quQ[0]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqy1: {
+        setpoint_value: Number(curveValues.quQ[1]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqy2: {
+        setpoint_value: Number(curveValues.quQ[2]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqy3: {
+        setpoint_value: Number(curveValues.quQ[3]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqy4: {
+        setpoint_value: Number(curveValues.quQ[4]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quqy5: {
+        setpoint_value: Number(curveValues.quQ[5]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+
+      quux0: {
+        setpoint_value: Number(curveValues.quU[0]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quux1: {
+        setpoint_value: Number(curveValues.quU[1]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quux2: {
+        setpoint_value: Number(curveValues.quU[2]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quux3: {
+        setpoint_value: Number(curveValues.quU[3]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+      quux4: {
+        setpoint_value: Number(curveValues.quU[4]?.x || 0),
+        setpoint_unit: "p.u.",
+      },
+
+      quuy0: {
+        setpoint_value: Number(curveValues.quU[0]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quuy1: {
+        setpoint_value: Number(curveValues.quU[1]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quuy2: {
+        setpoint_value: Number(curveValues.quU[2]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quuy3: {
+        setpoint_value: Number(curveValues.quU[3]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
+      quuy4: {
+        setpoint_value: Number(curveValues.quU[4]?.y || 0),
+        setpoint_unit: "p.u.",
+      },
     };
+
 
     setPendingPayload(payload);
     setIsPasswordOpen(true);
@@ -279,16 +462,17 @@ export default function ControlServices() {
 
   return (
     <Box
-  bg={cardBg}
-  border="1px solid"
-  borderColor={cardBorder}
-  borderRadius="12px"
-  w={`${WRAP_W}px`}
-  h={`${WRAP_H}px`}
-  overflow="hidden"
-  pointerEvents={!canControlService ? "none" : "auto"}
-  opacity={!canControlService ? 0.6 : 1}
->
+      bg={cardBg}
+      border="1px solid"
+      borderColor={cardBorder}
+      borderRadius="12px"
+      w={`${WRAP_W}px`}
+      h={`${WRAP_H}px`}
+      overflow="auto"
+      overflowX="hidden"
+      pointerEvents={!canControlService ? "none" : "auto"}
+      opacity={!canControlService ? 0.6 : 1}
+    >
       <VStack align="stretch" spacing={0}>
         <HStack justify="space-between" px="16px" py="12px">
           <Text fontWeight={700}>Control Services</Text>
@@ -324,8 +508,8 @@ export default function ControlServices() {
         >
           <OneField
             label="P"
-            subtext="827267"
-            unit="kWh"
+            subtext={Number(GetDataService("actual_active_power", ppc_data) || 0) / 1000 + " kW"}
+            unit="kW"
             dot={modes?.p?.active ? "green" : "red"}
             modeSymbol={modes?.p?.control_state === "local" ? "L" : "R"}
             value={pValue}
@@ -344,9 +528,28 @@ export default function ControlServices() {
             modeSymbol={modes?.pf?.control_state === "local" ? "L" : "R"}
           />
 
+          <Row h={46}>
+            <HStack w="full" justify="space-between">
+              <HStack spacing={3}>
+                <Text fontSize="sm" fontWeight={700} color={useColorModeValue("gray.800", "#E8ECEC")}>
+                  Droop Characteristics
+                </Text>
+                <StatusDot color="red" />
+              </HStack>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => setIsEditOpen(true)}
+                isDisabled={!canControlService}
+              >
+                Edit
+              </Button>
+            </HStack>
+          </Row>
+
           <OneField
             label="Q"
-            subtext="0 kVAr"
+            subtext={Number(GetDataService("actual_reactive_power", ppc_data) || 0) / 1000 + " kVAr"}
             unit="kVAr"
             dot={modes?.q?.active ? "green" : "red"}
             modeSymbol={modes?.q?.control_state === "local" ? "L" : "R"}
@@ -356,17 +559,28 @@ export default function ControlServices() {
 
           <OneField
             label="cosphi"
-            subtext="1"
-            dot="red"
-            modeSymbol={modes?.cosphi?.control_state === "local" ? "L" : "R"}
+            subtext={String(GetDataService("actual_cos_phi", ppc_data) || 0)}
+            unit=""
+            dot={modes?.cosphi?.active ? "green" : "red"}
+            modeSymbol={
+              modes?.cosphi?.control_state === "local" ? "L" : "R"
+            }
+            value={cosphiValue}
+            onChange={setCosphiValue}
           />
 
           <OneField
-            label="V Droop"
-            subtext="4"
-            dot="red"
-            modeSymbol={modes?.v_droop?.control_state === "local" ? "L" : "R"}
+            label="V"
+            subtext={`${GetDataService("actual_voltage", ppc_data) || 0} V`}
+            unit="V"
+            dot={modes?.v?.active ? "green" : "red"}
+            modeSymbol={
+              modes?.v?.control_state === "local" ? "L" : "R"
+            }
+            value={vValue}
+            onChange={setVValue}
           />
+
 
           <OneField
             label="FRT"
@@ -381,6 +595,15 @@ export default function ControlServices() {
           isOpen={isPasswordOpen}
           onClose={() => setIsPasswordOpen(false)}
           onConfirm={handlePasswordConfirm}
+        />
+        <ControlServicesEditModal
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          values={curveValues}
+          onSave={(values) => {
+            setCurveValues(values);
+            setIsEditOpen(false);
+          }}
         />
         {/* Confirmation dialog for Apply */}
         <AlertDialog

@@ -32,6 +32,7 @@ import {
 import DashboardLog from "./DashboardLog"; // render dashboard log content
 import StrategyLog from "./StrategyLog"; // new strategy log tab component
 import ReportLog from "./ReportLog"; // new report log tab component
+import SystemLog from "./SystemLog";
 import { SearchIcon, RepeatIcon, CalendarIcon, CloseIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import { authFetch } from "../hooks/useAuth";
 
@@ -165,6 +166,7 @@ if (to) params.set("to", to);
           <Tab>Control Log</Tab>
           <Tab>Strategy Log</Tab>
           <Tab>Report Log</Tab>
+          <Tab>System Log</Tab>
         </TabList>
 
         <TabPanels>
@@ -389,14 +391,19 @@ if (to) params.set("to", to);
           </TabPanel>
 
           {/* STRATEGY LOG TAB */}
-          <TabPanel p={0}>
-            <StrategyLog />
-          </TabPanel>
+<TabPanel p={0}>
+  <StrategyLog />
+</TabPanel>
 
-          {/* REPORT LOG TAB */}
-          <TabPanel p={0}>
-            <ReportLog />
-          </TabPanel>
+{/* REPORT LOG TAB */}
+<TabPanel p={0}>
+  <ReportLog />
+</TabPanel>
+
+{/* SYSTEM LOG TAB */}
+<TabPanel p={0}>
+  <SystemLog />
+</TabPanel>
         </TabPanels>
       </Tabs>
     </Box>

@@ -1,194 +1,703 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import {
-  Box,
-  HStack,
-  VStack,
-  Text,
-  Icon,
-} from "@chakra-ui/react";
-import { MdPsychology } from "react-icons/md";
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@chakra-ui/icons";
 
 import GraphLayout from "../../Layouts/WidgetsLayout/GraphsLayout/GraphLayout";
-import SplineGraph from "../../Graphs/RevampCharts/SplineGraph";
+import ColumnGraphNew from "../../Graphs/RevampCharts/ColumnGraphNew";
 
 import type { ExportFunctions } from "../../../types/graphExport/export";
 
-const hour = 60 * 60 * 1000;
+type ForecastItem = {
+  forecast_load_kw: number;
+  timestamp: string;
+};
 
-// Fixed date instead of Date.now()
-const start = Date.UTC(2026, 6, 15, 0, 0, 0);
+type ScheduleItem = {
+  id: number;
+  start_ts: string;
+  end_ts: string | null;
+  power: number | null;
+  type: string;
+  duration: string | null;
+};
+
+type ApiResponse = {
+  forecast?: ForecastItem[];
+  schedule?: ScheduleItem[];
+  status?: string;
+};
+
+const API_BASE_URL = (
+  (import.meta.env.VITE_API_BASE as string | undefined) || ""
+)
+  .replace(/^['"]+|['"]+$/g, "")
+  .replace(/\/$/, "");
 
 const LoadForecastChart = () => {
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
-  const series = useMemo(
-    () => [
+  // =========================================================
+  // TODAY
+  // =========================================================
+
+  const getToday = (): string => {
+    const today = new Date();
+
+    const year = today.getFullYear();
+
+    const month = String(
+      today.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      today.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // Default date = today
+  const [selectedDate, setSelectedDate] =
+    useState<string>(getToday());
+
+  // =========================================================
+  // API DATA
+  // =========================================================
+
+  const [apiData, setApiData] =
+    useState<ApiResponse>({
+      forecast: [],
+      schedule: [],
+    });
+
+  const [loading, setLoading] =
+    useState(false);
+
+  // =========================================================
+  // FULLSCREEN STATE
+  // =========================================================
+
+  const [isFullScreen, setIsFullScreen] =
+    useState(false);
+
+  const [screenHeight, setScreenHeight] =
+    useState(
+      typeof window !== "undefined"
+        ? window.innerHeight
+        : 700
+    );
+
+  // =========================================================
+  // FULLSCREEN + RESIZE LISTENER
+  // =========================================================
+
+  useEffect(() => {
+    const handleFullScreen = () => {
+      setIsFullScreen(
+        !!document.fullscreenElement
+      );
+
+      setScreenHeight(
+        window.innerHeight
+      );
+    };
+
+    const handleResize = () => {
+      setScreenHeight(
+        window.innerHeight
+      );
+    };
+
+    document.addEventListener(
+      "fullscreenchange",
+      handleFullScreen
+    );
+
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullScreen
+      );
+
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+    };
+  }, []);
+
+  // =========================================================
+  // FETCH LOAD + SCHEDULE API
+  // =========================================================
+
+  useEffect(() => {
+    const fetchLoadAndSchedule =
+      async () => {
+        try {
+          setLoading(true);
+
+          const url =
+            `${API_BASE_URL}/api/load-and-schedule?date=${selectedDate}`;
+
+          console.log(
+            "Load Schedule API:",
+            url
+          );
+
+          const response =
+            await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(
+              `API failed: ${response.status} ${response.statusText}`
+            );
+          }
+
+          const data: ApiResponse =
+            await response.json();
+
+          console.log(
+            "Load Schedule API Response:",
+            data
+          );
+
+          setApiData({
+            forecast:
+              data.forecast || [],
+
+            schedule:
+              data.schedule || [],
+
+            status:
+              data.status,
+          });
+        } catch (error) {
+          console.error(
+            "Failed to fetch load and schedule:",
+            error
+          );
+
+          setApiData({
+            forecast: [],
+            schedule: [],
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+    fetchLoadAndSchedule();
+  }, [selectedDate]);
+
+  // =========================================================
+  // DATE NAVIGATION
+  // =========================================================
+
+  const changeDate = (days: number) => {
+    const date = new Date(
+      `${selectedDate}T00:00:00`
+    );
+
+    date.setDate(
+      date.getDate() + days
+    );
+
+    const year =
+      date.getFullYear();
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      date.getDate()
+    ).padStart(2, "0");
+
+    setSelectedDate(
+      `${year}-${month}-${day}`
+    );
+  };
+
+  // =========================================================
+  // DISPLAY DATE
+  // =========================================================
+
+  const formattedSelectedDate =
+    useMemo(() => {
+      const date = new Date(
+        `${selectedDate}T00:00:00`
+      );
+
+      return date.toLocaleDateString(
+        "en-GB",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }
+      );
+    }, [selectedDate]);
+
+  // =========================================================
+  // 24 HOUR CATEGORIES
+  // =========================================================
+
+  const categories = useMemo(() => {
+    return Array.from(
+      { length: 25 },
+      (_, hour) => {
+        const date = new Date(
+          `${selectedDate}T00:00:00`
+        );
+
+        date.setHours(
+          hour,
+          0,
+          0,
+          0
+        );
+
+        return date.toLocaleTimeString(
+          "en-GB",
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }
+        );
+      }
+    );
+  }, [selectedDate]);
+
+  // =========================================================
+  // LOAD FORECAST
+  // =========================================================
+  //
+  // API gives minute-wise forecast.
+  // Convert minute data to hourly average.
+  // =========================================================
+
+  const forecastHourlyData =
+    useMemo(() => {
+      const hourlyValues: number[][] =
+        Array.from(
+          { length: 24 },
+          () => []
+        );
+
+      (
+        apiData.forecast || []
+      ).forEach((item) => {
+        if (
+          item.forecast_load_kw ===
+            null ||
+          item.forecast_load_kw ===
+            undefined ||
+          !item.timestamp
+        ) {
+          return;
+        }
+
+        const normalizedTimestamp =
+          item.timestamp.replace(
+            " ",
+            "T"
+          );
+
+        const date = new Date(
+          normalizedTimestamp
+        );
+
+        if (
+          Number.isNaN(
+            date.getTime()
+          )
+        ) {
+          return;
+        }
+
+        const hour =
+          date.getHours();
+
+        if (
+          hour >= 0 &&
+          hour < 24
+        ) {
+          hourlyValues[
+            hour
+          ].push(
+            Number(
+              item.forecast_load_kw
+            )
+          );
+        }
+      });
+
+      const result: (
+        | number
+        | null
+      )[] = Array(25).fill(null);
+
+      hourlyValues.forEach(
+        (values, hour) => {
+          if (!values.length) {
+            return;
+          }
+
+          const average =
+            values.reduce(
+              (sum, value) =>
+                sum + value,
+              0
+            ) / values.length;
+
+          result[hour] =
+            Number(
+              average.toFixed(2)
+            );
+        }
+      );
+
+      // Close spline at 24:00
+      if (
+        result[23] !== null
+      ) {
+        result[24] =
+          result[23];
+      }
+
+      return result;
+    }, [apiData.forecast]);
+
+  // =========================================================
+  // BESS SCHEDULE
+  // =========================================================
+  //
+  // Charge    = positive
+  // Discharge = negative
+  // Idle      = ignored
+  // Grid      = ignored
+  // =========================================================
+
+  const bessScheduleData =
+    useMemo(() => {
+      const values: (
+        | number
+        | null
+      )[] = Array(25).fill(
+        null
+      );
+
+      (
+        apiData.schedule || []
+      ).forEach((item) => {
+        if (
+          !item.start_ts ||
+          item.power === null ||
+          item.power === undefined
+        ) {
+          return;
+        }
+
+        const type =
+          String(
+            item.type || ""
+          ).toLowerCase();
+
+        // Only Charge / Discharge
+        if (
+          type !== "charge" &&
+          type !== "discharge"
+        ) {
+          return;
+        }
+
+        const startDate =
+          new Date(
+            item.start_ts
+          );
+
+        if (
+          Number.isNaN(
+            startDate.getTime()
+          )
+        ) {
+          return;
+        }
+
+        const startHour =
+          startDate.getHours();
+
+        if (
+          startHour < 0 ||
+          startHour > 23
+        ) {
+          return;
+        }
+
+        let power =
+          Number(item.power);
+
+        if (
+          Number.isNaN(power)
+        ) {
+          return;
+        }
+
+        // Charge = positive
+        if (
+          type === "charge"
+        ) {
+          power =
+            Math.abs(power);
+        }
+
+        // Discharge = negative
+        if (
+          type === "discharge"
+        ) {
+          power =
+            -Math.abs(power);
+        }
+
+        // Multiple schedules in
+        // same hour
+        if (
+          values[startHour] ===
+          null
+        ) {
+          values[startHour] =
+            power;
+        } else {
+          values[startHour] =
+            Number(
+              values[startHour]
+            ) + power;
+        }
+      });
+
+      return values;
+    }, [apiData.schedule]);
+
+  // =========================================================
+  // CHART SERIES
+  // =========================================================
+
+  const series = useMemo(() => {
+    return [
       {
         type: "spline",
-        name: "Actual",
-        color: "#2E90FA",
-        marker: { enabled: true },
-        data: [
-          [start + 0 * hour, 6.2],
-          [start + 1 * hour, 6.8],
-          [start + 2 * hour, 7.5],
-          [start + 3 * hour, 8.2],
-          [start + 4 * hour, 8.8],
-          [start + 5 * hour, 8.0],
-          [start + 6 * hour, 7.4],
-          [start + 7 * hour, null],
-        ],
-      },
 
-      {
-        type: "spline",
-        name: "Forecast",
-        color: "#22C55E",
-        marker: { enabled: true },
-        data: [
-          [start + 7 * hour, 7.3],
-          [start + 8 * hour, 8.1],
-          [start + 9 * hour, 9.0],
-          [start + 10 * hour, 9.6],
-          [start + 11 * hour, 9.2],
-          [start + 12 * hour, 8.6],
-          [start + 13 * hour, 7.9],
-          [start + 14 * hour, 7.0],
-        ],
-      },
+        name: "Load Forecast",
 
-      {
-        type: "spline",
-        name: "Upper Bound",
-        color: "#C026D3",
-        marker: { enabled: false },
-        data: [
-          [start + 7 * hour, 8.5],
-          [start + 8 * hour, 9.5],
-          [start + 9 * hour, 10.5],
-          [start + 10 * hour, 11.2],
-          [start + 11 * hour, 10.8],
-          [start + 12 * hour, 10.0],
-          [start + 13 * hour, 9.3],
-          [start + 14 * hour, 8.4],
-        ],
-      },
+        color: "#3B82F6",
 
-      {
-        type: "spline",
-        name: "Lower Bound",
-        color: "#A855F7",
-        marker: { enabled: false },
-        data: [
-          [start + 7 * hour, 6.1],
-          [start + 8 * hour, 6.8],
-          [start + 9 * hour, 7.5],
-          [start + 10 * hour, 8.2],
-          [start + 11 * hour, 7.9],
-          [start + 12 * hour, 7.3],
-          [start + 13 * hour, 6.8],
-          [start + 14 * hour, 6.1],
-        ],
-      },
-    ],
-    []
-  );
-
-  const options = useMemo(
-    () => ({
-      xAxis: {
-        type: "datetime",
-      },
-
-      yAxis: {
-        min: 0,
-        max: 12,
-        title: {
-          text: null,
+        marker: {
+          enabled: false,
         },
+
+        data:
+          forecastHourlyData,
       },
 
-      tooltip: {
-        shared: true,
-        valueDecimals: 2,
-      },
+      {
+        type: "column",
 
-      legend: {
-        enabled: true,
-        show: false,
+        name: "BESS Schedule",
+
+        color: "#22C55E",
+
+        data:
+          bessScheduleData,
       },
-    }),
-    []
+    ];
+  }, [
+    forecastHourlyData,
+    bessScheduleData,
+  ]);
+
+  // =========================================================
+  // DYNAMIC CHART HEIGHT
+  // =========================================================
+  //
+  // Normal:
+  //   210px
+  //
+  // Fullscreen:
+  //   Almost complete viewport height
+  // =========================================================
+
+  const chartHeight = isFullScreen
+    ? Math.max(
+        screenHeight - 90,
+        400
+      )
+    : 240;
+
+  // =========================================================
+  // TITLE
+  // =========================================================
+
+  const titleContent = (
+    <Flex
+      width="100%"
+      align="center"
+      gap={2}
+      minW={0}
+    >
+      {/* TITLE */}
+
+      <Text
+        fontSize="16px"
+        fontWeight="600"
+        lineHeight="1"
+        whiteSpace="nowrap"
+      >
+        24-Hour Load Forecast
+      </Text>
+
+      {/* DATE CONTROLS */}
+
+      <Flex
+        align="center"
+        gap={1}
+        ml={1}
+      >
+        {/* PREVIOUS */}
+
+        <IconButton
+          aria-label="Previous date"
+          icon={
+            <ChevronLeftIcon
+              boxSize={4}
+            />
+          }
+          size="xs"
+          variant="ghost"
+          onClick={() =>
+            changeDate(-1)
+          }
+        />
+
+        {/* SELECTED DATE */}
+
+        <Text
+          fontSize="12px"
+          fontWeight="600"
+          minW="92px"
+          textAlign="center"
+          whiteSpace="nowrap"
+        >
+          {formattedSelectedDate}
+        </Text>
+
+        {/* NEXT */}
+
+        <IconButton
+          aria-label="Next date"
+          icon={
+            <ChevronRightIcon
+              boxSize={4}
+            />
+          }
+          size="xs"
+          variant="ghost"
+          onClick={() =>
+            changeDate(1)
+          }
+        />
+
+        {/* DATE PICKER */}
+
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(event) => {
+            setSelectedDate(
+              event.target.value
+            );
+          }}
+          style={{
+            height: "26px",
+            width: "118px",
+            padding: "2px 6px",
+            marginLeft: "3px",
+            border:
+              "1px solid #CBD5E0",
+            borderRadius: "5px",
+            fontSize: "12px",
+            background: "white",
+          }}
+        />
+      </Flex>
+    </Flex>
   );
+
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
     <GraphLayout
-      title="Load Forecast - Next 48 Hours"
+      title={titleContent}
       width={["820px"]}
-      height="320px"
+      height="315px"
       fullScreen
       onExport={exportFunctions}
     >
-      <Box position="relative" h="100%">
-        <SplineGraph
-          apiData={series}
-          height={200}
-          props={options}
-          onExportReady={setExportFunctions}
-          showLegendButtons={false}
-        />
-
-        <HStack
-          position="absolute"
-          bottom="-12px"
-          left="10px"
-          right="10px"
-          justify="space-between"
-          borderTop="1px solid rgba(255,255,255,.08)"
-          pt={3}
-          pb={0}
-          bg="transparent"
-        >
-          <VStack spacing={0} align="start">
-            <Text fontSize="10px" color="gray.500">
-              MAPE
-            </Text>
-            <Text fontWeight="600">4.32%</Text>
-          </VStack>
-
-          <VStack spacing={0} align="start">
-            <Text fontSize="10px" color="gray.500">
-              RMSE
-            </Text>
-            <Text fontWeight="600">0.41 MW</Text>
-          </VStack>
-
-          <VStack spacing={0} align="start">
-            <Text fontSize="10px" color="gray.500">
-              MAE
-            </Text>
-            <Text fontWeight="600">0.33 MW</Text>
-          </VStack>
-
-          <VStack spacing={0} align="start">
-            <Text fontSize="10px" color="gray.500">
-              R² Score
-            </Text>
-            <Text fontWeight="600">0.94</Text>
-          </VStack>
-
-          <HStack spacing={2}>
-            <Icon as={MdPsychology} color="gray.500" />
-
-            <VStack spacing={0} align="start">
-              <Text fontSize="10px" color="gray.500">
-                Model
-              </Text>
-              <Text fontWeight="600">LightGBM v2.3</Text>
-            </VStack>
-          </HStack>
-        </HStack>
+      <Box
+        h={
+          isFullScreen
+            ? "calc(100vh - 50px)"
+            : "100%"
+        }
+        minW={0}
+        position="relative"
+        overflow="hidden"
+      >
+        {loading ? (
+          <Flex
+            h="100%"
+            align="center"
+            justify="center"
+            fontSize="13px"
+            color="gray.500"
+          >
+            Loading...
+          </Flex>
+        ) : (
+          <Box
+            width="100%"
+            height={
+              isFullScreen
+                ? `${chartHeight}px`
+                : "100%"
+            }
+          >
+            <ColumnGraphNew
+              apiData={series}
+              category={categories}
+              height={chartHeight}
+              barWidth={14}
+              barCategoryGap="15%"
+              borderRadius={4}
+              legendHeight={40}
+              onExportReady={
+                setExportFunctions
+              }
+            />
+          </Box>
+        )}
       </Box>
     </GraphLayout>
   );

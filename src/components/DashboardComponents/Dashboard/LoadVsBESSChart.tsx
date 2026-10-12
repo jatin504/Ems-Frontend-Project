@@ -169,7 +169,7 @@ const LoadVsBESSChart = () => {
   return (
     <GraphLayout
       title="Load vs BESS Schedule"
-      width={["580px"]}
+      width={["460px"]}
       height="320px"
       fullScreen
       onExport={exportFunctions}

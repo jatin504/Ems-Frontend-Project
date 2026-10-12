@@ -1,7 +1,7 @@
 import React from "react";
 import {
   Box, VStack, HStack, Text, Button, Select,
-  useColorModeValue, useDisclosure, Icon, useToast, Input,
+  useColorModeValue, useDisclosure, Icon, Input,
 } from "@chakra-ui/react";
 import { FiCalendar } from "react-icons/fi";
 import { useNavigate } from "react-router-dom"; //  UPDATED: for navigation
@@ -67,7 +67,6 @@ export default function ScheduledCommands() {
   const chipText = useColorModeValue("#0F172A", "#E8ECEC");
 
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const toast = useToast();
   const fetchSchedules = useFetchSchedules();
   const navigate = useNavigate(); //  UPDATED
 
@@ -107,11 +106,25 @@ export default function ScheduledCommands() {
   const refresh = React.useCallback(async () => {
     try {
       const data = await fetchSchedulesRef.current("all");
-      setRawRows(data || []);
-    } catch (e: any) {
-      toast({ title: "Failed to load schedules", description: e?.message || "Please try again.", status: "error", duration: 4000, isClosable: true });
+
+      console.log("[ScheduledCommands] list response:", data);
+      console.log("[ScheduledCommands] type:", typeof data);
+      console.log("[ScheduledCommands] isArray:", Array.isArray(data));
+
+      if (Array.isArray(data)) {
+        setRawRows(data);
+      } else {
+        console.error(
+          "[ScheduledCommands] Expected array but received:",
+          data
+        );
+        setRawRows([]);
+      }
+    } catch (error) {
+      console.error("[ScheduledCommands] refresh failed:", error);
+      setRawRows([]);
     }
-  }, [toast]);
+  }, []);
 
   // load once on mount
   React.useEffect(() => { refresh(); }, []);

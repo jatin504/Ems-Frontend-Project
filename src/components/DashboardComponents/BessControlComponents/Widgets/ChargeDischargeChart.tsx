@@ -181,7 +181,7 @@ const ChargeDischargeChart: React.FC = () => {
   return (
     <GraphLayout
       title={<WidgetTitle>Charge/Discharge</WidgetTitle>}
-      width={["578px"]}
+      width={["588px"]}
       height="344px"
       bg={CARD_BG}
       border={`1px solid ${BORDER}`}

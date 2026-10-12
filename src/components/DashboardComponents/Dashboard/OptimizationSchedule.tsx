@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
 
   Box,
+
   Button,
+
   Flex,
+
   Text,
 
   Badge,
@@ -15,40 +18,25 @@ import {
 
   HStack,
 
-  Divider,
-
   Icon,
 
   Collapse,
+
   Input,
+
   useColorModeValue,
+
 } from "@chakra-ui/react";
-
-
 
 import {
 
   FiAlertTriangle,
 
+FiActivity,
+
   FiChevronDown,
 
   FiChevronUp,
-
-  FiActivity,
-
-  FiSun,
-
-  FiZap,
-
-  FiBattery,
-
-  FiArrowDown,
-
-  FiArrowUp,
-
-  FiGrid,
-
-  FiDollarSign,
 
   FiClock,
 
@@ -56,21 +44,15 @@ import {
 
 } from "react-icons/fi";
 
-
-
 /* =========================================================
 
    TYPES
 
-\========================================================= */
-
-
+\\========================================================= */
 
 interface Schedule {
 
   time_stamp: string;
-
-
 
   load_kw: number;
 
@@ -86,8 +68,6 @@ interface Schedule {
 
   load_state: string;
 
-
-
   decision: string;
 
   charge_kw: number;
@@ -100,37 +80,25 @@ interface Schedule {
 
   grid_limit_violation_kw: number;
 
-
-
   soc_percent: number;
 
   battery_energy_mwh: number;
 
   throughput_cycles: number;
 
-
-
   upcoming_peak_timestamp: string | null;
 
   upcoming_peak_required_kw: number;
-
-
 
   active_peak_energy_mwh: number;
 
   violation_energy_mwh: number;
 
-
-
   risk_reserve_mwh: number;
 
   required_reserve_mwh: number;
 
-
-
   description: string;
-
-
 
   is_pass: boolean;
 
@@ -138,284 +106,64 @@ interface Schedule {
 
   ems_recommendations?: string[];
 
+  event_id?: string;
+
   [key: string]: any;
 
 }
 
 interface EMSRecommendationProps {
+
   scheduleData?: Schedule[];
+
 }
 
+interface EMSApiResult {
+  bess_event_decision: { active_peak_energy_mwh:number; battery_energy_mwh:number; charge_kw:number; co_relation_percent:number; decision:string; description:string; discharge_kw:number; event_id?:string; grid_charge_kw:number; grid_import_kw:number; grid_import_limit_kw:number; grid_limit_violation_kw:number; load_kw:number; load_state:string; net_load_kw:number; pv_kw:number; required_reserve_mwh:number; risk_reserve_mwh:number; soc_percent:number; tariff_per_kw:number; throughput_cycles:number; time_stamp:string; upcoming_peak_required_kw:number; upcoming_peak_timestamp:string|null; violation_energy_mwh:number; };
+  description:string; event_id?:string; fault:string|null; is_pass:boolean;
+  strategy_result?: Array<{ battery_energy_mwh:number; decision:string; discharge_kw:number; soc:number; timestamp:string; grid_power_kw?:number; remaining_excess_kw?:number; status?:string; target_battery_energy_mwh?:number; target_soc_percent?:number; }>;
+}
+interface EMSApiResponse { count:number; results:EMSApiResult[]; success:boolean; }
+
 interface BankSocInput {
+
   bank: string;
+
   soc: string;
+
 }
 
 interface BankInputValues {
+
   banks: BankSocInput[];
+
   power: string;
+
   load: string;
+
 }
 
 const createEmptyBankInputs = (): BankInputValues => ({
+
   banks: Array.from({ length: 5 }, (_, index) => ({
+
     bank: `Bank ${index + 1}`,
+
     soc: "",
+
   })),
+
   power: "",
+
   load: "",
+
 });
-
-
-
 
 /* =========================================================
 
    DUMMY FAILED SCHEDULES
 
-\========================================================= */
-
-
-
-const dummyFailedSchedules: Schedule[] = [
-
-  {
-
-    time_stamp: "2026-09-22 14:00:00",
-
-
-
-    load_kw: 4500,
-
-    pv_kw: 1200,
-
-    net_load_kw: 3300,
-
-    grid_import_limit_kw: 3000,
-
-    tariff_per_kw: 7.5,
-
-    co_relation_percent: 15,
-
-    load_state: "peak",
-
-
-
-    decision: "discharge",
-
-    charge_kw: 0,
-
-    grid_charge_kw: 0,
-
-    discharge_kw: 3000,
-
-    grid_import_kw: 300,
-
-    grid_limit_violation_kw: 300,
-
-
-
-    soc_percent: 18.5,
-
-    battery_energy_mwh: 4.2,
-
-    throughput_cycles: 0.62,
-
-
-
-    upcoming_peak_timestamp: "2026-09-22 15:00:00",
-
-    upcoming_peak_required_kw: 3500,
-
-
-
-    active_peak_energy_mwh: 4.2,
-
-    violation_energy_mwh: 0.3,
-
-
-
-    risk_reserve_mwh: 3.8,
-
-    required_reserve_mwh: 5.2,
-
-
-
-    description:
-
-      "PV supplies 1200 kW. BESS discharges 3000 kW. Grid import reaches 300 kW above the configured grid limit.",
-
-
-
-    is_pass: false,
-
-    fault: "Grid import limit exceeded",
-
-  },
-
-
-
-  {
-
-    time_stamp: "2026-09-22 18:15:00",
-
-
-
-    load_kw: 2800,
-
-    pv_kw: 0,
-
-    net_load_kw: 2800,
-
-    grid_import_limit_kw: 2500,
-
-    tariff_per_kw: 6,
-
-    co_relation_percent: 10,
-
-    load_state: "peak",
-
-
-
-    decision: "charge",
-
-    charge_kw: 2500,
-
-    grid_charge_kw: 2500,
-
-    discharge_kw: 0,
-
-    grid_import_kw: 2800,
-
-    grid_limit_violation_kw: 300,
-
-
-
-    soc_percent: 92.1,
-
-    battery_energy_mwh: 23,
-
-    throughput_cycles: 0.81,
-
-
-
-    upcoming_peak_timestamp: "2026-09-22 19:00:00",
-
-    upcoming_peak_required_kw: 0,
-
-
-
-    active_peak_energy_mwh: 0,
-
-    violation_energy_mwh: 0,
-
-
-
-    risk_reserve_mwh: 5.2,
-
-    required_reserve_mwh: 5.2,
-
-
-
-    description:
-
-      "Charging request cannot be safely executed because battery SOC is already above the maximum charging threshold.",
-
-
-
-    is_pass: false,
-
-    fault: "SOC limit exceeded",
-
-  },
-
-
-
-  {
-
-    time_stamp: "2026-09-22 21:30:00",
-
-
-
-    load_kw: 3200,
-
-    pv_kw: 0,
-
-    net_load_kw: 3200,
-
-    grid_import_limit_kw: 3000,
-
-    tariff_per_kw: 4,
-
-    co_relation_percent: 0,
-
-    load_state: "off_peak",
-
-
-
-    decision: "discharge",
-
-    charge_kw: 0,
-
-    grid_charge_kw: 0,
-
-    discharge_kw: 2600,
-
-    grid_import_kw: 600,
-
-    grid_limit_violation_kw: 0,
-
-
-
-    soc_percent: 12.4,
-
-    battery_energy_mwh: 3.1,
-
-    throughput_cycles: 0.91,
-
-
-
-    upcoming_peak_timestamp: "2026-09-23 14:00:00",
-
-    upcoming_peak_required_kw: 4000,
-
-
-
-    active_peak_energy_mwh: 3.1,
-
-    violation_energy_mwh: 0,
-
-
-
-    risk_reserve_mwh: 3.1,
-
-    required_reserve_mwh: 5.2,
-
-
-
-    description:
-
-      "BESS discharge reduces grid demand, but available battery energy is below the required reserve for the upcoming peak.",
-
-
-
-    is_pass: false,
-
-    fault: "Required reserve not maintained",
-
-  },
-
-];
-
-
-
-/* =========================================================
-
-   HELPERS
-
-\========================================================= */
-
-
+\\========================================================= */
 
 const formatNumber = (
 
@@ -427,8 +175,6 @@ const formatNumber = (
 
   if (value === undefined || value === null) return "--";
 
-
-
   return Number(value).toLocaleString("en-IN", {
 
     minimumFractionDigits: digits,
@@ -439,21 +185,13 @@ const formatNumber = (
 
 };
 
-
-
 const formatDate = (timestamp: string) => {
 
   if (!timestamp) return "--";
 
-
-
-  const datePart = timestamp.split(" ")[0];
-
-
+  const datePart = timestamp.includes("T") ? timestamp.split("T")[0] : timestamp.split(" ")[0];
 
   const [year, month, day] = datePart.split("-");
-
-
 
   return `${day} ${new Date(
 
@@ -471,37 +209,25 @@ const formatDate = (timestamp: string) => {
 
 };
 
-
-
 const formatTime = (timestamp: string) => {
 
   if (!timestamp) return "--";
 
-
-
-  const timePart = timestamp.split(" ")[1] || "";
-
-
+  const timePart = timestamp.includes("T") ? timestamp.split("T")[1] || "" : timestamp.split(" ")[1] || "";
 
   return timePart.substring(0, 5);
 
 };
 
-
-
 const getFaultTitle = (item: Schedule) => {
 
   if (item.fault) return item.fault;
-
-
 
   if ((item.grid_limit_violation_kw || 0) > 0) {
 
     return "Grid import limit exceeded";
 
   }
-
-
 
   if (
 
@@ -515,155 +241,21 @@ const getFaultTitle = (item: Schedule) => {
 
   }
 
-
-
   if ((item.soc_percent || 0) > 90) {
 
     return "SOC limit exceeded";
 
   }
 
-
-
   return "Schedule constraint violation";
 
 };
-
-
-
-/* =========================================================
-
-   COMPACT METRIC
-
-\========================================================= */
-
-
-
-interface MetricItemProps {
-
-  icon: React.ElementType;
-
-  label: string;
-
-  value: string;
-
-  valueColor?: string;
-
-}
-
-
-
-const MetricItem = ({
-
-  icon,
-
-  label,
-
-  value,
-
-  valueColor,
-
-}: MetricItemProps) => {
-
-  return (
-
-    <Flex
-
-      minW={0}
-
-      w="100%"
-
-      align="center"
-
-      gap="4px"
-
-      overflow="hidden"
-
-    >
-
-      <Icon
-
-        as={icon}
-
-        flexShrink={0}
-
-        boxSize="12px"
-
-        color={valueColor || "#64748B"}
-
-      />
-
-
-
-      <Box
-
-        minW={0}
-
-        overflow="hidden"
-
-      >
-
-        <Text
-
-          fontSize="8px"
-
-          color="#64748B"
-
-          lineHeight="10px"
-
-          whiteSpace="nowrap"
-
-          overflow="hidden"
-
-          textOverflow="ellipsis"
-
-        >
-
-          {label}
-
-        </Text>
-
-
-
-        <Text
-
-          fontSize="10px"
-
-          fontWeight="700"
-
-          color={valueColor || "#172033"}
-
-          lineHeight="13px"
-
-          whiteSpace="nowrap"
-
-          overflow="hidden"
-
-          textOverflow="ellipsis"
-
-        >
-
-          {value}
-
-        </Text>
-
-      </Box>
-
-    </Flex>
-
-  );
-
-};
-
-
 
 /* =========================================================
 
    DETAIL BOX
 
-\========================================================= */
-
-
+\\========================================================= */
 
 interface DetailBoxProps {
 
@@ -672,8 +264,6 @@ interface DetailBoxProps {
   value: string;
 
 }
-
-
 
 const DetailBox = ({
 
@@ -723,8 +313,6 @@ const DetailBox = ({
 
       </Text>
 
-
-
       <Text
 
         fontSize="10px"
@@ -751,366 +339,215 @@ const DetailBox = ({
 
 };
 
-
-
 /* =========================================================
 
    MAIN COMPONENT
 
-\========================================================= */
-
-
-
-const EMS_RECOMMENDATION_API =
-  (() => {
-    const url = new URL(import.meta.env.VITE_API_BASE);
-    url.port = import.meta.env.VITE_API_PORT;
-    url.pathname = "/api/ems-recommendation";
-    return url.toString();
-  })();
+\\========================================================= */
 
 const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
+
   const [expandedIndex, setExpandedIndex] =
+
     useState<number | null>(0);
 
   const [editingScheduleKey, setEditingScheduleKey] =
+
     useState<string | null>(null);
 
   const [bankInputs, setBankInputs] =
+
     useState<BankInputValues>(createEmptyBankInputs);
 
   const [savedBankInputs, setSavedBankInputs] =
+
     useState<Record<string, BankInputValues>>({});
 
-  const [apiSchedules, setApiSchedules] =
-    useState<Schedule[]>([]);
-
-  const [loading, setLoading] = useState(true);
-
-  const [apiError, setApiError] = useState<string | null>(null);
-
   const cardBg = useColorModeValue(
+
     "#FFFFFF",
+
     "#1A202C"
+
   );
 
   const borderColor = useColorModeValue(
+
     "#E2E8F0",
+
     "#2D3748"
+
   );
+  const textColor = useColorModeValue("#172033", "gray.100");
 
   /* =======================================================
-     FETCH EMS RECOMMENDATION FROM BACKEND API
+
+     DUMMY FAILED SCHEDULES
+
   ======================================================= */
+
+  const [scheduleData, setScheduleData] = useState<Schedule[]>([]);
+  const [apiFailedCount, setApiFailedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-
     const fetchEMSRecommendation = async () => {
       try {
-        setLoading(true);
         setApiError(null);
-
-        const response = await fetch(
-          EMS_RECOMMENDATION_API,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            `EMS Recommendation API failed: ${response.status} ${response.statusText}`
-          );
-        }
-
-        const result = await response.json();
-
-        if (!result?.success) {
-          throw new Error(
-            result?.message ||
-              "EMS Recommendation API returned an error"
-          );
-        }
-
-        const schedules = Array.isArray(result?.schedule)
-          ? result.schedule
-          : [];
-
-        if (isMounted) {
-          setApiSchedules(schedules);
-        }
+        const response = await fetch(`${import.meta.env.VITE_API_BASE}/api/ems-recommendation`, { method: "GET", headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error(`EMS Recommendation API failed: ${response.status} ${response.statusText}`);
+        const data: EMSApiResponse = await response.json();
+        if (!data.success || !Array.isArray(data.results)) throw new Error("Invalid EMS Recommendation API response");
+        setApiFailedCount(data.count);
+        const mappedSchedules: Schedule[] = data.results.map((result) => {
+          const d = result.bess_event_decision;
+          return { time_stamp:d.time_stamp, load_kw:d.load_kw, pv_kw:d.pv_kw, net_load_kw:d.net_load_kw, grid_import_limit_kw:d.grid_import_limit_kw, tariff_per_kw:d.tariff_per_kw, co_relation_percent:d.co_relation_percent, load_state:d.load_state, decision:d.decision, charge_kw:d.charge_kw, grid_charge_kw:d.grid_charge_kw, discharge_kw:d.discharge_kw, grid_import_kw:d.grid_import_kw, grid_limit_violation_kw:d.grid_limit_violation_kw, soc_percent:d.soc_percent, battery_energy_mwh:d.battery_energy_mwh, throughput_cycles:d.throughput_cycles, upcoming_peak_timestamp:d.upcoming_peak_timestamp, upcoming_peak_required_kw:d.upcoming_peak_required_kw, active_peak_energy_mwh:d.active_peak_energy_mwh, violation_energy_mwh:d.violation_energy_mwh, risk_reserve_mwh:d.risk_reserve_mwh, required_reserve_mwh:d.required_reserve_mwh, description:result.description || d.description || "--", is_pass:result.is_pass, fault:result.fault, ems_recommendations:result.description || d.description ? [result.description || d.description] : [], event_id:result.event_id || d.event_id || "", strategy_result:result.strategy_result || [] };
+        });
+        setScheduleData(mappedSchedules);
       } catch (error) {
-        console.error(
-          "EMS Recommendation API Error:",
-          error
-        );
-
-        if (isMounted) {
-          setApiSchedules([]);
-          setApiError(
-            error instanceof Error
-              ? error.message
-              : "Failed to fetch EMS recommendations"
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+        console.error("EMS Recommendation API Error:", error);
+        setApiError(error instanceof Error ? error.message : "Failed to fetch EMS recommendation");
+        setScheduleData([]);
+      } finally { setLoading(false); }
     };
-
     fetchEMSRecommendation();
-
-    return () => {
-      isMounted = false;
-    };
+    const interval = setInterval(fetchEMSRecommendation, 15_000);
+    return () => clearInterval(interval);
   }, []);
 
-  /* =======================================================
-     ONLY FAILED SCHEDULES FROM API
-  ======================================================= */
-
-  const failedSchedules = useMemo(() => {
-    return apiSchedules.filter(
-      (item) => item?.is_pass === false
-    );
-  }, [apiSchedules]);
-
-  const failedCount = failedSchedules.length;
+  const failedSchedules = scheduleData;
+  const failedCount = apiFailedCount;
 
   const openBankInputs = (scheduleKey: string) => {
+
     const saved = savedBankInputs[scheduleKey];
+
     setBankInputs(
+
       saved
+
         ? {
+
             banks: saved.banks.map((bank) => ({ ...bank })),
+
             power: saved.power,
+
             load: saved.load,
+
           }
+
         : createEmptyBankInputs()
+
     );
+
     setEditingScheduleKey(scheduleKey);
+
   };
 
   const updateBankSoc = (bankIndex: number, value: string) => {
+
     setBankInputs((current) => ({
+
       ...current,
+
       banks: current.banks.map((bank, index) =>
+
         index === bankIndex ? { ...bank, soc: value } : bank
+
       ),
+
     }));
+
   };
 
   const saveBankInputs = () => {
+
     if (!editingScheduleKey) return;
 
     setSavedBankInputs((current) => ({
+
       ...current,
+
       [editingScheduleKey]: {
+
         banks: bankInputs.banks.map((bank) => ({ ...bank })),
+
         power: bankInputs.power,
+
         load: bankInputs.load,
+
       },
+
     }));
+
     setEditingScheduleKey(null);
+
   };
-
-/* =======================================================
-
-     EMPTY STATE
-
-  ======================================================= */
-
-
-
-  /* =======================================================
-     LOADING STATE
-  ======================================================= */
 
   if (loading) {
     return (
       <Box
         w="100%"
-        h="320px"
+        h="400px"
+        minH="400px"
         bg={cardBg}
         border="1px solid"
         borderColor={borderColor}
         borderRadius="10px"
-        overflow="hidden"
-        boxShadow="0 2px 8px rgba(15,23,42,0.06)"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
       >
-        <Flex
-          h="100%"
-          align="center"
-          justify="center"
-          direction="column"
-          gap="8px"
-        >
-          <Icon
-            as={FiActivity}
-            boxSize="28px"
-            color="#2563EB"
-          />
-
-          <Text
-            fontSize="14px"
-            fontWeight="700"
-            color="#172033"
-          >
-            Loading EMS Recommendation
-          </Text>
-
-          <Text
-            fontSize="10px"
-            color="#64748B"
-          >
-            Fetching failed schedules from EMS backend...
-          </Text>
-        </Flex>
+        <Text fontSize="14px" fontWeight="700" color={textColor}>
+          Loading EMS Recommendation...
+        </Text>
       </Box>
     );
   }
 
-  /* =======================================================
-     API ERROR STATE
-  ======================================================= */
-
   if (apiError) {
-    return (
-      <Box
-        w="100%"
-        h="320px"
-        bg={cardBg}
-        border="1px solid"
-        borderColor="#FECACA"
-        borderRadius="10px"
-        overflow="hidden"
-        boxShadow="0 2px 8px rgba(15,23,42,0.06)"
-      >
-        <Flex
-          h="100%"
-          align="center"
-          justify="center"
-          direction="column"
-          gap="6px"
-          px="20px"
-          textAlign="center"
-        >
-          <Icon
-            as={FiAlertTriangle}
-            boxSize="28px"
-            color="#DC2626"
-          />
-
-          <Text
-            fontSize="14px"
-            fontWeight="700"
-            color="#B91C1C"
-          >
-            EMS Recommendation Unavailable
-          </Text>
-
-          <Text
-            fontSize="10px"
-            color="#64748B"
-            maxW="500px"
-          >
-            {apiError}
-          </Text>
-        </Flex>
-      </Box>
-    );
+    return (<Box w="100%" h="400px" minH="400px" bg={cardBg} border="1px solid" borderColor={borderColor} borderRadius="10px" display="flex" alignItems="center" justifyContent="center" px={4}><VStack spacing={2}><Icon as={FiAlertTriangle} boxSize="22px" color="#DC2626" /><Text fontSize="13px" fontWeight="700" color="#B91C1C" textAlign="center">Failed to load EMS Recommendation</Text><Text fontSize="10px" color="#64748B" textAlign="center">{apiError}</Text></VStack></Box>);
   }
 
   if (failedCount === 0) {
-
     return (
-
       <Box
-
         w="100%"
-
-        h="320px"
-
+        h="400px"
+        minH="400px"
+        minW={0}
         bg={cardBg}
-
         border="1px solid"
-
         borderColor={borderColor}
-
         borderRadius="10px"
-
-        overflow="hidden"
-
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        textAlign="center"
+        px={4}
         boxShadow="0 2px 8px rgba(15,23,42,0.06)"
-
       >
+        <Icon as={FiActivity} boxSize="28px" color="#94A3B8" mb={3} />
 
-        <Flex
-
-          h="100%"
-
-          align="center"
-
-          justify="center"
-
-          direction="column"
-
-          gap="5px"
-
+        <Text
+          fontSize="14px"
+          fontWeight="700"
+          color={useColorModeValue("#172033", "gray.100")}
         >
+          No Failed Schedules
+        </Text>
 
-          <Icon
-
-            as={FiInfo}
-
-            boxSize="28px"
-
-            color="#16A34A"
-
-          />
-
-
-
-          <Text
-
-            fontSize="14px"
-
-            fontWeight="700"
-
-            color="#172033"
-
-          >
-
-            All Schedules Passed
-
-          </Text>
-
-
-
-          <Text
-
-            fontSize="10px"
-
-            color="#64748B"
-
-          >
-
-            No EMS recommendation is required.
-
-          </Text>
-
-        </Flex>
-
+        <Text
+          fontSize="11px"
+          color={useColorModeValue("#64748B", "gray.400")}
+          mt={1}
+        >
+          All schedules are passing or no failed schedules are available.
+        </Text>
       </Box>
-
     );
-
   }
 
 
@@ -1121,12 +558,11 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
       w="100%"
 
-      h="320px"
-
+      h="400px"
       minW={0}
-
       position="relative"
-
+      display="flex"
+      flexDirection="column"
       bg={cardBg}
 
       border="1px solid"
@@ -1147,12 +583,10 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
       =================================================== */}
 
-
-
       <Flex
 
         h="66px"
-
+        flexShrink={0}
         px="12px"
 
         align="center"
@@ -1205,8 +639,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
           </Flex>
 
-
-
           <VStack
 
             align="flex-start"
@@ -1235,8 +667,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
             </Text>
 
-
-
             <Text
 
               fontSize="9px"
@@ -1256,8 +686,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
           </VStack>
 
         </HStack>
-
-
 
         <Badge
 
@@ -1293,8 +721,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
           />
 
-
-
           {failedCount} FAILED SCHEDULE
 
           {failedCount !== 1 ? "S" : ""}
@@ -1303,20 +729,16 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
       </Flex>
 
-
-
       {/* ===================================================
 
           SCROLL AREA
 
       =================================================== */}
 
-
-
       <Box
 
-        h="254px"
-
+        flex="1"
+        minH={0}
         overflowY="auto"
 
         overflowX="hidden"
@@ -1369,8 +791,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
               expandedIndex === index;
 
-
-
             const violation =
 
               Number(
@@ -1378,8 +798,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                 item.grid_limit_violation_kw || 0
 
               ) > 0;
-
-
 
             const reserveViolation =
 
@@ -1391,38 +809,49 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
               );
 
-
-
             const socViolation =
 
               Number(item.soc_percent || 0) > 90;
 
-
-
             const scheduleKey = `${item.time_stamp}-${index}`;
 
             return (
+
               <React.Fragment key={scheduleKey}>
-                <Button
+
+                {/* <Button
                   alignSelf="flex-start"
                   size="xs"
                   colorScheme="blue"
+
                   variant={savedBankInputs[scheduleKey] ? "solid" : "outline"}
+
                   onClick={() => openBankInputs(scheduleKey)}
+
                 >
+
                   {savedBankInputs[scheduleKey]
+
                     ? "Edit Bank Inputs"
                     : "Enter Bank Inputs"}
-                </Button>
+                </Button> */}
 
                 <Box
+
                   w="100%"
+
                   minW={0}
+
                   border="1px solid"
+
                   borderColor="#E2E8F0"
+
                   borderRadius="8px"
+
                   bg="#FFFFFF"
+
                   overflow="hidden"
+
                 >
 
                 {/* =========================================
@@ -1430,8 +859,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                     MAIN CONTENT
 
                 ========================================= */}
-
-
 
                 <Flex
 
@@ -1450,8 +877,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                       TIME
 
                   ======================================= */}
-
-
 
                   <Flex
 
@@ -1475,6 +900,15 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                   >
 
+                    <Text
+                      fontSize="8px"
+                      fontWeight="700"
+                      color="#64748B"
+                      mb="3px"
+                      whiteSpace="nowrap"
+                    >
+                      {item.event_id || "--"}
+                    </Text>
                     <Icon
 
                       as={FiAlertTriangle}
@@ -1486,8 +920,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                       mb="3px"
 
                     />
-
-
 
                     <Text
 
@@ -1502,13 +934,8 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                       whiteSpace="nowrap"
 
                     >
-
                       SCHEDULE NOT PASSED
-
                     </Text>
-
-
-
                     <Text
 
                       fontSize="25px"
@@ -1530,8 +957,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                       )}
 
                     </Text>
-
-
 
                     <Text
 
@@ -1555,15 +980,89 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                   </Flex>
 
+                  {/* =======================================
+
+                      FAULT
+
+                  ======================================= */}
+
+                  <Box
+
+                    w="20%"
+
+                    minW="160px"
+
+                    maxW="20%"
+
+                    flex="0 0 20%"
+
+                    order={3}
+
+                    px="10px"
+
+                    py="10px"
+
+                    overflow="hidden"
+
+                    borderLeft="1px solid"
+
+                    borderColor="#E2E8F0"
+
+                    bg="#FCFDFE"
+
+                  >
+
+                    <Text fontSize="12px" fontWeight="700" color="#9A3412" mb="6px">
+
+                      Fault
+
+                    </Text>
+
+                    <Box
+                      bg="#FFF7ED"
+                      border="1px solid"
+                      borderColor="#FED7AA"
+
+                      borderRadius="6px"
+
+                      px="10px"
+
+                      py="9px"
+
+                    >
+
+                      <Text fontSize="10px" color="#C2410C" lineHeight="14px">
+
+                        {item.fault || getFaultTitle(item)}
+                      </Text>
+                    </Box>
+                    <Box mt="12px">
+                      <Text
+                        fontSize="10px"
+                        fontWeight="700"
+                        color="#172033"
+                        mb="4px"
+                      >
+                        Description
+                      </Text>
+                      <Text
+                        fontSize="10px"
+                        color="#475569"
+                        lineHeight="15px"
+                        noOfLines={4}
+                      >
+                        {item.description || "--"}
+                      </Text>
+                    </Box>
+                  </Box>
+
 
 
                   {/* =======================================
 
-                      CENTER
+                      CENTER RECOMMENDATION
 
                   ======================================= */}
-
-
 
                   <Box
 
@@ -1571,550 +1070,292 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                     minW={0}
 
-                    px="9px"
+                    w="auto"
 
-                    py="9px"
+                    maxW="none"
 
-                    overflow="hidden"
+                    order={2}
 
-                  >
-
-                    {/* TOP METRICS */}
-
-
-
-                    <SimpleGrid
-
-                      columns={3}
-
-                      spacingX="9px"
-
-                      spacingY="8px"
-
-                      minW={0}
-
-                    >
-
-                      <MetricItem
-
-                        icon={FiActivity}
-
-                        label="Load"
-
-                        value={`${formatNumber(
-
-                          item.load_kw
-
-                        )} kW`}
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiSun}
-
-                        label="PV"
-
-                        value={`${formatNumber(
-
-                          item.pv_kw
-
-                        )} kW`}
-
-                        valueColor="#15803D"
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiZap}
-
-                        label="Net Load"
-
-                        value={`${formatNumber(
-
-                          item.net_load_kw
-
-                        )} kW`}
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiGrid}
-
-                        label="Grid Limit"
-
-                        value={`${formatNumber(
-
-                          item.grid_import_limit_kw
-
-                        )} kW`}
-
-                        valueColor="#2563EB"
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiDollarSign}
-
-                        label="Tariff"
-
-                        value={`₹${formatNumber(
-
-                          item.tariff_per_kw,
-
-                          1
-
-                        )}/kW`}
-
-                        valueColor="#D97706"
-
-                      />
-
-
-
-                      <VStack
-
-                        spacing={0}
-
-                        align="flex-start"
-
-                        minW={0}
-
-                      >
-
-                        <Text
-
-                          fontSize="8px"
-
-                          color="#64748B"
-
-                          lineHeight="10px"
-
-                        >
-
-                          Load State
-
-                        </Text>
-
-
-
-                        <Badge
-
-                          mt="2px"
-
-                          px="7px"
-
-                          py="3px"
-
-                          borderRadius="5px"
-
-                          fontSize="7px"
-
-                          bg={
-
-                            item.load_state ===
-
-                            "peak"
-
-                              ? "#FFE4E6"
-
-                              : "#E0F2FE"
-
-                          }
-
-                          color={
-
-                            item.load_state ===
-
-                            "peak"
-
-                              ? "#DC2626"
-
-                              : "#0369A1"
-
-                          }
-
-                        >
-
-                          {item.load_state ||
-
-                            "--"}
-
-                        </Badge>
-
-                      </VStack>
-
-                    </SimpleGrid>
-
-
-
-                    <Divider
-
-                      borderColor="#EDF2F7"
-
-                      my="8px"
-
-                    />
-
-
-
-                    {/* BOTTOM METRICS */}
-
-
-
-                    <SimpleGrid
-
-                      columns={3}
-
-                      spacingX="9px"
-
-                      spacingY="7px"
-
-                      minW={0}
-
-                    >
-
-                      <VStack
-
-                        spacing={1}
-
-                        align="flex-start"
-
-                        minW={0}
-
-                      >
-
-                        <Text
-
-                          fontSize="8px"
-
-                          color="#64748B"
-
-                          lineHeight="10px"
-
-                        >
-
-                          Decision
-
-                        </Text>
-
-
-
-                        <Badge
-
-                          px="7px"
-
-                          py="3px"
-
-                          borderRadius="5px"
-
-                          fontSize="7px"
-
-                          bg={
-
-                            item.decision ===
-
-                            "charge"
-
-                              ? "#E0F2FE"
-
-                              : "#FFE4E6"
-
-                          }
-
-                          color={
-
-                            item.decision ===
-
-                            "charge"
-
-                              ? "#2563EB"
-
-                              : "#DC2626"
-
-                          }
-
-                        >
-
-                          {item.decision ||
-
-                            "--"}
-
-                        </Badge>
-
-                      </VStack>
-
-
-
-                      <MetricItem
-
-                        icon={FiArrowDown}
-
-                        label="Charge"
-
-                        value={`${formatNumber(
-
-                          item.charge_kw
-
-                        )} kW`}
-
-                        valueColor="#16A34A"
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiArrowUp}
-
-                        label="Discharge"
-
-                        value={`${formatNumber(
-
-                          item.discharge_kw
-
-                        )} kW`}
-
-                        valueColor="#EA580C"
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiGrid}
-
-                        label="Grid Import"
-
-                        value={`${formatNumber(
-
-                          item.grid_import_kw
-
-                        )} kW`}
-
-                        valueColor="#7C3AED"
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiBattery}
-
-                        label="SOC"
-
-                        value={`${formatNumber(
-
-                          item.soc_percent,
-
-                          1
-
-                        )}%`}
-
-                        valueColor={
-
-                          socViolation
-
-                            ? "#DC2626"
-
-                            : "#15803D"
-
-                        }
-
-                      />
-
-
-
-                      <MetricItem
-
-                        icon={FiBattery}
-
-                        label="Battery"
-
-                        value={`${formatNumber(
-
-                          item.battery_energy_mwh,
-
-                          1
-
-                        )} MWh`}
-
-                        valueColor="#475569"
-
-                      />
-
-                    </SimpleGrid>
-
-                    </Box>
-
-
-
-                  {/* =======================================
-                      RIGHT RECOMMENDATION
-                  ======================================= */}
-
-                  <Box
-                    w="235px"
-                    minW="235px"
-                    maxW="235px"
                     bg="#FFFFFF"
-                    borderLeft="1px solid"
+
+                    borderRight="1px solid"
+
                     borderColor="#E2E8F0"
-                    px="9px"
-                    py="9px"
+
+                    px="14px"
+
+                    py="12px"
+
                     overflow="hidden"
+
+                    display="flex"
+
+                    flexDirection="column"
+
                   >
+
                     <Box
+
                       bg="#EFF6FF"
-                      borderRadius="7px"
+
+                      borderRadius="9px"
+
                       px="8px"
-                      py="7px"
-                      mb="7px"
+
+                      py="4px"
+
+                      mb="5px"
+
+                      border="1px solid"
+
+                      borderColor="#DBEAFE"
+
                     >
+
                       <HStack spacing="6px" align="flex-start">
+
                         <Flex
-                          w="19px"
-                          h="19px"
-                          minW="19px"
+
+                          w="15px"
+
+                          h="15px"
+
+                          minW="15px"
+
                           borderRadius="50%"
+
                           bg="#2563EB"
+
                           align="center"
+
                           justify="center"
+
                         >
-                          <Icon as={FiInfo} color="white" boxSize="10px" />
+
+                          <Icon as={FiInfo} color="white" boxSize="8px" />
+
                         </Flex>
 
                         <VStack align="flex-start" spacing="1px" minW={0}>
+
                           <Text
-                            fontSize="9px"
+
+                            fontSize="14px"
+
                             fontWeight="800"
+
                             color="#1D4ED8"
+
                             whiteSpace="nowrap"
+
                             overflow="hidden"
+
                             textOverflow="ellipsis"
-                            maxW="175px"
+
+                            maxW="220px"
+
                           >
+
                             EMS Recommendation
+
                           </Text>
-                          <Text fontSize="8px" color="#475569" lineHeight="11px">
+
+                          <Text fontSize="9px" color="#475569" lineHeight="12px">
+
                             Recommended actions for this schedule
+
                           </Text>
+
                         </VStack>
+
                       </HStack>
+
                     </Box>
 
-                    <Text fontSize="8px" fontWeight="700" color="#172033" mb="5px">
+                    <Text
+
+                      fontSize="11px"
+
+                      fontWeight="700"
+
+                      color="#172033"
+
+                      mb="6px"
+
+                    >
+
                       Recommendations
+
                     </Text>
 
                     <VStack
+
                       align="stretch"
-                      spacing="5px"
-                      maxH="145px"
+
+                      spacing="7px"
+
+                      maxH="175px"
+
                       overflowY="auto"
+
                       sx={{
+
                         "&::-webkit-scrollbar": { width: "3px" },
+
                         "&::-webkit-scrollbar-track": { background: "#F8FAFC" },
+
                         "&::-webkit-scrollbar-thumb": {
+
                           background: "#CBD5E1",
+
                           borderRadius: "10px",
+
                         },
+
                       }}
+
                     >
+
                       {Array.isArray(item.ems_recommendations) &&
+
                       item.ems_recommendations.length > 0 ? (
+
                         item.ems_recommendations.map(
+
                           (recommendation, recommendationIndex) => (
+
                             <Flex
+
                               key={`${item.time_stamp}-recommendation-${recommendationIndex}`}
+
                               align="flex-start"
+
                               gap="6px"
+
                               bg="#F8FAFC"
+
                               border="1px solid"
+
                               borderColor="#E2E8F0"
+
                               borderRadius="6px"
-                              px="7px"
-                              py="6px"
+
+                              px="10px"
+
+                              py="9px"
+
                             >
+
                               <Flex
+
                                 w="17px"
+
                                 h="17px"
+
                                 minW="17px"
+
                                 borderRadius="50%"
+
                                 bg="#DBEAFE"
+
                                 align="center"
+
                                 justify="center"
+
                                 mt="1px"
+
                               >
+
                                 <Text fontSize="8px" fontWeight="800" color="#2563EB">
+
                                   {recommendationIndex + 1}
+
                                 </Text>
+
                               </Flex>
-                              <Text fontSize="8px" color="#334155" lineHeight="11px" noOfLines={3}>
+
+                              <Text
+
+                                fontSize="10px"
+
+                                color="#334155"
+
+                                lineHeight="14px"
+
+                                noOfLines={3}
+
+                              >
+
                                 {recommendation}
+
                               </Text>
+
                             </Flex>
+
                           )
+
                         )
+
                       ) : (
+
                         <Box
+
                           bg="#F8FAFC"
+
                           border="1px solid"
+
                           borderColor="#E2E8F0"
+
                           borderRadius="6px"
+
                           px="7px"
+
                           py="8px"
+
                         >
+
                           <Text fontSize="8px" color="#64748B" lineHeight="11px">
+
                             No EMS recommendation available.
+
                           </Text>
+
                         </Box>
+
                       )}
+
                     </VStack>
 
-                    {item.fault && (
-                      <Box mt="8px">
-                        <Text fontSize="8px" fontWeight="700" color="#172033" mb="3px">
-                          Reason
-                        </Text>
-                        <Box
-                          bg="#FFF7ED"
-                          border="1px solid"
-                          borderColor="#FED7AA"
-                          borderRadius="6px"
-                          px="7px"
-                          py="6px"
-                        >
-                          <Text fontSize="8px" color="#C2410C" lineHeight="11px" noOfLines={2}>
-                            {item.fault}
-                          </Text>
-                        </Box>
-                      </Box>
-                    )}
-
-                    <Box mt="8px">
-                      <Text fontSize="8px" fontWeight="700" color="#172033" mb="2px">
-                        Description
-                      </Text>
-                      <Text fontSize="8px" color="#64748B" lineHeight="11px" noOfLines={3}>
-                        {item.description || "--"}
-                      </Text>
-                    </Box>
                   </Box>
+
+                </Flex>
+
+                <Flex
+                  justify="flex-end"
+                  px="9px"
+                  py="3px"
+                  borderTop="1px solid"
+                  borderColor="#E2E8F0"
+                >
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color="#2563EB"
+                    rightIcon={
+                      <Icon
+                        as={isExpanded ? FiChevronUp : FiChevronDown}
+                      />
+                    }
+                    aria-expanded={isExpanded}
+                    aria-controls={`schedule-details-${index}`}
+                    onClick={() =>
+                      setExpandedIndex((current) =>
+                        current === index ? null : index
+                      )
+                    }
+                  >
+                    {isExpanded ? "Hide details" : "Show details"}
+                  </Button>
                 </Flex>
 
                 {/* =========================================
@@ -2122,8 +1363,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                     EXPANDED DETAILS
 
                 ========================================= */}
-
-
 
                 <Collapse
 
@@ -2134,6 +1373,7 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                 >
 
                   <Box
+                    id={`schedule-details-${index}`}
 
                     px="9px"
 
@@ -2173,8 +1413,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                       />
 
-
-
                       <DetailBox
 
                         label="Grid Import"
@@ -2186,8 +1424,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                         )} kW`}
 
                       />
-
-
 
                       <DetailBox
 
@@ -2201,8 +1437,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                       />
 
-
-
                       <DetailBox
 
                         label="Grid Charge"
@@ -2214,8 +1448,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                         )} kW`}
 
                       />
-
-
 
                       <DetailBox
 
@@ -2231,8 +1463,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                       />
 
-
-
                       <DetailBox
 
                         label="Battery Energy"
@@ -2246,8 +1476,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                         )} MWh`}
 
                       />
-
-
 
                       <DetailBox
 
@@ -2263,8 +1491,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                       />
 
-
-
                       <DetailBox
 
                         label="Required Reserve"
@@ -2278,8 +1504,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                         )} MWh`}
 
                       />
-
-
 
                       <DetailBox
 
@@ -2295,8 +1519,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                       />
 
-
-
                       <DetailBox
 
                         label="Violation Energy"
@@ -2311,8 +1533,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
 
                       />
 
-
-
                       <DetailBox
 
                         label="Throughput Cycles"
@@ -2326,8 +1546,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                         )}
 
                       />
-
-
 
                       <DetailBox
 
@@ -2344,8 +1562,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                       />
 
                     </SimpleGrid>
-
-
 
                     <Flex
 
@@ -2370,8 +1586,6 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                         flexShrink={0}
 
                       />
-
-
 
                       <Text
 
@@ -2416,8 +1630,11 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
                   </Box>
 
                 </Collapse>
+
               </Box>
+
               </React.Fragment>
+
             );
 
           })}
@@ -2427,107 +1644,203 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
       </Box>
 
       {editingScheduleKey && (
+
         <Flex
+
           position="absolute"
+
           inset={0}
+
           zIndex={10}
+
           align="center"
+
           justify="center"
+
           bg="blackAlpha.500"
+
           p={3}
+
         >
+
           <Box
+
             w="100%"
+
             maxH="100%"
+
             overflowY="auto"
+
             bg={cardBg}
+
             border="1px solid"
+
             borderColor={borderColor}
+
             borderRadius="10px"
+
             p={3}
+
             boxShadow="lg"
+
           >
+
             <Flex justify="space-between" align="center" mb={3}>
+
               <Text fontSize="sm" fontWeight="700" color="#172033">
+
                 BESS Bank Inputs
+
               </Text>
+
               <Button
+
                 size="xs"
+
                 variant="ghost"
+
                 onClick={() => setEditingScheduleKey(null)}
+
                 aria-label="Close bank inputs"
+
               >
+
                 Close
+
               </Button>
+
             </Flex>
 
             <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2} mb={3}>
+
               <Input
+
                 size="sm"
+
                 type="number"
+
                 placeholder="BESS Power (kW)"
+
                 aria-label="BESS power"
+
                 value={bankInputs.power}
+
                 onChange={(event) =>
+
                   setBankInputs((current) => ({
+
                     ...current,
+
                     power: event.target.value,
+
                   }))
+
                 }
+
               />
+
               <Input
+
                 size="sm"
+
                 type="number"
+
                 placeholder="Load (kW)"
+
                 aria-label="Load"
+
                 value={bankInputs.load}
+
                 onChange={(event) =>
+
                   setBankInputs((current) => ({
+
                     ...current,
+
                     load: event.target.value,
+
                   }))
+
                 }
+
               />
+
             </SimpleGrid>
 
             <VStack align="stretch" spacing={2}>
+
               {bankInputs.banks.map((bank, bankIndex) => (
+
                 <SimpleGrid
+
                   key={bank.bank}
+
                   columns={{ base: 1, sm: 2 }}
+
                   spacing={2}
+
                   alignItems="center"
+
                   p={2}
+
                   border="1px solid"
+
                   borderColor={borderColor}
+
                   borderRadius="md"
+
                 >
+
                   <Text fontSize="xs" fontWeight="700">
+
                     {bank.bank}
+
                   </Text>
+
                   <Input
+
                     size="sm"
+
                     type="number"
+
                     min={0}
+
                     max={100}
+
                     placeholder="SOC (%)"
+
                     aria-label={`${bank.bank} SOC`}
+
                     value={bank.soc}
+
                     onChange={(event) =>
+
                       updateBankSoc(bankIndex, event.target.value)
+
                     }
+
                   />
+
                 </SimpleGrid>
+
               ))}
+
             </VStack>
 
             <Flex justify="flex-end" mt={3}>
+
               <Button size="sm" colorScheme="blue" onClick={saveBankInputs}>
+
                 Save
+
               </Button>
+
             </Flex>
+
           </Box>
+
         </Flex>
+
       )}
 
     </Box>
@@ -2535,7 +1848,5 @@ const OptimizationSchedule: React.FC<EMSRecommendationProps> = () => {
   );
 
 };
-
-
 
 export default OptimizationSchedule;

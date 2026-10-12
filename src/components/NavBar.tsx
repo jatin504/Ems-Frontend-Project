@@ -574,6 +574,8 @@ const Navbar = () => {
       <Box
         ref={sidebarRef}
         position="fixed"
+        display="flex"
+        flexDirection="column"
         left="0"
         top="0"
         bottom="0"
@@ -594,7 +596,7 @@ const Navbar = () => {
         )}
         transition="width .25s ease"
         zIndex={1200}
-        overflowY="auto"
+        overflowY="hidden"
         overflowX="hidden"
         pt="12px"
         pb="12px"
@@ -644,7 +646,23 @@ const Navbar = () => {
         </Flex>
 
         {/* Sidebar Menu Items */}
-        <VStack spacing="4px" align="stretch">
+        <Box
+          flex="1"
+          minH={0}
+          overflowY="auto"
+          overflowX="hidden"
+          pb="12px"
+          css={{
+            "&::-webkit-scrollbar": {
+              width: "4px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: "rgba(100,116,139,.35)",
+              borderRadius: "10px",
+            },
+          }}
+        >
+          <VStack spacing="4px" align="stretch">
           <SidebarMainItem
             label="Devices"
             icon={<FiCpu />}
@@ -824,21 +842,41 @@ const Navbar = () => {
             active={location.pathname === "/settings"}
             onClick={() => navigate("/settings")}
           />
-        </VStack>
+          </VStack>
+        </Box>
         {!sidebarCollapsed && (
           <VStack
-            position="absolute"
-            bottom="8px"
-            left="0"
-            right="0"
-            spacing="0"
+            flexShrink={0}
+            width="100%"
+            spacing="3px"
             align="center"
+            textAlign="center"
+            px="8px"
+            pt="10px"
+            pb="12px"
+            borderTop="1px solid"
+            borderColor={useColorModeValue(
+              "rgba(148,163,184,.25)",
+              "rgba(71,85,105,.35)"
+            )}
+            bg={useColorModeValue("#E8EEF5", "#0B1420")}
             pointerEvents="none"
           >
-            <Text fontSize="9px" color={useColorModeValue("#64748B", "#94A3B8")}>
+            <Text
+              fontSize="9px"
+              lineHeight="12px"
+              color={useColorModeValue("#64748B", "#94A3B8")}
+            >
               v3.1.0
             </Text>
-            <Text fontSize="9px" color={useColorModeValue("#64748B", "#94A3B8")}>
+            <Text
+              fontSize="9px"
+              lineHeight="13px"
+              textAlign="center"
+              whiteSpace="normal"
+              overflowWrap="anywhere"
+              color={useColorModeValue("#64748B", "#94A3B8")}
+            >
               Designed by Cogneta Green Solution
             </Text>
           </VStack>

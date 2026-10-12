@@ -217,7 +217,21 @@ function App() {
 
             {/* Other */}
             <Route path="/sld" element={<SLDDashboard />} />
-            <Route path="/calendar" element={<CalendarDashboard />} />
+            <Route
+              path="/calendar"
+              element={
+                <DashboardLayout
+                  breadcrumbs={[
+                    { label: "Home", href: "/plantview" },
+                    { label: "Control", href: "/besscontroll" },
+                    { label: "BESS", href: "/besscontroll" },
+                    { label: "Calendar" },
+                  ]}
+                >
+                  <CalendarDashboard />
+                </DashboardLayout>
+              }
+            />
             <Route
               path="/config/device"
               element={
