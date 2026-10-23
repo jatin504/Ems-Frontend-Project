@@ -56,6 +56,7 @@ const AreaspineGraph: React.FC<AreaSplineGraphProps> = ({
   tooltipBg,
   tooltipColor,
   legendColor,
+  isFullscreen = false,
 }) => {
   const chartRef = useRef<ReactECharts>(null);
   const [isDark, setIsDark] = useState(false);
@@ -341,7 +342,7 @@ const AreaspineGraph: React.FC<AreaSplineGraphProps> = ({
         lazyUpdate={true}
         style={{
           width: "100%",
-          height: Number(height),
+          height: isFullscreen ? "calc(100vh - 120px)" : height,
         }}
       />
       <Button

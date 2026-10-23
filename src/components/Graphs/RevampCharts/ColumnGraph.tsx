@@ -25,11 +25,12 @@ interface ColumnGraphProps {
   xAxisInterval?: number | string;
   props?: any;
   isFullscreen?: boolean;
+  fullscreenHeightOffset?: number;
   onExportReady? : (functions : ExportFunctions) => void;
   inFullScreen? : (mode : boolean) => void;
 }
 
-const ColumnGraph: React.FC<ColumnGraphProps> = ({ apiData, height = 280, bg, category, legendHeight = 40, xAxisInterval = "auto", props, isFullscreen = false, inFullScreen, onExportReady }) => {
+const ColumnGraph: React.FC<ColumnGraphProps> = ({ apiData, height = 280, bg, category, legendHeight = 40, xAxisInterval = "auto", props, isFullscreen = false, fullscreenHeightOffset = 120, inFullScreen, onExportReady }) => {
   // console.log("FULL", isFullscreen)
   const chartRef = useRef<HighchartsReact.RefObject>(null);
   const [isDark, setIsDark] = useState(false);
@@ -207,15 +208,19 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({ apiData, height = 280, bg, ca
       inFullScreen(isFullscreen)
     };
 
-    const newHeight = isFullscreen ? EnlargeHeight(770) : height;
-    setChartOptions((prevOptions) => ({
-      ...prevOptions,
-      chart: {
-        ...prevOptions.chart,
-        height: newHeight
-      }
-    }));
-  }, [isFullscreen, height]);
+    const updateHeight = () => {
+      setChartOptions((prevOptions) => ({
+        ...prevOptions,
+        chart: {
+          ...prevOptions.chart,
+          height: isFullscreen ? window.innerHeight - fullscreenHeightOffset : height
+        }
+      }));
+    };
+    updateHeight();
+    if (isFullscreen) window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, [isFullscreen, height, fullscreenHeightOffset]);
 
 
   useEffect(() => {

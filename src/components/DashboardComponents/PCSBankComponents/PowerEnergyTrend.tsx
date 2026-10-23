@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, HStack, useColorModeValue } from "@chakra-ui/react";
+import { HStack, useColorModeValue } from "@chakra-ui/react";
 import WidgetTitle from "../../Common/WidgetTitle";
 import { InfoOutlineIcon } from "@chakra-ui/icons";
 
@@ -64,7 +64,6 @@ const PowerEnergyTrend: React.FC<Props> = ({ selectedDevice }) => {
   const [exportFunctions, setExportFunctions] =
     useState<ExportFunctions | null>(null);
 
-  const bg = useColorModeValue("#FFFFFF", "#101820");
   const subText = useColorModeValue("#64748B", "#94A3B8");
 
   return (
@@ -75,27 +74,17 @@ const PowerEnergyTrend: React.FC<Props> = ({ selectedDevice }) => {
             <InfoOutlineIcon boxSize={4} color={subText} />
           </HStack>
         }
+        width="100%"
+        height="320px"
         fullScreen
         onExport={exportFunctions}
       >
-      <Box
-        bg={bg}
-        h="206px"
-      >
-        <Box
-          px="8px"
-          pt="6px"
-          pb="8px"
-          h="212px"
-        >
           <ColumnGraph
             apiData={chartData}
             height={235}
             onExportReady={setExportFunctions}
             props={{
-              chart: {
-                type: "column",
-              },
+              plotOptions: { column: { pointWidth: undefined, maxPointWidth: 64 } },
               xAxis: {
                 type: "datetime",
               },
@@ -118,8 +107,6 @@ const PowerEnergyTrend: React.FC<Props> = ({ selectedDevice }) => {
               },
             }}
           />
-        </Box>
-      </Box>
     </GraphLayout>
   );
 };

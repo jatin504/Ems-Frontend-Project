@@ -268,11 +268,12 @@ const BankHealthSummary: React.FC<Props> = ({ selectedDevice }) => {
             apiData={[
               {
                 name: "Health Score",
+                pointInterval: 24 * 60 * 60 * 1000,
                 color: "#66CC33",
                 data: trendData,
               },
             ]}
-            height={165}
+            height={150}
             showLegendButtons={false}
             xAxisTitle=""
             yAxisTitle=""
@@ -289,4 +290,4 @@ const BankHealthSummary: React.FC<Props> = ({ selectedDevice }) => {
 };
 
 export default BankHealthSummary;
-          
+

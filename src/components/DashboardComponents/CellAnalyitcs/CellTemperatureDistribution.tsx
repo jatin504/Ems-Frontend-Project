@@ -56,11 +56,12 @@ const CellTemperatureDistribution = () => {
       title="Cell Temperature Distribution"
       titleLengthSVG={138}
       titleLengthLongSVG={1680}
-      width={["460px"]}
+      width="100%"
       height="100%"
       fullScreen
+      onFullscreenChange={setIsFullscreen}
       timeWindow={false}
-      mt="2"
+      mt="0"
     >
       <VStack
         spacing={2}
@@ -69,10 +70,12 @@ const CellTemperatureDistribution = () => {
       >
         <Box
           flex="1"
-          minH="180px"
+          minH={0}
         >
           <ColumnChart
             height={200}
+            isFullscreen={isFullscreen}
+            fullscreenHeightOffset={160}
             apiData={[
               {
                 name: "Temperature",
@@ -106,7 +109,7 @@ const CellTemperatureDistribution = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
               },
@@ -123,7 +126,7 @@ const CellTemperatureDistribution = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
               },
@@ -146,6 +149,7 @@ const CellTemperatureDistribution = () => {
 
               plotOptions: {
                 column: {
+                  pointWidth: isFullscreen ? 32 : 7,
                   borderRadius: 2,
                   pointPadding: 0.08,
                   groupPadding: 0.05,
@@ -164,24 +168,24 @@ const CellTemperatureDistribution = () => {
         </Box>
                 {/* Bottom Legend */}
 
-        <HStack justify="space-between" mt={1} px={2} spacing={2} flexWrap="wrap">
+        <HStack flexShrink={0} justify="space-between" mt={1} px={2} spacing={2} flexWrap="wrap">
           <HStack spacing={1}>
             <Box w="10px" h="10px" bg={lowColor} borderRadius="2px" />
-            <Text fontSize="10px" color={legendText}>
+            <Text fontSize={isFullscreen ? "13px" : "10px"} color={legendText}>
               Low (&lt;30°C)
             </Text>
           </HStack>
 
           <HStack spacing={1}>
             <Box w="10px" h="10px" bg={normalColor} borderRadius="2px" />
-            <Text fontSize="10px" color={legendText}>
+            <Text fontSize={isFullscreen ? "13px" : "10px"} color={legendText}>
               Normal (30–45°C)
             </Text>
           </HStack>
 
           <HStack spacing={1}>
             <Box w="10px" h="10px" bg={highColor} borderRadius="2px" />
-            <Text fontSize="10px" color={legendText}>
+            <Text fontSize={isFullscreen ? "13px" : "10px"} color={legendText}>
               High (&gt;45°C)
             </Text>
           </HStack>

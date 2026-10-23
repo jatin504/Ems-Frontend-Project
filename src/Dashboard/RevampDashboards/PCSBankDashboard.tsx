@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Flex,
+  Grid,
+  Spinner,
   HStack,
   Text,
   Button,
@@ -41,11 +43,9 @@ const PCSBankDashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const incomingBank = (location.state as { currentBank?: string })?.currentBank;
-  const [selectedDevice, setSelectedDevice] = useState("");
+  const [selectedDevice, setSelectedDevice] = useState(incomingBank || "");
 
   const deviceOptions = useMemo(() => {
-    console.log("All devices from useDevices:", devices);
-
     const options = devices
       ? devices
           .filter((device) => /_bank_bank_\d+$/i.test(device.device_id))
@@ -57,12 +57,6 @@ const PCSBankDashboard: React.FC = () => {
             ),
           }))
       : [];
-
-    console.log("Filtered bank device options:", options);
-    console.log(
-      "Device IDs:",
-      options.map((option) => option.id)
-    );
 
     return options;
   }, [devices]);
@@ -91,7 +85,14 @@ const PCSBankDashboard: React.FC = () => {
   }, [incomingBank, deviceOptions]);
 
   return (
-    <Box w="100%" minH="100vh" bg={bg}>
+    <Box w="100%" minW={0} bg={bg} sx={{
+      ".bank-widget": { minWidth: 0 },
+      ".bank-widget > :not(:fullscreen)": {
+        width: "100%", maxWidth: "100%", minWidth: 0,
+        height: "100%", margin: 0,
+        border: headerBorder, borderRadius: "12px", boxShadow: "none",
+      },
+    }}>
       {/* Header */}
       <Flex
         h="38px"
@@ -185,82 +186,41 @@ const PCSBankDashboard: React.FC = () => {
 
       </Flex>
 
-      <Box px="12px" pt="12px">
+      {selectedDevice && <Box px="12px" pt="12px">
         <BankTopSummary selectedDevice={selectedDevice} />
-      </Box>
+      </Box>}
 
-      <>
-        {/* First Row */}
-        <Box px="12px" mt="12px">
-          <HStack
-            spacing="16px"
-            align="stretch"
-            w="1896px"
-          >
-            <Box w="430px" mt="-20px">
-              <BankHealthSummary selectedDevice={selectedDevice} />
+      {!selectedDevice ? (
+        <Flex p={8} gap={3} align="center" justify="center" role="status">
+          {loading && <Spinner size="sm" />}
+          <Text>{loading ? "Loading bank devices..." : "No bank selected"}</Text>
+        </Flex>
+      ) : (
+        <Box px="12px" pb="12px">
+          <Grid templateColumns={{ base: "minmax(0,1fr)", xl: "minmax(0,0.85fr) minmax(0,1fr) minmax(0,1.6fr)" }} gap={3} mt={3}>
+            <Box className="bank-widget" h="344px"><BankHealthSummary selectedDevice={selectedDevice} /></Box>
+            <Box className="bank-widget" h="344px"><BatteryHealthOverview selectedDevice={selectedDevice} /></Box>
+            <Box className="bank-widget" h="344px">
+              <StringsSummary selectedDevice={selectedDevice} rackDevices={rackDevices}
+                onRackSelect={(rackId) => navigate("/batteryrackk", { state: {
+                  currentRack: rackId, currentBank: selectedDevice,
+                  breadcrumbSource: (location.state as { breadcrumbSource?: string } | null)?.breadcrumbSource,
+                } })} />
             </Box>
-
-            <Box w="525px">
-              <BatteryHealthOverview selectedDevice={selectedDevice} />
-            </Box>
-
-            <Box w="880px">
-              <StringsSummary
-                selectedDevice={selectedDevice}
-                rackDevices={rackDevices}
-                onRackSelect={(rackId) =>
-                  navigate("/batteryrackk", {
-                    state: { currentRack: rackId },
-                  })
-                }
-              />
-            </Box>
-          </HStack>
+          </Grid>
+          <Grid templateColumns={{ base: "minmax(0,1fr)", xl: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.65fr) minmax(0,0.6fr)" }} gap={3} mt={3}>
+            <Box className="bank-widget" h="320px"><Powergraph selectedDevice={selectedDevice} /></Box>
+            <Box className="bank-widget" h="320px"><PowerEnergyTrend selectedDevice={selectedDevice} /></Box>
+            <Box className="bank-widget" h="320px"><BankStatus /></Box>
+            <Box className="bank-widget" h="320px"><LimitsRealtime selectedDevice={selectedDevice} /></Box>
+          </Grid>
+          <Grid templateColumns={{ base: "minmax(0,1fr)", xl: "repeat(3,minmax(0,1fr))" }} gap={3} mt={3}>
+            <Box className="bank-widget" h="320px"><SocGraph selectedDevice={selectedDevice} /></Box>
+            <Box className="bank-widget" h="320px"><VoltageCurrentGraph selectedDevice={selectedDevice} /></Box>
+            <Box className="bank-widget" h="320px"><EnvironmentCooling /></Box>
+          </Grid>
         </Box>
-
-        {/* Second Row */}
-        <Box px="12px" mt="16px">
-          <HStack
-            spacing="16px"
-            align="stretch"
-            w="1896px"
-          >
-            <Box w="662px" mt="-20px">
-              <Powergraph selectedDevice={selectedDevice} />
-            </Box>
-
-            <Box w="522px" mt="-18px" ml="-26px">
-              <PowerEnergyTrend selectedDevice={selectedDevice} />
-            </Box>
-
-            <Box w="342px">
-              <BankStatus />
-            </Box>
-
-            <Box w="322px">
-              <LimitsRealtime selectedDevice={selectedDevice} />
-            </Box>
-          </HStack>
-        </Box>
-
-        {/* Third Row */}
-        <Box px="12px" mt="16px">
-          <HStack spacing="16px" align="stretch" w="1896px">
-            <Box w="620px" mt="-16px">
-              <SocGraph selectedDevice={selectedDevice} />
-            </Box>
-
-            <Box w="620px" mt="-16px">
-              <VoltageCurrentGraph selectedDevice={selectedDevice} />
-            </Box>
-
-            <Box w="590px">
-              <EnvironmentCooling />
-            </Box>
-          </HStack>
-        </Box>
-      </>
+      )}
 
       
     </Box>

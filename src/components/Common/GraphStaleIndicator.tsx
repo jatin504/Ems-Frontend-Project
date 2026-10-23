@@ -24,6 +24,16 @@ export const StaleIndicator = ({
   let tooltipText = "";
 
   if (hasMissingPoints) {
+    const dateFormatter = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "UTC",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
     tooltipText =
       "Data unavailable\n\n" +
       missingPoints
@@ -31,16 +41,7 @@ export const StaleIndicator = ({
           (p, index) =>
             `${index + 1}. ${
               p.seriesName ? p.seriesName + " - " : ""
-            }${new Date(p.ts).toLocaleString("en-IN", {
-              timeZone: "UTC",
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: false,
-            })}`
+            }${dateFormatter.format(new Date(p.ts))}`
         )
         .join("\n");
   }

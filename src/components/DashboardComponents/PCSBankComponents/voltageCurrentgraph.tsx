@@ -266,7 +266,7 @@ const VoltageCurrentGraph: React.FC<VoltageCurrentGraphProps> = ({
     >
       <SplineGraph
         apiData={seriesForChart}
-        height={230}
+        height={250}
         onExportReady={setExportFunctions}
         props={{
           /*

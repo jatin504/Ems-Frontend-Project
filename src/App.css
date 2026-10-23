@@ -79,11 +79,6 @@ body {
 }
 
 /*  Fault Graph → Hide Show/Hide buttons */
-.fault-graph-wrapper button {
-  display: none !important;
-}
-
-/*  Extra safe selector (Highcharts wrapper case) */
-.fault-graph-wrapper div > button {
+.fault-graph-wrapper main button {
   display: none !important;
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Breadcrumb,
@@ -12,7 +12,7 @@ import { ChevronRightIcon } from "@chakra-ui/icons";
 import { Link as RouterLink } from "react-router-dom";
 
 type DashboardLayoutProps = {
-  breadcrumbs?: { label: string; href?: string }[];
+  breadcrumbs?: { label: string; href?: string; state?: unknown; onClick?: () => void }[];
   children: React.ReactNode;
 };
 
@@ -23,7 +23,7 @@ function getDashboardStorageKey() {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
-  breadcrumbs = [{ label: "Home", href: "/plantview" }, { label: "Dashboard" }],
+  breadcrumbs = [{ label: "Home", href: "/" }, { label: "Dashboard" }],
   children,
 }) => {
   // Save dashboard data to localStorage on unmount or navigation
@@ -73,18 +73,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   // Resizing Logic
   const [scale, setScale] = useState(1);
-  const initialDPR = useRef(window.devicePixelRatio);
 
   useEffect(() => {
     const updateScale = () => {
-      // If devicePixelRatio changed, assume it's zooming, so don't update scale
-      if (window.devicePixelRatio !== initialDPR.current) return;
-
       const baseWidth = 1920;
       const currentWidth = window.innerWidth;
       const availableWidth = currentWidth - 82;
       const widthScale = availableWidth / baseWidth;
-      setScale(widthScale * 1.05);
+      // Recalculate on browser zoom too; never enlarge the dashboard beyond its design size.
+      setScale(Math.min(1, Math.max(0.1, widthScale * 1.05)));
     };
 
     updateScale(); // Run once on mount
@@ -125,16 +122,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           }
         >
           {breadcrumbs.map((bc, idx) => (
-            <BreadcrumbItem key={idx} isCurrentPage={!bc.href}>
-              {bc.href ? (
+            <BreadcrumbItem key={idx} isCurrentPage={idx === breadcrumbs.length - 1}>
+              {bc.onClick ? (
+                <BreadcrumbLink as="button" type="button" onClick={bc.onClick}>
+                  {bc.label}
+                </BreadcrumbLink>
+              ) : bc.href ? (
                 <BreadcrumbLink
                   as={RouterLink}
                   to={bc.href}
+                  state={bc.state}
                 >
                   {bc.label}
                 </BreadcrumbLink>
               ) : (
-                <BreadcrumbLink fontWeight="600">
+                <BreadcrumbLink as="span" fontWeight={idx === breadcrumbs.length - 1 ? "600" : "400"}>
                   {bc.label}
                 </BreadcrumbLink>
               )}

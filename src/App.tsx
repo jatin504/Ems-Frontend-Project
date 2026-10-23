@@ -222,7 +222,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/plantview" },
+                    { label: "Home", href: "/" },
                     { label: "Control", href: "/besscontroll" },
                     { label: "BESS", href: "/besscontroll" },
                     { label: "Calendar" },
@@ -366,18 +366,7 @@ function App() {
 
             <Route
               path="/batteryrackk"
-              element={
-                <DashboardLayout
-                  breadcrumbs={[
-                    { label: "Home", href: "/" },
-                    { label: "Plant View", href: "/plantview" },
-                    { label: "Battery Bank", href: "/batterybankk" },
-                    { label: "Rack" },
-                  ]}
-                >
-                  <RackDashboard />
-                </DashboardLayout>
-              }
+              element={<RackDashboard />}
             />
             <Route
               path="/ppc"
@@ -488,7 +477,7 @@ function App() {
                 <DashboardLayout
                   breadcrumbs={[
                     { label: "Home", href: "/" },
-                    { label: "Control", href: "/tradingdashboard" },
+                    { label: "Control" },
                     { label: "Trading" },
                   ]}
                 >
@@ -591,7 +580,7 @@ function App() {
               element={
                 <DashboardLayout
                   breadcrumbs={[
-                    { label: "Home", href: "/devices/meter-1" },
+                    { label: "Home", href: "/" },
                     { label: "Meter" },
                   ]}
                 >
@@ -658,7 +647,6 @@ function App() {
                 <DashboardLayout
                   breadcrumbs={[
                     { label: "Home", href: "/" },
-                    { label: "Dashboards", href: "/dashboards" },
                     { label: "Protection Relay" },
                   ]}
                 >
@@ -703,7 +691,7 @@ function App() {
                 <DashboardLayout
                   breadcrumbs={[
                     { label: "Home", href: "/" },
-                    { label: "Control", href: "/solardashboard" },
+                    { label: "Control" },
                     { label: "Solar" },
                   ]}
                 >

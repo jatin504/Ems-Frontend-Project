@@ -67,11 +67,12 @@ const CellVoltageDistribution = () => {
       title="Cell Voltage Distribution"
       titleLengthSVG={118}
       titleLengthLongSVG={1680}
-      width={["460px"]}
+      width="100%"
       height="100%"
       fullScreen
+      onFullscreenChange={setIsFullscreen}
       timeWindow={false}
-      mt="2"
+      mt="0"
     >
       <VStack
         spacing={2}
@@ -80,18 +81,18 @@ const CellVoltageDistribution = () => {
       >
         <Box
           flex="1"
-          minH="180px"
+          minH={0}
         >
           <ColumnChart
             height={200}
+            isFullscreen={isFullscreen}
+            fullscreenHeightOffset={160}
             apiData={[
               {
                 name: "Voltage",
                 data: chartData,
               },
             ]}
-            isFullscreen={isFullscreen}
-            onFullscreenChange={setIsFullscreen}
             props={{
               xAxis: {
                 categories: chartData.map((_, i) =>
@@ -108,7 +109,7 @@ const CellVoltageDistribution = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
               },
@@ -125,7 +126,7 @@ const CellVoltageDistribution = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
               },
@@ -147,6 +148,7 @@ const CellVoltageDistribution = () => {
 
               plotOptions: {
                 column: {
+                  pointWidth: isFullscreen ? 32 : 7,
                   borderRadius: 2,
                   pointPadding: 0.08,
                   groupPadding: 0.05,
@@ -167,6 +169,7 @@ const CellVoltageDistribution = () => {
         {/* Bottom Legend */}
 
         <HStack
+          flexShrink={0}
           justify="space-between"
           mt={1}
           px={2}
@@ -179,7 +182,7 @@ const CellVoltageDistribution = () => {
               bg="#2563EB"
               borderRadius="2px"
             />
-            <Text fontSize="10px">
+            <Text fontSize={isFullscreen ? "13px" : "10px"}>
               Low (&lt;3.345V)
             </Text>
           </HStack>
@@ -191,7 +194,7 @@ const CellVoltageDistribution = () => {
               bg="#65A30D"
               borderRadius="2px"
             />
-            <Text fontSize="10px">
+            <Text fontSize={isFullscreen ? "13px" : "10px"}>
               Normal (3.345–3.360V)
             </Text>
           </HStack>
@@ -203,7 +206,7 @@ const CellVoltageDistribution = () => {
               bg="#DC2626"
               borderRadius="2px"
             />
-            <Text fontSize="10px">
+            <Text fontSize={isFullscreen ? "13px" : "10px"}>
               High (&gt;3.360V)
             </Text>
           </HStack>

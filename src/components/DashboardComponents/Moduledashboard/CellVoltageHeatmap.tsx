@@ -56,12 +56,15 @@ const CellVoltageHeatmap = () => {
       width={["560px"]}
       height="630px"
       fullScreen
+      onFullscreenChange={setIsFullscreen}
+      contentProps={{ height: "calc(100% - 48px)", pb: 0, minH: 0 }}
       timeWindow={false}
       mt="2"
     >
       <VStack
         w="100%"
         h="100%"
+        minH={0}
         spacing={2}
         align="stretch"
         bg={useColorModeValue("#F8FAFC", "#0F1720")}
@@ -71,14 +74,14 @@ const CellVoltageHeatmap = () => {
         <Box
           w="100%"
           flex="1"
-          minH="220px"
+          minH={0}
           p="4px"
         >
           <HeatmapChart
+            fitContainer
             height={430}
             apiData={heatmapData}
             isFullscreen={isFullscreen}
-            onFullscreenChange={setIsFullscreen}
             props={{
               xAxis: {
                 type: "category",
@@ -86,7 +89,7 @@ const CellVoltageHeatmap = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
               },
@@ -97,7 +100,7 @@ const CellVoltageHeatmap = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
                 gridLineWidth: 0,
@@ -138,6 +141,7 @@ const CellVoltageHeatmap = () => {
         </Box>
 
         <Box
+          flexShrink={0}
           px={4}
           pb={2}
           bg={useColorModeValue("#F8FAFC", "#0F1720")}

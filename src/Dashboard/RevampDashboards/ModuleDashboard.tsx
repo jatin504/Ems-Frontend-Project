@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   HStack,
+  Grid,
   Text,
   useColorModeValue,
   VStack,
@@ -18,6 +19,8 @@ import CellBalancingStatus from "../../components/DashboardComponents/Moduledash
 import CellAnalyticsDashboard from "./CellAnalyticsDashboard";
 
 interface Props {
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
   onOpenAnalytics?: () => void;
   onBackToRack?: () => void;
   moduleId: string;
@@ -25,12 +28,15 @@ interface Props {
 }
 
 export default function ModuleDashboard({
+  activeTab: selectedTab,
+  onTabChange,
   moduleId,
   onBack,
   onOpenAnalytics,
   onBackToRack,
 }: Props) {
-  const [activeTab, setActiveTab] = useState("details");
+  const [localTab, setActiveTab] = useState("details");
+  const activeTab = selectedTab ?? localTab;
 
   const bg = useColorModeValue("#F4F7FB", "#0B1220");
   const border = useColorModeValue("#E2E8F0", "#203344");
@@ -77,6 +83,7 @@ export default function ModuleDashboard({
         activeTab={activeTab}
         onChange={(tab) => {
           setActiveTab(tab);
+          onTabChange?.(tab);
           if (tab === "analytics" && onOpenAnalytics) onOpenAnalytics();
           if (tab === "details" && onBack) onBack();
         }}
@@ -97,49 +104,27 @@ export default function ModuleDashboard({
       {/* Content */}
       <Box p="20px" minH="500px">
         {activeTab === "details" && (
-          <HStack
-            align="start"
-            spacing="20px"
-            w="100%"
+          <Grid
+            templateColumns={{ base: "minmax(0,1fr)", xl: "360px 300px minmax(0,1fr) minmax(0,1fr)" }}
+            gap="16px"
+            alignItems="start"
+            minW={0}
+            sx={{
+              ".module-widget": { minWidth: 0 },
+              ".module-widget > :not(:fullscreen)": { width: "100%", maxWidth: "100%", margin: 0 },
+            }}
           >
-            {/* Left Side */}
-            <VStack
-              w="340px"
-              spacing="16px"
-              align="stretch"
-            >
+            <VStack className="module-widget" spacing="16px" align="stretch">
               <ModuleInfoCard moduleId={moduleId} />
-
               <ModuleStatusCard />
             </VStack>
-
-            <HStack
-              flex="1"
-              spacing="16px"
-              align="start"
-            >
-              {/* Second Column */}
-              <Box ml="8px">
-                <ElectricalParameters />
-              </Box>
-
-              {/* Third Column */}
-              <Box flex="1" maxW="560px">
-                <CellVoltageHeatmap />
-              </Box>
-
-              {/* Fourth Column */}
-              <VStack
-                w="340px"
-                spacing="20px"
-                align="stretch"
-              >
-                <TemperatureDistribution />
-
-                <CellBalancingStatus />
-              </VStack>
-            </HStack>
-          </HStack>
+            <Box className="module-widget"><ElectricalParameters /></Box>
+            <Box className="module-widget" h="650px" sx={{ "& > :not(:fullscreen)": { height: "100%" } }}><CellVoltageHeatmap /></Box>
+            <VStack spacing="16px" align="stretch" minW={0}>
+              <Box className="module-widget" h="389px"><TemperatureDistribution /></Box>
+              <Box className="module-widget"><CellBalancingStatus /></Box>
+            </VStack>
+          </Grid>
         )}
 
         {activeTab === "analytics" && (

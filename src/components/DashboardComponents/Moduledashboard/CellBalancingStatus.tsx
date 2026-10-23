@@ -50,9 +50,9 @@ const CellBalancingStatus = () => {
         {/* Left */}
         <HStack
           flex="0 0 58%"
-          spacing={5}
+          spacing={3}
           align="center"
-          px={2}
+          px={0}
         >
           <CircularProgress
             value={96}
@@ -83,7 +83,7 @@ const CellBalancingStatus = () => {
             align="start"
             spacing={2}
           >
-            <HStack justify="space-between" w="170px">
+            <HStack justify="space-between" w="150px">
               <HStack>
                 <Box w="12px" h="12px" bg="#65B32E" borderRadius="full" />
                 <Text fontSize="13px" color={text}>Balanced</Text>
@@ -92,7 +92,7 @@ const CellBalancingStatus = () => {
               <Text fontSize="13px" color={text}>24 (96%)</Text>
             </HStack>
 
-            <HStack justify="space-between" w="170px">
+            <HStack justify="space-between" w="150px">
               <HStack>
                 <Box w="12px" h="12px" bg="#F59E0B" borderRadius="full" />
                 <Text fontSize="13px" color={text}>Balancing</Text>
@@ -101,7 +101,7 @@ const CellBalancingStatus = () => {
               <Text fontSize="13px" color={text}>1 (4%)</Text>
             </HStack>
 
-            <HStack justify="space-between" w="170px">
+            <HStack justify="space-between" w="150px">
               <HStack>
                 <Box w="12px" h="12px" bg="#EF4444" borderRadius="full" />
                 <Text fontSize="13px" color={text}>Not Balanced</Text>
@@ -110,7 +110,7 @@ const CellBalancingStatus = () => {
               <Text fontSize="13px" color={text}>0 (0%)</Text>
             </HStack>
 
-            <HStack justify="space-between" w="170px">
+            <HStack justify="space-between" w="150px">
               <HStack>
                 <Box w="12px" h="12px" bg="#9CA3AF" borderRadius="full" />
                 <Text fontSize="13px" color={text}>Offline</Text>
@@ -129,7 +129,7 @@ const CellBalancingStatus = () => {
                 {/* Right */}
         <Box
           flex="0 0 42%"
-          px={4}
+          px={2}
           pb={3}
         >
           <Text
