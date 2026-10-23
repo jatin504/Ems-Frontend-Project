@@ -293,6 +293,8 @@ export const TimeWindow: React.FC<TimeWindowProps> = ({
 
     return (
         <Popover
+            isLazy
+            lazyBehavior="unmount"
             isOpen={isOpen}
             onOpen={() => setIsOpen(true)}
             onClose={() => setIsOpen(false)}

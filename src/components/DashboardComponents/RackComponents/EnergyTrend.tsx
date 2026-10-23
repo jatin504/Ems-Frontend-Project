@@ -145,7 +145,7 @@ const EnergyPowerTrend = ({ rackId }: Props) => {
     >
       <SplineGraph
         apiData={seriesForChart}
-        height={250}
+        height={230}
         onExportReady={setExportFunctions}
         props={{
           yAxis: {

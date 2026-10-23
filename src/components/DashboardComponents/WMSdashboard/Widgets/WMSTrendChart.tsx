@@ -271,7 +271,8 @@ const WMSTrendChart: React.FC<WMSTrendChartProps> = ({
         </Box>
       }
 
-      width={["688px"]}
+      width="100%"
+      contentProps={{ height: "calc(100% - 48px)", pb: 0 }}
 
       height="424px"
 
@@ -287,7 +288,7 @@ const WMSTrendChart: React.FC<WMSTrendChartProps> = ({
       <SplineGraph
         apiData={seriesForChart}
 
-        height={360}
+        height={340}
 
         props={{
 

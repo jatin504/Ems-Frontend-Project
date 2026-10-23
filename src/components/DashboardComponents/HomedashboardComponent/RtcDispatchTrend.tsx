@@ -174,10 +174,11 @@ const RtcDispatchTrend = () => {
       onTimeWindowChange={handleTimeWindowChange}
       onReset={handleReset}
       onExport={exportFunctions}
+      contentProps={{ sx: { "& > div > button": { bottom: 0 } } }}
     >
       <AreaSplineGraph
         apiData={seriesForChart}
-        height={200}
+        height="100%"
         onExportReady={setExportFunctions}
         axisLabelColor={textColor}
         gridColor={gridColor}

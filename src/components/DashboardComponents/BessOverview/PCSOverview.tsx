@@ -95,7 +95,6 @@ export default function PCSOverview() {
   const navigate = useNavigate();
 
   const { colorMode } = useColorMode();
-  const bodyBg = useColorModeValue("gray.50", "gray.900");
   const cardBg = useColorModeValue("#FFFFFF", "#000000");
   const cardBorder = useColorModeValue("#E5E7EB", "#2D3748");
   const cardText = useColorModeValue("#111827", "#FFFFFF");
@@ -440,7 +439,9 @@ export default function PCSOverview() {
   const renderValueCard = (value: string, trend: TrendType) => (
     <HStack
       key={`${colorMode}-${value}`}
-      w="92px"
+      w="100%"
+      maxW="110px"
+      mx="auto"
       h="28px"
       px={2}
       spacing={2}
@@ -734,8 +735,8 @@ return (
   <Box
     ref={panelRef}
     w="100%"
-    h="300px"
-    bg={bodyBg}
+    h={isFullscreen ? "100vh" : "300px"}
+    bg={cardBg}
     borderRadius="12px"
     overflow="hidden"
     border="1px solid"
@@ -746,7 +747,9 @@ return (
     <HStack
       justify="space-between"
       px={3}
-      py={0.5}
+      py={2}
+      minH="44px"
+      flexShrink={0}
       bg={cardBg}
       borderBottom="1px solid"
       borderColor={useColorModeValue("#EEF2F7", "whiteAlpha.100")}
@@ -802,10 +805,11 @@ return (
 
     <Box
       flex="1"
-      px={1}
-      pt={2}
+      px={0}
+      minH={0}
+      pt={0}
       pb={0}
-      bg={bodyBg}
+      bg={cardBg}
       overflow="hidden"
       display="flex"
       flexDirection="column"
@@ -844,87 +848,44 @@ return (
 
           muiTablePaperProps={{
             sx: {
-              position: "relative",
               height: "100%",
+              minHeight: 0,
               display: "flex",
               flexDirection: "column",
-              transformStyle: "preserve-3d",
-              boxShadow: useColorModeValue("0 28px 80px rgba(15, 23, 42, 0.18)", "0 32px 90px rgba(0, 0, 0, 0.45)"),
-              background: useColorModeValue("linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)", "linear-gradient(180deg, #111827 0%, #111827 100%)"),
-              borderRadius: "18px",
+              boxShadow: "none",
+              background: cardBg,
+              borderRadius: 0,
               overflow: "hidden",
-              transition: "transform 0.25s ease, box-shadow 0.25s ease",
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                inset: 0,
-                background: "radial-gradient(circle at top center, rgba(255,255,255,0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(59,130,246,0.16), transparent 24%)",
-                opacity: 0.8,
-                pointerEvents: "none",
-                animation: "pulseGlow 6s ease-in-out infinite",
-              },
-              "@keyframes pulseGlow": {
-                "0%, 100%": {
-                  opacity: 0.7,
-                },
-                "50%": {
-                  opacity: 0.95,
-                },
-              },
-              "&:hover": {
-                transform: "translateY(-2px)",
-                boxShadow: useColorModeValue("0 34px 100px rgba(15, 23, 42, 0.22)", "0 38px 110px rgba(0, 0, 0, 0.55)"),
-              },
             },
           }}
-
           muiTableContainerProps={{
             sx: {
               flex: 1,
               minHeight: 0,
               overflowY: "auto",
               overflowX: isFullscreen ? "auto" : "hidden",
-              perspective: "1600px",
-              transformStyle: "preserve-3d",
               "& .MuiTableHead-root": {
                 background: headerBg,
                 position: "sticky",
                 top: 0,
                 zIndex: 2,
-                transform: "translateZ(6px)",
-                boxShadow: "0 10px 32px rgba(15,23,42,0.08)",
                 "& .MuiTableCell-root": {
                   fontWeight: 700,
-                  fontSize: "14px",
+                  fontSize: isFullscreen ? "12px" : "11px",
                   color: cardText,
-                  borderBottom: "none",
                   background: headerBg,
                 },
               },
               "& .MuiTableBody-root .MuiTableRow-root": {
                 background: rowBg,
-                borderRadius: "18px",
-                boxShadow: "0 10px 24px rgba(15,23,42,.08)",
-                transition: "transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease",
-                minHeight: "30px",
-                height: "auto",
-                transform: "translateZ(0)",
-              },
-              "& .MuiTableBody-root .MuiTableRow-root:hover": {
-                transform: "translateY(-6px) translateZ(10px)",
-                boxShadow: "0 18px 42px rgba(15,23,42,.18)",
-              },
-              "& .MuiTableCell-root": {
-                transition: "transform 0.3s ease, background 0.3s ease, color 0.3s ease",
               },
             },
           }}
-
           muiTableProps={{
             sx: {
-              tableLayout: isFullscreen ? "auto" : "fixed",
-              width: isFullscreen ? "max-content" : "100%",
-              minWidth: isFullscreen ? "max-content" : "100%",
+              tableLayout: "fixed",
+              width: "100%",
+              minWidth: isFullscreen ? "1500px" : "100%",
               borderSpacing: "0",
               borderCollapse: "collapse",
               "& .MuiTableCell-root": {
@@ -987,9 +948,11 @@ return (
 
           muiBottomToolbarProps={{
             sx: {
-              minHeight: "34px",
-              height: "34px",
+              minHeight: "40px",
+              height: "40px",
               marginTop: "auto",
+              paddingBottom: "6px",
+              flexShrink: 0,
               background: cardBg,
               color: cardText,
               borderTop: `1px solid ${cardBorder}`,
@@ -999,7 +962,7 @@ return (
                 height: "34px",
                 color: cardText,
                 position: "relative",
-                top: "-4px",
+                top: 0,
               },
 
               "& .MuiTablePagination-toolbar": {
@@ -1008,7 +971,7 @@ return (
                 padding: "0 6px",
                 display: "flex",
                 alignItems: "center",
-                transform: "translateY(-2px)",
+                transform: "none",
               },
 
               "& .MuiTablePagination-selectRoot": {

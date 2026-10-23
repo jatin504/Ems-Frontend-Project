@@ -43,11 +43,12 @@ const TemperatureDistribution = () => {
       title="Temperature Distribution"
       titleLengthSVG={110}
       titleLengthLongSVG={1680}
-      width={["550px"]}
+      width="100%"
       height="100%"
       fullScreen
+      onFullscreenChange={setIsFullscreen}
       timeWindow={false}
-      mt="2"
+      mt="0"
     >
       <VStack
         w="100%"
@@ -69,7 +70,7 @@ const TemperatureDistribution = () => {
               },
             ]}
             isFullscreen={isFullscreen}
-            onFullscreenChange={setIsFullscreen}
+            fullscreenHeightOffset={210}
             props={{
               xAxis: {
                 categories: Array.from(
@@ -82,7 +83,7 @@ const TemperatureDistribution = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
               },
@@ -95,7 +96,7 @@ const TemperatureDistribution = () => {
                 labels: {
                   style: {
                     color: axisLabelColor,
-                    fontSize: "8px",
+                    fontSize: isFullscreen ? "12px" : "8px",
                   },
                 },
               },
@@ -116,6 +117,7 @@ const TemperatureDistribution = () => {
 
               plotOptions: {
                 column: {
+                  pointWidth: isFullscreen ? 32 : 7,
                   borderRadius: 3,
                   pointPadding: 0.15,
                   groupPadding: 0.08,
@@ -136,7 +138,8 @@ const TemperatureDistribution = () => {
         {/* Legend */}
         <HStack
           justify="center"
-          spacing={8}
+          spacing={3}
+          flexWrap="wrap"
           mt={1}
         >
           <HStack spacing={2}>

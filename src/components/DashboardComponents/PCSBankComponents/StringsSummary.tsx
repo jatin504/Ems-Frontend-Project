@@ -63,7 +63,10 @@ const ValueBox = ({
   trend?: TrendType;
 }) => (
   <HStack
-    w="92px"
+    w="100%"
+    maxW="110px"
+    minW={0}
+    mx="auto"
     h="28px"
     px={2}
     bg="white"
@@ -122,9 +125,13 @@ const StringsSummary: React.FC<Props> = ({
   });
 
   const [rows, setRows] = useState<StringData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!selectedDevice) return;
+    const controller = new AbortController();
+    setRows([]);
+    setLoading(true);
 
     const fetchStrings = async () => {
       try {
@@ -132,9 +139,10 @@ const StringsSummary: React.FC<Props> = ({
           `${API_BASE}/api/lastest-direct-data/multiple-latest-devices`,
           {
             method: "POST",
+            signal: controller.signal,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              device_id_patterns: ["_bank_bank_"],
+              device_id_patterns: [`${selectedDevice}_rack_rack_`],
             }),
           }
         );
@@ -199,15 +207,20 @@ const StringsSummary: React.FC<Props> = ({
             };
           });
 
-        setRows(mappedRows);
+        if (!controller.signal.aborted) setRows(mappedRows);
       } catch (error) {
-        console.error("Failed to fetch string summary:", error);
+        if (!controller.signal.aborted) console.error("Failed to fetch string summary:", error);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     fetchStrings();
     const interval = window.setInterval(fetchStrings, 60_000);
-    return () => window.clearInterval(interval);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
   }, [selectedDevice]);
 
   const toggleFullscreen = () => {
@@ -391,8 +404,8 @@ const StringsSummary: React.FC<Props> = ({
   return (
     <Box
       ref={panelRef}
-      w={isFullscreen ? "100%" : "93%"}
-      maxW={isFullscreen ? "100%" : "93%"}
+      w="100%"
+      maxW="100%"
       minW={0}
       h={isFullscreen ? "100vh" : "344px"}
       display="flex"
@@ -406,6 +419,7 @@ const StringsSummary: React.FC<Props> = ({
       {/* Header */}
       <Flex
         h="40px"
+        flexShrink={0}
         px={3}
         align="center"
         justify="space-between"
@@ -470,77 +484,25 @@ const StringsSummary: React.FC<Props> = ({
             enableHiding={false}
             enableFullScreenToggle={false}
             enablePagination
-            layoutMode="grid"
+            layoutMode="semantic"
             state={{
               pagination,
+              isLoading: loading,
             }}
             onPaginationChange={setPagination}
             muiTablePaperProps={{
               sx: {
-                perspective: "1600px",
-                transformStyle: "preserve-3d",
-                position: "relative",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                borderRadius: "18px",
-                boxShadow: "0 28px 80px rgba(15,23,42,.18)",
-                background:
-                  "linear-gradient(180deg,#F8FAFC 0%,#E2E8F0 100%)",
-                transition: "all .25s ease",
-
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "radial-gradient(circle at top center,rgba(255,255,255,.18),transparent 30%)",
-                  pointerEvents: "none",
-                },
-
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 34px 90px rgba(15,23,42,.22)",
-                },
+                height: "100%", minHeight: 0, display: "flex", flexDirection: "column",
+                overflow: "hidden", borderRadius: 0, boxShadow: "none",
+                background: tableMode === "light" ? "#FFFFFF" : "#101820",
               },
             }}
             muiTableContainerProps={{
               sx: {
-                width: "100%",
-                maxWidth: "100%",
-                minWidth: 0,
-                perspective: "1600px",
-                transformStyle: "preserve-3d",
-                flex: 1,
-                minHeight: 0,
-                overflowY: "auto",
-                overflowX: isFullscreen ? "auto" : "hidden",
-
-                "& .MuiTableHead-root": {
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 2,
-                  background: "#F8FAFC",
-                  boxShadow: "0 10px 25px rgba(15,23,42,.08)",
-                },
-
-                "& .MuiTableBody-root .MuiTableRow-root": {
-                  background: "#FFFFFF",
-                  transition:
-                    "transform .25s ease, box-shadow .25s ease, background .25s ease",
-                  transform: "translateZ(0)",
-                  boxShadow: "0 2px 8px rgba(15,23,42,.04)",
-                },
-
-                "& .MuiTableBody-root .MuiTableRow-root:hover": {
-                  transform: "translateY(-3px) translateZ(8px)",
-                  boxShadow: "0 10px 24px rgba(15,23,42,.14)",
-                  background: "#FFFFFF",
-                },
+                flex: 1, minHeight: 0, overflow: "auto",
+                "& .MuiTableHead-root": { position: "sticky", top: 0, zIndex: 2 },
               },
-            }}
-            muiTableProps={{
+            }}            muiTableProps={{
               sx: {
                 tableLayout: "fixed",
                 width: "100%",
@@ -577,7 +539,7 @@ const StringsSummary: React.FC<Props> = ({
               sx: {
                 background: "#F8FAFC",
                 color: "#0F172A",
-                fontSize: "13px",
+                fontSize: "11px",
                 fontWeight: 700,
                 borderBottom: "1px solid #E5E7EB",
                 textAlign: "center",
@@ -599,7 +561,7 @@ const StringsSummary: React.FC<Props> = ({
               sx: {
                 fontSize: "12px",
                 py: "4px",
-                height: "36px",
+                height: isFullscreen ? "36px" : `${Math.max(36, 232 / Math.max(1, Math.min(rows.length, pagination.pageSize)))}px`,
                 minHeight: "36px",
                 borderBottom: "1px solid #F1F5F9",
                 textAlign: "center",
@@ -611,7 +573,7 @@ const StringsSummary: React.FC<Props> = ({
 
                 "& .MuiTablePagination-root": {
                   minHeight: "34px",
-                  marginTop: "-10px",
+                  marginTop: 0,
                 },
 
                 "& .MuiTablePagination-toolbar": {

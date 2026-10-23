@@ -336,7 +336,7 @@ export default function RackSummary({ rackId }: Props) {
         : "No Data";
 
   return (
-    <HStack spacing={4} mb={5}>
+    <HStack spacing={4} mb={0}>
 
       <SummaryCard
         icon={FaBolt}

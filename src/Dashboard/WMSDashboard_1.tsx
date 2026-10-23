@@ -5,6 +5,7 @@ import {
   useColorModeValue,
   Text,
   Select,
+  Grid,
 } from "@chakra-ui/react";
 
 import {
@@ -117,7 +118,11 @@ const WMSDashboard_1 = () => {
       minH="100vh"
       bg={bg}
       p="10px"
-      overflowX="auto"
+      minW={0}
+      sx={{
+        ".wms-widget": { minWidth: 0 },
+        ".wms-widget > :not(:fullscreen)": { width: "100%", maxWidth: "100%", height: "100%", margin: 0 },
+      }}
     >
 
       <VStack
@@ -191,61 +196,61 @@ const WMSDashboard_1 = () => {
         <WMSTopCards selectedDevice={selectedDevice} />
 
         {/* SECOND ROW */}
-        <HStack
-          spacing="10px"
+        <Grid
+          templateColumns={{ base: "minmax(0,1fr)", xl: "minmax(0,1.35fr) minmax(0,1.4fr) minmax(0,0.95fr)" }}
+          gap="10px"
           align="stretch"
         >
 
-          <Box w="37%">
+          <Box className="wms-widget">
             <WMSOverview selectedDevice={selectedDevice} />
           </Box>
 
           <Box
-            w="48%"
-            mt="-16px"
+            className="wms-widget"
           >
             <WMSTrendChart selectedDevice={selectedDevice} />
           </Box>
 
           <Box
-            w="25%"
-            ml="-206px"
+            className="wms-widget"
           >
             <WindRoseChart selectedDevice={selectedDevice} />
           </Box>
 
-        </HStack>
+        </Grid>
 
         {/* THIRD ROW */}
-        <HStack
-          spacing="10px"
+        <Grid
+          templateColumns={{ base: "minmax(0,1fr)", xl: "minmax(0,1.15fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,0.75fr)" }}
+          gap="10px"
           align="stretch"
         >
 
-          <Box w="36%">
+          <Box className="wms-widget">
             <ParameterTrends selectedDevice={selectedDevice} />
           </Box>
 
           <VStack
             spacing="10px"
             align="stretch"
-            w="28%"
-            ml="-119px"
+            minW={0}
+            sx={{ "& > div": { flex: 1 } }}
           >
-            <DailySummary selectedDevice={selectedDevice} />
+            <Box className="wms-widget" w="100%"><DailySummary selectedDevice={selectedDevice} /></Box>
 
-            <WMSStationStatus selectedDevice={selectedDevice} />
+            <Box className="wms-widget" w="100%"><WMSStationStatus selectedDevice={selectedDevice} /></Box>
           </VStack>
 
-          <Box w="26%">
+          <Box className="wms-widget">
             <SensorStatus selectedDevice={selectedDevice} />
           </Box>
 
-          <Box w="18%">
+          <Box className="wms-widget">
             <AlertsEvents selectedDevice={selectedDevice} />
           </Box>
 
-        </HStack>
+        </Grid>
 
       </VStack>
 

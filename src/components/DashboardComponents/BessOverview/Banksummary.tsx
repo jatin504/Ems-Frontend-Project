@@ -436,9 +436,23 @@ const BankSummary = () => {
           minW="0"
         >
           {bankOptions.map(
-            (bank: BankData, index: number) => (
+            (bank: BankData) => (
               <Box
-                key={index}
+                key={bank.device_id}
+                role="link"
+                tabIndex={0}
+                cursor="pointer"
+                onClick={() =>
+                  navigate("/batterybankk", {
+                    state: { currentBank: bank.device_id, breadcrumbSource: "bess" },
+                    replace: true,
+                  })
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.click();
+                }}
+                _hover={{ borderColor: "blue.300" }}
+                _focusVisible={{ outline: "2px solid", outlineColor: "blue.400" }}
                 w="100%"
                 maxW="100%"
                 minW="0"
@@ -481,17 +495,7 @@ const BankSummary = () => {
                       whiteSpace="nowrap"
                       overflow="hidden"
                       textOverflow="ellipsis"
-                      onClick={() =>
-                        navigate("/batterybankk", {
-                          state: {
-                            currentBank:
-                              bank.device_id,
-                            breadcrumbSource:
-                              "bess",
-                          },
-                          replace: true,
-                        })
-                      }
+
                     >
                       {bank.device_id
                         .replace(/^plant_\d+_/, "")

@@ -4,6 +4,7 @@ import {
   VStack,
   useColorModeValue,
   HStack,
+  Grid,
   Button,
 } from "@chakra-ui/react";
 import ModuleTabs from "../../components/DashboardComponents/Moduledashboard/ModuleTabs";
@@ -40,6 +41,13 @@ export default function CellAnalyticsDashboard({ moduleId, onBack, onBackToRack 
       borderColor={border}
       borderRadius="12px"
       p="20px"
+      minW={0}
+      sx={{
+        ".analytics-widget": { minWidth: 0 },
+        ".analytics-widget > :not(:fullscreen)": {
+          width: "100%", maxWidth: "100%", height: "100%", margin: 0,
+        },
+      }}
     >
       <VStack spacing="12px" align="stretch">
         <ModuleTabs
@@ -63,67 +71,28 @@ export default function CellAnalyticsDashboard({ moduleId, onBack, onBackToRack 
 
         <CellAnalyticsTopRibbon />
 
-        <HStack spacing="16px" align="stretch" >
-          {/* Heatmap - same width as current */}
-          <Box w="860px" h="450px" transform="translateY(-22px)">
-            <CellVoltageHeatmap />
-          </Box>
-
-          {/* Right Side */}
-          <HStack flex="1" spacing="16px" align="stretch">
-            {/* Left Column */}
-            <VStack flex="1" spacing="16px">
-              <Box w="100%" h="170px">
-                <CellVoltageStatistics />
-              </Box>
-
-              <Box w="100%" h="250px" mt="-20px">
-                <CellVoltageDistribution />
-              </Box>
-            </VStack>
-
-            {/* Right Column */}
-            <VStack flex="1" spacing="16px">
-              <Box w="100%" h="170px">
-                <CellTemperatureStatistics />
-              </Box>
-
-              <Box w="100%" h="250px" mt="-20px">
-                <CellTemperatureDistribution />
-              </Box>
-            </VStack>
-          </HStack>
-        </HStack>
-
-        {/* ======================= Second Row ======================= */}
-        <HStack spacing="16px" align="stretch">
-          {/* Cell Details */}
-          <Box w="860px" h="430px">
-            <CellDetailsTable />
-          </Box>
-
-          {/* Trends */}
-          <VStack w="460px" spacing="16px" align="stretch">
-            <Box h="207px" mt="-20px">
-              <VoltageTrend />
-            </Box>
-
-            <Box h="207px">
-              <TemperatureTrend />
-            </Box>
+        <Grid templateColumns={{ base: "minmax(0,1fr)", xl: "minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr)" }} gap="16px" minW={0}>
+          <Box className="analytics-widget" h="502px"><CellVoltageHeatmap /></Box>
+          <VStack spacing="12px" align="stretch" minW={0}>
+            <Box className="analytics-widget" h="170px"><CellVoltageStatistics /></Box>
+            <Box className="analytics-widget" h="320px"><CellVoltageDistribution /></Box>
           </VStack>
-
-          {/* Health Section */}
-          <VStack w="460px" spacing="16px" align="stretch">
-            <Box h="180px">
-              <CellHealthSummary />
-            </Box>
-
-            <Box h="235px">
-              <WeakestCellParameter />
-            </Box>
+          <VStack spacing="12px" align="stretch" minW={0}>
+            <Box className="analytics-widget" h="170px"><CellTemperatureStatistics /></Box>
+            <Box className="analytics-widget" h="320px"><CellTemperatureDistribution /></Box>
           </VStack>
-        </HStack>
+        </Grid>
+        <Grid templateColumns={{ base: "minmax(0,1fr)", xl: "minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr)" }} gap="16px" minW={0}>
+          <Box className="analytics-widget" h="430px"><CellDetailsTable /></Box>
+          <VStack spacing="16px" align="stretch" minW={0}>
+            <Box className="analytics-widget" h="207px"><VoltageTrend /></Box>
+            <Box className="analytics-widget" h="207px"><TemperatureTrend /></Box>
+          </VStack>
+          <VStack spacing="16px" align="stretch" minW={0}>
+            <Box className="analytics-widget" h="180px"><CellHealthSummary /></Box>
+            <Box className="analytics-widget" h="235px"><WeakestCellParameter /></Box>
+          </VStack>
+        </Grid>
       </VStack>
     </Box>
   );

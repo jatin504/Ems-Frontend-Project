@@ -290,7 +290,8 @@ const DailySummary = ({
               align="center"
               justify="flex-start"
               position="relative"
-              px="10px"
+              px="4px"
+              minW={0}
             >
 
               {/* Divider */}
@@ -322,7 +323,8 @@ const DailySummary = ({
                 color={labelColor}
                 fontSize="13px"
                 textAlign="center"
-                whiteSpace="nowrap"
+                whiteSpace="normal"
+                minH="32px"
                 mb="8px"
               >
                 {item.title}

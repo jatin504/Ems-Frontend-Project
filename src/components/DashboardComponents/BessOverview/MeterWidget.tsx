@@ -520,13 +520,27 @@ const MeterWidget = () => {
             <Box
               w={isFullscreen ? "100%" : "180px"}
               minW={isFullscreen ? "0" : "180px"}
-              h={isFullscreen ? "90px" : "218px"}
+              h={isFullscreen ? "100px" : "218px"}
               minH="0"
               display="flex"
               flexDirection={isFullscreen ? "row" : "column"}
               gap={isFullscreen ? "8px" : "2px"}
               overflow="visible"
               boxSizing="border-box"
+              sx={isFullscreen ? {
+                "& > div": {
+                  padding: "10px 12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                },
+                "& > div > .chakra-stack": { marginTop: 0 },
+                "& > div > .chakra-stack:first-of-type": {
+                  height: "28px",
+                  minHeight: "28px",
+                  alignItems: "center",
+                },
+              } : undefined}
             >
               <Box
                 flex="1"
@@ -662,14 +676,14 @@ const MeterWidget = () => {
                     >
                       <Icon as={FiActivity} boxSize="18px" color={blueGlow} />
                     </Box>
-                    <Box>
+                    <Box display="contents">
                       <Text fontSize={isFullscreen ? "12px" : "8px"} fontWeight="600" lineHeight="10px">Frequency</Text>
+                    </Box>
+                  </HStack>
                       <Text fontSize={isFullscreen ? "20px" : "15px"} fontWeight="700" lineHeight="16px" color={blueGlow}>
                         49.81
                         <Text as="span" fontSize={isFullscreen ? "9px" : "7px"} ml="3px" color={subTextColor}>Hz</Text>
                       </Text>
-                    </Box>
-                  </HStack>
 
                 </HStack>
               </Box>

@@ -28,7 +28,6 @@ export default function ProtectionRelayDashboard() {
 
   const breadcrumbs = [
     { label: "Home", href: "/" },
-    { label: "Dashboards", href: "/dashboards" },
     { label: "Protection Relay" },
   ];
 

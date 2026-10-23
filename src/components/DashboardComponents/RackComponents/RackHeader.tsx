@@ -5,13 +5,9 @@ import {
   VStack,
   Text,
   Badge,
-  Switch,
-  IconButton,
-  Spacer,
   Divider,
   useColorModeValue,
 } from "@chakra-ui/react";
-import { RepeatIcon, ArrowUpIcon } from "@chakra-ui/icons";
 
 const Item = ({
   label,
@@ -54,7 +50,7 @@ export default function RackHeader() {
       borderRadius="10px"
       px={6}
       py={3}
-      mb={5}
+      mb={0}
       boxShadow="sm"
     >
       <HStack spacing={5} w="100%">
@@ -105,32 +101,6 @@ export default function RackHeader() {
         <Divider orientation="vertical" h="36px" borderColor={divider} />
 
         <Item label="Last Update" value="V1.8.2" />
-
-        <Spacer />
-
-        <HStack spacing={2}>
-          <Text fontSize="12px">Auto Refresh</Text>
-
-          <Switch
-            size="sm"
-            colorScheme="green"
-            defaultChecked
-          />
-
-          <IconButton
-            aria-label="Refresh"
-            icon={<RepeatIcon />}
-            size="sm"
-            variant="ghost"
-          />
-
-          <IconButton
-            aria-label="Expand"
-            icon={<ArrowUpIcon />}
-            size="sm"
-            variant="ghost"
-          />
-        </HStack>
 
       </HStack>
     </Box>

@@ -261,7 +261,7 @@ const SensorStatus = ({
       <Table
         variant="unstyled"
         size="sm"
-        sx={{ tableLayout: "fixed" }}
+        sx={{ tableLayout: "fixed", "th, td": { px: "6px" }, "th:first-of-type": { width: "43%" } }}
       >
 
         <Thead>
@@ -337,7 +337,8 @@ const SensorStatus = ({
                   fontSize="14px"
                   py="10px"
                   borderBottom={`1px solid ${divider}`}
-                  whiteSpace="nowrap"
+                  whiteSpace="normal"
+                  overflowWrap="anywhere"
                   overflow="hidden"
                   textOverflow="ellipsis"
                   maxW="320px"

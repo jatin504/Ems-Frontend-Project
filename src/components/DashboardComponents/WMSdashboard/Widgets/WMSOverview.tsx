@@ -266,7 +266,14 @@ const WMSOverview = ({
       <Table
         variant="unstyled"
         size="sm"
+        sx={{ tableLayout: "fixed", "th, td": { px: "6px", whiteSpace: "normal", overflowWrap: "anywhere" }, th: { fontSize: "10px" }, td: { fontSize: "12px" } }}
       >
+        <colgroup>
+          <col style={{ width: "30%" }} />
+          <col style={{ width: "12%" }} /><col style={{ width: "12%" }} />
+          <col style={{ width: "12%" }} /><col style={{ width: "12%" }} />
+          <col style={{ width: "22%" }} />
+        </colgroup>
 
         <Thead>
 
@@ -381,12 +388,15 @@ const WMSOverview = ({
 
                   <Box
                     w="95px"
+                    maxW="100%"
+                    minW={0}
                     h="24px"
                     position="relative"
                   >
 
                     <svg
                       width="95"
+                      style={{ width: "100%", maxWidth: "95px" }}
                       height="24"
                       viewBox="0 0 95 24"
                       fill="none"

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Box, HStack, VStack } from "@chakra-ui/react";
+import { Box, Grid, HStack, VStack, useColorModeValue } from "@chakra-ui/react";
 
 import PlantCard from "../components/DashboardComponents/BessOverview/PlantCard";
 import MeterCard from "../components/DashboardComponents/BessOverview/MeterCard";
@@ -14,6 +14,7 @@ import MeterWidget from "../components/DashboardComponents/BessOverview/MeterWid
 // import MeterWidget from "./SolarviewDashboard/Widgets/MeterWidget";
 
 const BessDashboard = () => {
+  const widgetBorder = useColorModeValue("#E2E8F0", "rgba(255,255,255,0.12)");
   useEffect(() => {
     const logLayout = () => {
       const getBox = (id: string) => {
@@ -72,116 +73,55 @@ const BessDashboard = () => {
     <Box
       id="bess-dashboard"
       w="100%"
-      maxW="100%"
-      overflowX="hidden"
-      overflowY="visible"
-      bg="#F3F6F9"
+      minW={0}
+      bg={useColorModeValue("#F3F6F9", "#0B1220")}
+      sx={{
+        ".bess-widget": { minWidth: 0 },
+        ".bess-widget > :not(:fullscreen)": {
+          width: "100%",
+          minWidth: 0,
+          maxWidth: "100%",
+          height: "100%",
+          margin: 0,
+          border: "1px solid",
+          borderColor: widgetBorder,
+          borderRadius: "12px",
+          boxShadow: "none",
+        },
+      }}
     >
-      {/* FIRST ROW */}
-      <HStack
+      <Grid
         id="bess-first-row"
-        spacing={2}
-        align="flex-start"
-        h="fit-content"
-        minH="0"
-        flex="none"
+        templateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 1fr) minmax(0, 1.03fr) minmax(0, 1.14fr)" }}
+        gap={3}
+        alignItems="stretch"
       >
-        <Box w="280px" flex="none">
-          <PlantCard />
-        </Box>
+        <HStack spacing={3} align="stretch" minW={0} h="300px">
+          <Box className="bess-widget" flex={1}><PlantCard /></Box>
+          <Box className="bess-widget" flex={1}><MeterCard /></Box>
+        </HStack>
+        <Box className="bess-widget" h="300px"><MeterWidget /></Box>
+        <Box className="bess-widget" h="300px"><PCSOverview /></Box>
+      </Grid>
 
-        <Box w="280px" flex="none">
-          <MeterCard />
-        </Box>
-
-        <Box w="280px" flex="none" mt={-5}>
-          <MeterWidget />
-        </Box>
-
-        <Box
-          w="calc(100% - 860px)"
-          minW="0"
-          flex="1"
-          ml={310}
-          mt={-2}
-        >
-          <PCSOverview />
-        </Box>
-      </HStack>
-
-      {/* SECOND ROW */}
-      <HStack
+      <Grid
         id="bess-second-row"
-        spacing={2}
-        align="flex-start"
-        mt={2}
-        w="100%"
-        maxW="100%"
-        overflow="hidden"
+        templateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 1fr) minmax(0, 1.03fr) minmax(0, 1.14fr)" }}
+        gap={3}
+        mt={3}
+        alignItems="stretch"
       >
-        {/* LEFT COLUMN */}
-        <VStack
-          id="bess-left-column"
-          spacing={2}
-          align="stretch"
-          w="38%"
-          minW="0"
-          h="fit-content"
-          flexShrink={1}
-        >
-          {/* System Topology */}
-          <Box
-            w="100%"
-            h="330px"
-            flexShrink={0}
-          >
-            <Flow />
-          </Box>
-
-          {/* Meter Widget replaced by lifetime throughput + SOC summary */}
-          <VStack
-            w="560px"
-            spacing={2}
-            align="stretch"
-            flexShrink={0}
-            mt={0}
-          >
-            <PCSLifetimeThroughput />
-            <SOCSummary />
-          </VStack>
+        <VStack id="bess-left-column" spacing={3} align="stretch" minW={0}>
+          <Box className="bess-widget" h="330px"><Flow /></Box>
+          <Box className="bess-widget" h="180px"><PCSLifetimeThroughput /></Box>
+          <Box className="bess-widget" h="150px"><SOCSummary /></Box>
         </VStack>
-
-        {/* CENTER COLUMN */}
-        <VStack
-          id="bess-center-column"
-          spacing={2}
-          align="stretch"
-          w="42%"
-          minW="0"
-          flexShrink={1}
-        >
-          {/* Energy Overview */}
-          <Box mt="-16px" ml={-120} flexShrink={0}>
-            <EnergyOverview />
-          </Box>
-
-          {/* Energy Power Trend - Meter Widget ke right */}
-          <Box mt="-18px" ml={-120} flexShrink={0}>
-            <EnergyPowerTrend />
-          </Box>
+        <VStack id="bess-center-column" spacing={3} align="stretch" minW={0}>
+          <Box className="bess-widget" h="330px"><EnergyOverview /></Box>
+          <Box className="bess-widget" h="342px"><EnergyPowerTrend /></Box>
         </VStack>
-
-        {/* RIGHT */}
-        <Box
-          id="bess-right-column"
-          w="20%"
-          minW="0"
-          flexShrink={1}
-          ml={-290}
-        >
-          <Banksummary />
-        </Box>
-      </HStack>
+        <Box id="bess-right-column" className="bess-widget" h="684px"><Banksummary /></Box>
+      </Grid>
     </Box>
   );
 };

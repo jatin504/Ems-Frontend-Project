@@ -232,7 +232,8 @@ const ParameterTrends = ({
       border={`1px solid ${border}`}
       borderRadius="10px"
       p="14px"
-      w="520px"
+      w="100%"
+      minW={0}
       minH="300px"
       overflow="hidden"
     >
@@ -349,6 +350,8 @@ const ParameterTrends = ({
                 <Box
                   position="relative"
                   flex="1"
+                  minW={0}
+                  overflow="hidden"
                   h="26px"
                   mx="10px"
                 >

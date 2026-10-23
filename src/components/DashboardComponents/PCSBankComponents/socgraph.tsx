@@ -345,11 +345,6 @@ const SocGraph: React.FC<SocGraphProps> = ({
 
     const points = device[SOC_ALIAS] ?? [];
 
-    console.log("================================");
-    console.log("SoC API Data:", data);
-    console.log("Selected Device:", selectedDevice);
-    console.log("SoC Points:", points);
-
     if (!points.length) return [];
 
     return [

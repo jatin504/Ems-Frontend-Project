@@ -371,7 +371,7 @@ ${
       <SpineGraph
         key={activeSelectedDevice}
         apiData={seriesForChart}
-        height={220}
+        height={250}
         onExportReady={setExportFunctions}
         props={{
           chart: {
