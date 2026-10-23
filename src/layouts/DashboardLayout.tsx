@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Breadcrumb,
@@ -12,7 +12,7 @@ import { ChevronRightIcon } from "@chakra-ui/icons";
 import { Link as RouterLink } from "react-router-dom";
 
 type DashboardLayoutProps = {
-  breadcrumbs?: { label: string; href?: string }[];
+  breadcrumbs?: { label: string; href?: string; state?: unknown; onClick?: () => void }[];
   children: React.ReactNode;
 };
 
@@ -23,7 +23,7 @@ function getDashboardStorageKey() {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
-  breadcrumbs = [{ label: "Home", href: "/plantview" }, { label: "Dashboard" }],
+  breadcrumbs = [{ label: "Home", href: "/" }, { label: "Dashboard" }],
   children,
 }) => {
   // Save dashboard data to localStorage on unmount or navigation
@@ -71,12 +71,33 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     // eslint-disable-next-line
   }, []);
 
+  // Resizing Logic
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const baseWidth = 1920;
+      const currentWidth = window.innerWidth;
+      const availableWidth = currentWidth - 82;
+      const widthScale = availableWidth / baseWidth;
+      // Recalculate on browser zoom too; never enlarge the dashboard beyond its design size.
+      setScale(Math.min(1, Math.max(0.1, widthScale * 1.05)));
+    };
+
+    updateScale(); // Run once on mount
+    window.addEventListener("resize", updateScale);
+
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   return (
     <Box
       w="100%"
+      pl={{ base: 0, md: "82px" }}
+      boxSizing="border-box"
       bg={useColorModeValue("#F4F6F6", "#0E1111")}
       overflowX="hidden"
-      sx={{ zoom: 0.80 }}
+      sx={{ zoom: scale }}
     >
       {/* Breadcrumb */}
       <Container
@@ -101,16 +122,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           }
         >
           {breadcrumbs.map((bc, idx) => (
-            <BreadcrumbItem key={idx} isCurrentPage={!bc.href}>
-              {bc.href ? (
+            <BreadcrumbItem key={idx} isCurrentPage={idx === breadcrumbs.length - 1}>
+              {bc.onClick ? (
+                <BreadcrumbLink as="button" type="button" onClick={bc.onClick}>
+                  {bc.label}
+                </BreadcrumbLink>
+              ) : bc.href ? (
                 <BreadcrumbLink
                   as={RouterLink}
                   to={bc.href}
+                  state={bc.state}
                 >
                   {bc.label}
                 </BreadcrumbLink>
               ) : (
-                <BreadcrumbLink fontWeight="600">
+                <BreadcrumbLink as="span" fontWeight={idx === breadcrumbs.length - 1 ? "600" : "400"}>
                   {bc.label}
                 </BreadcrumbLink>
               )}
@@ -121,11 +147,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* DASHBOARD CONTENT */}
       <Container
-        maxW="1920px"
-        px="16px"
+        maxW="none"
+        width="100%"
+        px="8px"
         pb="16px"
         mx="0"
         ml="0"
+        boxSizing="border-box"
       >
         <Flex direction="column" w="100%">
           {children}

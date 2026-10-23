@@ -17,7 +17,7 @@ export default function ProtectionRelayDashboard() {
   const crumbColor = useColorModeValue("#4A5568", "#CBD5E0");
   const crumbActiveColor = useColorModeValue("#1A202C", "#F1F5F9");
 
-  // ✅ UNIQUE RELAY NAMES (search friendly)
+  //  UNIQUE RELAY NAMES (search friendly)
   const [relays] = useState([
     { id: "REF615-1", name: "REF615 Relay-1" },
     { id: "REF615-2", name: "REF615 Relay-2" },
@@ -28,11 +28,10 @@ export default function ProtectionRelayDashboard() {
 
   const breadcrumbs = [
     { label: "Home", href: "/" },
-    { label: "Dashboards", href: "/dashboards" },
     { label: "Protection Relay" },
   ];
 
-  // ✅ SEARCH WORKS PROPERLY NOW
+  //  SEARCH WORKS PROPERLY NOW
   const filteredRelays = relays.filter((relay) =>
     relay.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
