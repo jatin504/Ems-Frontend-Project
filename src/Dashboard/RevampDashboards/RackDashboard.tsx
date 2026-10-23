@@ -1,130 +1,243 @@
-import { Box, HStack, Text, useColorModeValue } from "@chakra-ui/react";
-import React, { useMemo, useState, useEffect } from "react";
+import React from "react";
+import { Box, HStack, VStack, useColorModeValue } from "@chakra-ui/react";
+import { useLocation } from "react-router-dom";
 import { useDevices } from "../../hooks/useDevices";
-import CellBalancing from "../../components/DashboardComponents/RackComponents/Widgets/CellBalancing";
-import TemperatureCards from "../../components/DashboardComponents/RackComponents/Widgets/Temperatures";
-import StringGrid from "../../components/DashboardComponents/RackComponents/Widgets/StringGrid";
-import ControlPanel from "../../components/DashboardComponents/RackComponents/Widgets/ControlPanel";
-import ModulesTable from "../../components/DashboardComponents/RackComponents/Widgets/ModulesTable";
-import AnalogsAndStatus from "../../components/DashboardComponents/RackComponents/Widgets/RackStatus";
-import RackAnalog from "../../components/DashboardComponents/RackComponents/Widgets/RackAnalog";
-import RackStatus from "../../components/DashboardComponents/RackComponents/Widgets/RackStatus";
+import DashboardLayout from "../../layouts/DashboardLayout";
 
-// fixed canvas size to match your mock
-// const FRAME_W = 1920;
-// const FRAME_H = 939;
+import RackHeader from "../../components/DashboardComponents/RackComponents/RackHeader";
+import RackSummary from "../../components/DashboardComponents/RackComponents/RackSummary";
+
+import RackModuleLayout from "../../components/DashboardComponents/RackComponents/RackModuleLayout";
+import DeltaSummary from "../../components/DashboardComponents/RackComponents/DeltaSummary";
+import ControlLimits from "../../components/DashboardComponents/RackComponents/ControlLimits";
+
+import CellVoltageHeatmap from "../../components/DashboardComponents/RackComponents/CellVoltageHeatmap";
+import TemperatureDistribution from "../../components/DashboardComponents/RackComponents/TemperatureDistribution";
+import ProtectionAlarmSummary from "../../components/DashboardComponents/RackComponents/ProtectionAlarmSummary";
+import LifetimeThroughput from "../../components/DashboardComponents/RackComponents/LifetimeThroughput";
+import EnergyTrend from "../../components/DashboardComponents/RackComponents/EnergyTrend";
+import RecentEvents from "../../components/DashboardComponents/RackComponents/RecentEvents";
+import ModuleDashboard from "./ModuleDashboard";
+import CellAnalyticsDashboard from "./CellAnalyticsDashboard";
 
 export default function RackDashboard() {
-  // light mode gets a soft slate background, dark stays the same
-  const screen = useColorModeValue("#f1f5f9", "#0b0f14");
-  const crumbColor = useColorModeValue("#334155", "gray.400");
-
-  // --- RACK DROPDOWN LOGIC ---
-  const { devices, loading } = useDevices();
-  const [selectedRack, setSelectedRack] = useState("");
-
-  // Filter for rack devices (device_id like plant_1_pcs_1_ess_2_rack_rack_*)
-  const rackOptions = useMemo(() => {
-    if (!devices) return [];
-    return devices
-      .filter((d: any) => d.device_id?.toLowerCase().includes("_rack_rack_"))
-      .map((d: any) => {
-        // Try to extract a numeric suffix from device_id
-        const match = d.device_id.match(/_rack_rack_(\d+)/);
-        const suffix = match ? match[1] : d.device_id;
-        return {
-          id: d.device_id,
-          label: suffix ? `Rack_${suffix}` : d.device_id,
-        };
-      });
-  }, [devices]);
-
-  // Auto-select first rack
-  useEffect(() => {
-    if (!selectedRack && rackOptions.length > 0) {
-      setSelectedRack(rackOptions[0].id);
-    }
-  }, [rackOptions, selectedRack]);
-
-  // const [scale, setScale] = React.useState(1);
-  // const viewportRef = React.useRef<HTMLDivElement>(null);
-
-  // React.useLayoutEffect(() => {
-  //   const update = () => {
-  //     const cw =
-  //       viewportRef.current?.clientWidth ?? document.documentElement.clientWidth;
-  //     const s = Math.min(1, (cw - 2) / FRAME_W);
-  //     setScale(s);
-  //   };
-  //   update();
-  //   window.addEventListener("resize", update);
-  //   return () => window.removeEventListener("resize", update);
-  // }, []);
-
+  const screen = useColorModeValue("#F1F5F9", "#0B0F14");
+  const location = useLocation();
+  const { devices } = useDevices();
+  const rackDeviceId =
+    (location.state as { currentRack?: string })?.currentRack || "";
+  const selectedRack = React.useMemo(
+    () => devices?.find(
+      (device) =>
+        device.deviceType === "rack" &&
+        device.device_id === rackDeviceId
+    ),
+    [devices, rackDeviceId]
+  );
+  const selectedRackId = selectedRack?.device_id || rackDeviceId;
+  const [selectedModule, setSelectedModule] = React.useState<string | null>(null);
+  const [showModuleDashboard, setShowModuleDashboard] = React.useState(false);
+  const [showAnalyticsPage, setShowAnalyticsPage] = React.useState(false);
+  const [moduleTab, setModuleTab] = React.useState("details");
+  const navigationState = location.state as { currentBank?: string; breadcrumbSource?: string } | null;
+  const currentBank = navigationState?.currentBank || selectedRackId.replace(/_rack_rack_\d+$/i, "");
+  const backToRack = () => {
+    setShowAnalyticsPage(false);
+    setShowModuleDashboard(false);
+    setSelectedModule(null);
+    setModuleTab("details");
+  };
+  const moduleOpen = !!selectedModule && (showModuleDashboard || showAnalyticsPage);
+  const tabLabels: Record<string, string> = {
+    details: "Module Details", voltages: "Voltages", temperatures: "Temperatures",
+    alarms: "Alarms & Events", health: "Lifetime & Health", settings: "Settings",
+  };
+  const breadcrumbs = [
+    { label: "Home", href: "/" },
+    navigationState?.breadcrumbSource === "bess"
+      ? { label: "BESS", href: "/devices/bess" }
+      : { label: "Plant View", href: "/plantview" },
+    { label: "Battery Bank", href: "/batterybankk", state: {
+      currentBank, breadcrumbSource: navigationState?.breadcrumbSource,
+    } },
+    { label: "Rack", ...(moduleOpen ? { onClick: backToRack } : {}) },
+    ...(moduleOpen ? [{ label: `Module ${selectedModule}`, ...(showAnalyticsPage || moduleTab !== "details" ? {
+      onClick: () => { setShowAnalyticsPage(false); setShowModuleDashboard(true); setModuleTab("details"); },
+    } : {}) }] : []),
+    ...(showAnalyticsPage ? [{ label: "Cell Analytics" }] :
+      moduleOpen && moduleTab !== "details" ? [{ label: tabLabels[moduleTab] || moduleTab }] : []),
+  ];
 
   return (
-    <Box bg={screen} w="100%" minH="100%">
+    <DashboardLayout breadcrumbs={breadcrumbs}>
+    <Box
+      w="100%"
+      minH="100vh"
+      bg={screen}
+      px="20px"
+      py="20px"
+      sx={{
+        ".rack-row > div": { minWidth: 0 },
+        ".rack-row > div > :not(:fullscreen)": {
+          width: "100%", maxWidth: "100%", height: "100%", margin: 0,
+        },
+      }}
+    >
+      <VStack spacing="12px" align="stretch" w="100%">
 
-      {/* Select Rack Dropdown */}
-      <HStack
-        spacing="12px"
-        align="center"
-        bg={screen}
-        p="10px 14px"
-        borderRadius="md"
-        w="fit-content"
-        boxShadow="sm"
-        mb="20px"
-      >
-        <Text fontSize="13px" fontWeight={500} color={crumbColor}>
-          Select Rack:
-        </Text>
-        <select
-          style={{ width: 220, fontSize: 13, height: 28, borderRadius: 4, padding: '0 8px' }}
-          value={selectedRack}
-          disabled={loading}
-          onChange={(e) => setSelectedRack(e.target.value)}
-        >
-          {rackOptions.map((opt) => (
-            <option key={opt.id} value={opt.id}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </HStack>
+        {!showAnalyticsPage && (
+          <>
+            <RackHeader rackId={selectedRackId} />
 
-      {/* ---------- ROW 1 ---------- */}
-      <Box w={`100%`} h="302.4175px" mb={"20px"}>
-        <HStack gap="20px" w={`100%`} align="stretch" h="100%">
-          <Box w="330px" h="100%" borderRadius="12px">
-            <CellBalancing />
-          </Box>
-          <Box w="497px" h="100%" borderRadius="12px">
-            <TemperatureCards />
-          </Box>
-          <Box w="497px" h="100%" borderRadius="12px">
-            <StringGrid />
-          </Box>
-          <Box w="497px" h="100%" borderRadius="12px">
-            <ControlPanel />
-          </Box>
-        </HStack>
-      </Box>
+            <Box>
+              <RackSummary rackId={selectedRackId} />
+            </Box>
 
-      {/* ---------- ROW 2 ---------- */}
-      <Box w={`100%`} h="535.5825px">
-          <HStack spacing="20px" w={`100%`} align="stretch" >
-            <Box w="1240px" h="100%" borderRadius="12px">
-              <ModulesTable />
-            </Box>
-            <Box w="237px" h="100%" borderRadius="12px">
-              <RackAnalog />
-            </Box>
-            <Box w="380px" h="100%" borderRadius="12px" >
-              <RackStatus />
-            </Box>
-          </HStack>
-        </Box>
+            {/* ---------- First Row ---------- */}
+            <HStack
+              spacing="12px"
+              align="stretch"
+              w="100%"
+              className="rack-row"
+            >
+              <Box
+                w="1040px"
+                h="370px"
+              >
+                <RackModuleLayout
+                  rackId={selectedRackId}
+                  selectedModule={selectedModule}
+                  onModuleSelect={(id) => setSelectedModule(id)}
+                  onOpenDetails={() => {
+                    if (selectedModule) {
+                      setShowModuleDashboard(true);
+                      setModuleTab("details");
+                    }
+                  }}
+                />
+              </Box>
+
+              <Box
+                w="380px"
+                h="370px"
+              >
+                <DeltaSummary rackId={selectedRackId} />
+              </Box>
+
+              <Box
+                w="420px"
+                h="370px"
+              >
+                <ControlLimits />
+              </Box>
+            </HStack>
+
+            {showModuleDashboard && selectedModule && (
+              <Box mt="-10px">
+                <ModuleDashboard
+                  activeTab={moduleTab}
+                  moduleId={selectedModule}
+                  onTabChange={setModuleTab}
+                  onBackToRack={backToRack}
+                  onBack={() => {
+                    setShowModuleDashboard(false);
+                    setSelectedModule(null);
+                    setShowAnalyticsPage(false);
+                  }}
+                  onOpenAnalytics={() => setShowAnalyticsPage(true)}
+                />
+              </Box>
+            )}
+
+            {/* ---------- Second Row ---------- */}
+            {!showModuleDashboard && (
+              <HStack
+                spacing="12px"
+                align="stretch"
+                w="100%"
+                className="rack-row"
+              >
+                <Box
+                  flex="1.45"
+                  h="360px"
+
+                >
+                  <CellVoltageHeatmap rackId={selectedRackId} />
+                </Box>
+
+                <Box
+                  flex="1"
+                  h="360px"
+
+
+                >
+                  <TemperatureDistribution />
+                </Box>
+
+                <Box
+                  flex="1.15"
+                  h="360px"
+
+
+                >
+                  <ProtectionAlarmSummary />
+                </Box>
+              </HStack>
+            )}
+
+            {/* ---------- Third Row ---------- */}
+            {!showModuleDashboard && (
+              <HStack
+                className="rack-row"
+                spacing="12px"
+                align="stretch"
+                w="100%"
+              >
+                <Box
+                  flex="1.1"
+                  h="300px"
+                >
+                  <LifetimeThroughput />
+                </Box>
+
+                <Box
+                  flex="1"
+                  h="300px"
+
+
+                >
+                  <EnergyTrend />
+                </Box>
+
+                <Box
+                  flex="1"
+                  h="300px"
+                >
+                  <RecentEvents />
+                </Box>
+              </HStack>
+            )}
+          </>
+        )}
+
+        {showAnalyticsPage && selectedModule && (
+          <CellAnalyticsDashboard
+            moduleId={selectedModule}
+            onBack={() => {
+              setShowAnalyticsPage(false);
+              setShowModuleDashboard(true);
+              setModuleTab("details");
+            }}
+            onBackToRack={() => {
+              setShowAnalyticsPage(false);
+              setShowModuleDashboard(false);
+              setSelectedModule(null);
+            }}
+          />
+        )}
+
+      </VStack>
     </Box>
+    </DashboardLayout>
   );
 }

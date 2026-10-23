@@ -19,6 +19,7 @@ interface ExportFunction {
 }
 
 interface HeatmapChartProps {
+    fitContainer?: boolean;
     apiData?: Object[];
     height?: number | string;
     bg?: string;
@@ -31,6 +32,7 @@ interface HeatmapChartProps {
 }
 
 const HeatmapChart: React.FC<HeatmapChartProps> = ({ 
+    fitContainer = false,
     apiData, 
     height = 240, 
     xAxisInterval = "auto", 
@@ -164,6 +166,7 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
 
     // Adjust chart height based on full-screen state
     useEffect(() => {
+        if (fitContainer) return;
         const newHeight = isFullscreenActive ? EnlargeHeight(750) : height;
     // console.log(newHeight)
         setChartOptions((prevOptions) => {
@@ -176,7 +179,22 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
             };
             return JSON.parse(JSON.stringify(newOptions)); // deep clone to force re-render
         });
-    }, [isFullscreenActive, height]);
+    }, [isFullscreenActive, height, fitContainer]);
+
+    useEffect(() => {
+        if (!fitContainer || !containerRef.current) return;
+        const observer = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            if (width > 0 && height > 0) {
+                setChartOptions(previous => ({
+                    ...previous,
+                    chart: { ...previous.chart, width, height },
+                }));
+            }
+        });
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, [fitContainer]);
     // console.log(height)
 
     useEffect(() => {
@@ -209,6 +227,8 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({
         }
     }, [onExportReady]);
 
-    return <HighchartsReact highcharts={Highcharts} options={chartOptions} ref={chartRef || containerRef} />;
+    return <div ref={containerRef} style={fitContainer ? { width: '100%', height: '100%', minHeight: 0 } : undefined}>
+        <HighchartsReact highcharts={Highcharts} options={chartOptions} ref={chartRef} />
+    </div>;
 }
 export default HeatmapChart;
